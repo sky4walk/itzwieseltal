@@ -1,0 +1,3099 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S/360-Werkbank</title>
+<style>
+:root{
+  --bg:#e9e6df; --ink:#1d2228; --muted:#5b6470; --card:#fbfaf7; --line:#cfc9bd;
+  --panel:#34404c; --panel2:#2a333d; --plate:#c9ccc8; --lampoff:#3b3326; --lampon:#ffe69a; --glow:#ffcc45;
+  --accent:#1f5f9e; --red:#b3261e; --green:#2e7d32;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--accent)}
+header.top{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between;padding:10px 16px;background:#1b2530;color:#e8edf2}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.brand h1{font-size:20px;margin:0;letter-spacing:.5px}
+.brand .logo{font:700 13px/1 monospace;background:#e8edf2;color:#1b2530;padding:4px 6px;border-radius:3px}
+.brand .sub{font-size:13px;color:#9fb0c0}
+.ctl{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;font-size:13px}
+.ctl select{font:inherit;padding:3px}
+main,section.panel,nav.tabs,footer{max-width:1240px;margin:0 auto}
+section.panel{background:linear-gradient(#3c4957,#2e3843);color:#dfe6ee;border-radius:0 0 10px 10px;padding:12px 14px 14px;box-shadow:0 3px 10px rgba(0,0,0,.25)}
+.prow{display:flex;gap:10px;align-items:flex-start;margin:4px 0 8px}
+.plabel{flex:0 0 74px;font:700 11px/1.2 monospace;color:#b9c6d3;padding-top:14px}
+.lamps{display:flex;flex-wrap:wrap;gap:6px 12px}
+.lgrp{display:flex;flex-direction:column;align-items:center;background:var(--panel2);padding:3px 5px 4px;border-radius:4px}
+.lgrp .gl{font:9px/1.2 monospace;color:#9fb0c0;white-space:nowrap;margin-bottom:3px}
+.lgrp .ls{display:flex;gap:3px}
+.lamp{width:11px;height:11px;border-radius:50%;background:var(--lampoff);box-shadow:inset 0 0 2px #000}
+.lamp.on{background:var(--lampon);box-shadow:0 0 5px var(--glow)}
+.lamp.q{margin-left:4px}
+.status{display:flex;flex-wrap:wrap;gap:8px;margin-left:84px}
+.slamp{font:700 10px/1 monospace;padding:5px 8px;border-radius:3px;background:#4a3f2c;color:#2c2518;letter-spacing:.5px}
+.slamp.on{background:#ffd76a;color:#3a2c00;box-shadow:0 0 6px #ffcf4a}
+.slamp.red.on{background:#ff8a7a;color:#4a0a00;box-shadow:0 0 6px #ff6a5a}
+.switches{display:flex;flex-wrap:wrap;gap:12px 20px;margin:12px 0 6px}
+.swgrp{background:var(--plate);color:#222;border-radius:5px;padding:5px 8px 7px}
+.swl{font:700 10px/1.2 monospace;text-align:center;margin-bottom:4px;letter-spacing:.5px}
+.knobs{display:flex;gap:4px}
+.knob{width:30px;height:30px;border-radius:50%;border:2px solid #555;background:radial-gradient(circle at 35% 30%,#fafafa,#9a9a9a);font:700 13px/26px monospace;text-align:center;cursor:pointer;user-select:none;padding:0;color:#111}
+.knob.wide{width:auto;border-radius:14px;padding:0 10px;font-size:11px}
+.keys{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.key{font:700 11px/1.1 monospace;padding:9px 10px;border-radius:4px;border:1px solid #111;background:#f4f1ea;color:#111;cursor:pointer;min-width:74px;box-shadow:0 2px 0 #111}
+.key:active{transform:translateY(2px);box-shadow:none}
+.key.red{background:#c62f25;color:#fff}
+.key.blue{background:#2f6db5;color:#fff}
+.key.yel{background:#f2c84b}
+.tog{display:flex;align-items:center;gap:6px;font:700 11px monospace;color:#dfe6ee}
+.msg{margin-top:10px;font:13px/1.4 monospace;color:#ffe69a;min-height:18px}
+nav.tabs{display:flex;flex-wrap:wrap;gap:4px;padding:12px 8px 0}
+nav.tabs button{font:inherit;font-size:14px;padding:7px 12px;border:1px solid var(--line);border-bottom:none;border-radius:6px 6px 0 0;background:#dcd7cc;cursor:pointer}
+nav.tabs button.act{background:var(--card);font-weight:600}
+main{background:var(--card);border:1px solid var(--line);border-radius:0 6px 6px 6px;padding:14px;min-height:420px}
+.tab{display:none}.tab.act{display:block}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+button.b,label.b{display:inline-block;color:var(--ink);font:inherit;font-size:13px;padding:5px 10px;border:1px solid #888;border-radius:4px;background:#f3f1ec;cursor:pointer}
+button.b:hover,label.b:hover{background:#fff}
+input[type=text],textarea,select{font:13px monospace;border:1px solid #aaa;border-radius:3px;padding:4px}
+textarea{width:100%}
+pre{margin:0}
+.mono{font:13px/1.35 ui-monospace,Consolas,"Courier New",monospace}
+/* Konsole 1052 */
+.paper1052{background:#fffef6;border:1px solid #d8d2c0;min-height:300px;max-height:460px;overflow:auto;padding:10px 14px;font:15px/1.35 "Courier New",Courier,monospace;white-space:pre-wrap;color:#111;box-shadow:inset 0 0 12px rgba(0,0,0,.06)}
+.paper1052 .in{color:#b3261e}
+.paper1052 .sys{color:#666;font-style:italic}
+.reqon{outline:3px solid #f2c84b}
+/* Drucker 1403 */
+.paperwrap{max-height:560px;overflow:auto;background:#d9d4c6;padding:10px}
+.page{position:relative;margin:0 auto 10px;width:max-content;min-width:100%;background:#fdfdf8;padding:0 34px;box-shadow:0 1px 4px rgba(0,0,0,.25);border-bottom:1px dashed #999}
+.page:before,.page:after{content:"";position:absolute;top:0;bottom:0;width:22px;background:radial-gradient(circle at 11px 9px,#d9d4c6 4px,transparent 5px) 0 0/22px 18px repeat-y}
+.page:before{left:4px}.page:after{right:4px}
+.pl{font:12px/18px "Courier New",Courier,monospace;white-space:pre;height:18px;padding:0 6px}
+.pl.g{background:#d8efd8}
+/* Karten */
+canvas.card{width:100%;max-width:820px;height:auto;display:block;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.small{font-size:12px;color:var(--muted)}
+table.t{border-collapse:collapse;font:13px monospace}
+table.t td,table.t th{border:1px solid #ccc;padding:3px 7px;text-align:left}
+table.t th{background:#eee}
+.dis{max-height:430px;overflow:auto;border:1px solid #ccc;background:#fff}
+.dis div{font:13px/1.45 monospace;white-space:pre;padding:0 6px;cursor:pointer}
+.dis div.cur{background:#fff3b8}
+.dis div.bp{color:#b3261e;font-weight:700}
+.cols{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}
+@media (max-width:820px){.cols{grid-template-columns:1fr}.plabel{flex-basis:52px}.status{margin-left:0}}
+.listing{max-height:420px;overflow:auto;background:#fff;border:1px solid #ccc;padding:6px;font:12px/1.4 monospace;white-space:pre}
+.listing .err{color:#b3261e;font-weight:700}
+.memv{font:13px/1.4 monospace;white-space:pre;background:#fff;border:1px solid #ccc;padding:6px;overflow:auto;max-height:470px}
+.hint{background:#fff7d6;border:1px solid #e8d48a;padding:8px 10px;border-radius:4px;font-size:13px}
+footer{padding:16px 10px 30px;font-size:13px;color:var(--muted);text-align:center}
+h3{margin:6px 0 8px;font-size:16px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">S/360</span><h1>S/360-Werkbank</h1><span class="sub">IBM System/360 im Browser · Stufe 2: Gleitkomma, Befehlstest, Watchpoints, Zustandsdateien</span></div>
+  <div class="ctl">
+    <label>Hauptspeicher <select id="memSel">
+      <option value="65536">64 KB</option><option value="131072">128 KB</option><option value="262144">256 KB</option>
+      <option value="524288">512 KB</option><option value="1048576" selected>1 MB</option><option value="2097152">2 MB</option>
+      <option value="4194304">4 MB</option><option value="8388608">8 MB</option><option value="16777216">16 MB</option></select></label>
+    <label>Tempo <select id="rateSel">
+      <option value="35000">Model 30 (ca. 35.000 Bef./s)</option>
+      <option value="80000">Model 40 (ca. 80.000 Bef./s)</option>
+      <option value="160000">Model 50 (ca. 160.000 Bef./s)</option>
+      <option value="600000">Model 65 (ca. 600.000 Bef./s)</option>
+      <option value="16000000">Model 91 (ca. 16 Mio. Bef./s)</option>
+      <option value="0" selected>Maximum</option></select></label>
+    <label>E/A-Zeiten <select id="ioSel">
+      <option value="1">realistisch</option><option value="0.1">10-fach schneller</option>
+      <option value="0.01" selected>100-fach schneller</option><option value="0">sofort</option></select></label>
+    <button class="b" id="stSave" title="Kompletten Maschinenzustand als Datei sichern">Zustand sichern</button>
+    <label class="b" title="Gesicherten Maschinenzustand laden">Zustand laden <input type="file" id="stLoad" accept=".s360,.gz" hidden></label>
+    <span id="ips" class="small" style="color:#9fb0c0"></span>
+  </div>
+</header>
+
+<section class="panel" id="panel">
+  <div class="prow"><div class="plabel">PSW</div><div class="lamps" id="pswLamps"></div></div>
+  <div class="prow"><div class="plabel" id="dispLabel">ANZEIGE</div><div class="lamps" id="dispLamps"></div></div>
+  <div class="status" id="statusLamps"></div>
+  <div class="switches">
+    <div class="swgrp"><div class="swl">ADRESSE</div><div class="knobs" id="swAddr"></div></div>
+    <div class="swgrp"><div class="swl">DATEN</div><div class="knobs" id="swData"></div></div>
+    <div class="swgrp"><div class="swl">ANZEIGEWAHL</div><div class="knobs"><button class="knob wide" id="swSel">SPEICHER</button></div></div>
+    <div class="swgrp"><div class="swl">LADEEINHEIT</div><div class="knobs" id="swLoad"></div></div>
+  </div>
+  <div class="keys">
+    <button class="key red" id="kReset">SYSTEM<br>RESET</button>
+    <button class="key blue" id="kLoad">LADEN<br>(IPL)</button>
+    <button class="key yel" id="kStart">START</button>
+    <button class="key" id="kStop">STOP</button>
+    <button class="key" id="kStep">EINZEL-<br>SCHRITT</button>
+    <button class="key" id="kInt">UNTER-<br>BRECHEN</button>
+    <button class="key" id="kDisp">ANZEIGEN</button>
+    <button class="key" id="kStore">SPEICHERN</button>
+    <label class="tog"><input type="checkbox" id="kTimer" checked> ZEITGEBER</label>
+  </div>
+  <div class="msg" id="msg">Bereit. Assembler → Beispiel wählen → „Assemblieren + IPL“, oder Kartenstapel einlegen und LADEN drücken.</div>
+</section>
+
+<nav class="tabs" id="tabs">
+  <button data-t="tCon" class="act">Konsole 1052</button>
+  <button data-t="tRdr">Karten 2540</button>
+  <button data-t="tPrt">Drucker 1403</button>
+  <button data-t="tAsm">Assembler</button>
+  <button data-t="tDbg">Debugger</button>
+  <button data-t="tMem">Speicher</button>
+  <button data-t="tChn">Kanäle</button>
+  <button data-t="tTrc">Trace</button>
+  <button data-t="tHlp">Hilfe</button>
+</nav>
+<main>
+  <div class="tab act" id="tCon">
+    <h3>Konsolschreibmaschine IBM 1052 · Adresse 009</h3>
+    <div class="paper1052" id="conOut"></div>
+    <div class="row">
+      <input type="text" id="conIn" style="flex:1;min-width:200px" placeholder="Eingabe (Enter sendet; ohne laufende Leseanforderung wird ATTENTION gemeldet)">
+      <button class="b" id="conSend">Senden</button>
+      <button class="b" id="conReq">ANFORDERN (Request)</button>
+      <button class="b" id="conClr">Papier leeren</button>
+      <button class="b" id="conSave">Als Datei speichern</button>
+    </div>
+    <div class="small" id="conState">Keine Leseanforderung.</div>
+  </div>
+
+  <div class="tab" id="tRdr">
+    <h3>Kartenleser/-stanzer IBM 2540 · Leser 00C · Stanzer 00D</h3>
+    <canvas class="card" id="cardCv" width="820" height="370"></canvas>
+    <div class="row"><b id="rdrInfo"></b></div>
+    <div class="row">
+      <label class="b">Textdatei laden <input type="file" id="rdrFileTxt" accept=".txt,.jcl,.asm,.dat,.cbl,.for,text/*" hidden></label>
+      <label class="b">Binärdeck laden (80-Byte-Sätze) <input type="file" id="rdrFileBin" hidden></label>
+      <button class="b" id="rdrClear">Magazin leeren</button>
+      <label class="small"><input type="checkbox" id="rdrEof" checked> EOF-Taste (leeres Magazin = Dateiende)</label>
+    </div>
+    <textarea id="rdrText" rows="6" placeholder="Hier Text eintippen – jede Zeile wird eine Karte (EBCDIC, 80 Spalten)"></textarea>
+    <div class="row"><button class="b" id="rdrAdd">Text als Karten ans Magazin anhängen</button></div>
+    <div class="small">Magazin-Vorschau – Klick auf eine Karte zeigt sie oben an:</div>
+    <div class="listing" id="rdrList" style="max-height:200px;cursor:pointer"></div>
+    <h3 style="margin-top:14px">Deck-Ansicht</h3>
+    <div class="row"><button class="b" id="deckAna">Deck im Magazin aufschlüsseln</button>
+      <span class="small">lädt das Deck probeweise in einer eigenen Maschine (ohne es zu verbrauchen): IPL-Karte, Kanalprogramme, Ladeadressen und Disassemblierung</span></div>
+    <div class="listing" id="deckView" style="max-height:420px"></div>
+    <h3 style="margin-top:14px">Stanzer 00D</h3>
+    <div class="row"><span id="punInfo">0 Karten gestanzt.</span>
+      <button class="b" id="punSaveTxt">Als Text speichern</button><button class="b" id="punSaveBin">Als Binärdeck speichern</button><button class="b" id="punClear">Leeren</button></div>
+  </div>
+
+  <div class="tab" id="tPrt">
+    <h3>Zeilendrucker IBM 1403 · Adresse 00E</h3>
+    <div class="row"><button class="b" id="prtSave">Liste als Textdatei speichern</button><button class="b" id="prtClear">Papier abreißen (leeren)</button><span class="small" id="prtInfo"></span></div>
+    <div class="paperwrap" id="prtWrap"><div id="prtPages"></div></div>
+  </div>
+
+  <div class="tab" id="tAsm">
+    <h3>Assembler (Teilmenge der S/360-Assemblersprache)</h3>
+    <div class="row">
+      <select id="exSel"></select><button class="b" id="exLoad">Beispiel laden</button>
+      <label class="b">Quelltext laden <input type="file" id="asmFile" hidden></label>
+      <button class="b" id="asmSaveSrc">Quelltext speichern</button>
+    </div>
+    <textarea id="asmSrc" rows="18" class="mono" spellcheck="false"></textarea>
+    <div class="small">Datenkarten, die hinter das Programmdeck gelegt werden (optional):</div>
+    <textarea id="asmData" rows="3" class="mono" spellcheck="false"></textarea>
+    <div class="row">
+      <button class="b" id="asmRun"><b>Assemblieren + IPL</b></button>
+      <button class="b" id="asmOnly">Nur assemblieren</button>
+      <button class="b" id="asmDeck">Deck ins Magazin legen</button>
+      <button class="b" id="asmSaveDeck">Deck speichern (.deck)</button>
+      <span class="small" id="asmInfo"></span>
+    </div>
+    <div class="listing" id="asmList"></div>
+  </div>
+
+  <div class="tab" id="tDbg">
+    <div class="cols">
+      <div>
+        <div class="row">
+          <button class="b" id="dStep">Einzelschritt</button><button class="b" id="dStep10">10 Schritte</button>
+          <button class="b" id="dRun">Start</button><button class="b" id="dStop">Stop</button>
+          <label class="small"><input type="checkbox" id="dFollow" checked> folgt der PSW</label>
+          <input type="text" id="dAddr" size="8" placeholder="Adresse"><button class="b" id="dGo">Zeigen</button>
+        </div>
+        <div class="dis" id="dis"></div>
+        <div class="small">Klick auf eine Zeile setzt/löscht einen Haltepunkt. Haltepunkte: <span id="bpList">–</span></div>
+      </div>
+      <div>
+        <h3>PSW</h3><div class="mono" id="pswText"></div>
+        <h3>Universalregister</h3><table class="t" id="regTab"></table>
+        <div class="small" style="margin-top:8px">Register ändern: <input type="text" id="regNo" size="3" placeholder="Nr"> = <input type="text" id="regVal" size="10" placeholder="hex"> <button class="b" id="regSet">setzen</button></div>
+        <h3>Gleitkommaregister</h3><table class="t" id="fprTab"></table>
+      </div>
+    </div>
+  </div>
+
+  <div class="tab" id="tMem">
+    <div class="row">Adresse <input type="text" id="mAddr" size="8" value="000200"><button class="b" id="mGo">Anzeigen</button>
+      <button class="b" id="mPrev">◀ Seite</button><button class="b" id="mNext">Seite ▶</button>
+      &nbsp;Byte ändern: <input type="text" id="mPokeA" size="7" placeholder="Adresse"> = <input type="text" id="mPokeV" size="16" placeholder="Hexbytes"><button class="b" id="mPoke">schreiben</button></div>
+    <div class="memv" id="memv"></div>
+    <div class="small">Rechts die EBCDIC-Darstellung.</div>
+    <h3 style="margin-top:12px">Watchpoints (Schreibzugriffe durch CPU oder Kanal halten die Maschine an)</h3>
+    <div class="row">Adresse <input type="text" id="wpA" size="8" placeholder="hex"> Länge <input type="text" id="wpN" size="4" value="4">
+      <button class="b" id="wpAdd">hinzufügen</button><button class="b" id="wpClr">alle löschen</button></div>
+    <div class="mono" id="wpList">–</div>
+  </div>
+
+  <div class="tab" id="tChn">
+    <h3>Kanal- und Gerätemonitor</h3>
+    <table class="t" id="chnTab"></table>
+    <div class="small" style="margin-top:8px">CAW (Adresse 72) und CSW (Adresse 64): <span class="mono" id="cawcsw"></span></div>
+  </div>
+
+  <div class="tab" id="tTrc">
+    <div class="row"><label class="small"><input type="checkbox" id="trOn" checked> Trace-Ringpuffer aktiv (4096 Einträge)</label>
+      <button class="b" id="trRef">Aktualisieren</button><button class="b" id="trClr">Leeren</button>
+      <span class="small">Anzeige der letzten <select id="trN"><option>100</option><option selected>300</option><option>1000</option><option>4096</option></select> Einträge</span></div>
+    <div class="listing" id="trList" style="max-height:520px"></div>
+  </div>
+
+  <div class="tab" id="tHlp">
+    <h3>Kurzanleitung</h3>
+    <p>Die Werkbank bildet die <b>Architektur</b> des IBM System/360 nach (GA22-6821), kein bestimmtes Modell. Geräte: Konsolschreibmaschine 1052 (009), Kartenleser 2540 (00C), Kartenstanzer 2540 (00D), Zeilendrucker 1403 (00E), alle am Multiplexkanal 0.</p>
+    <ol>
+      <li><b>Assembler</b>-Reiter: Beispiel wählen, „Assemblieren + IPL“. Der Assembler erzeugt ein selbstladendes Kartendeck (IPL-Karte, Steuerkarten mit CCW-Ketten, Datenkarten), legt es in den Leser und drückt LADEN mit Ladeeinheit 00C.</li>
+      <li><b>Bedienfeld</b>: SYSTEM RESET, LADEN (IPL von der eingestellten Ladeeinheit), START, STOP, EINZELSCHRITT, UNTERBRECHEN (externe Unterbrechung, Code X'0040'). Mit ADRESSE/DATEN und ANZEIGEWAHL lassen sich Speicherwörter bzw. Register anzeigen und setzen. Drehschalter: Klick = +1, Rechtsklick oder Mausrad = −1/+1.</li>
+      <li><b>Programmende</b>: Die Beispiele laden eine PSW mit gesetztem Wartebit und gesperrten Unterbrechungen (gesperrter Wartezustand) – das Lämpchen WARTEN leuchtet.</li>
+      <li><b>Speichern</b> geht nur über Dateien (Drucker-, Konsol- und Stanzerausgabe, Decks, Quelltexte). Es wird kein Browserspeicher benutzt.</li>
+    </ol>
+    <h3>Assembler-Teilmenge</h3>
+    <p class="small">Alle Maschinenbefehle (RR, RX, RS, SI, S, SS) einschließlich erweiterter Sprungbefehle (B, BR, BE, BNE, BH, BL, BZ, BNZ, BO, BM, BP, NOP …); Anweisungen START, CSECT, USING, DROP, EQU, DC, DS, CCW, ORG, LTORG, CNOP, END; Konstantentypen C, X, B, F, H, A, Y, P, Z, E, D mit Wiederholungsfaktor und Längenangabe (z. B. <code>3CL8'A'</code>, <code>AL3(TEXT)</code>); Literale (<code>=F'1'</code>, <code>=C'XY'</code>, <code>=P'5'</code>); Ausdrücke mit + − * /, <code>*</code>, <code>L'SYMBOL</code>, selbstdefinierende Werte X'..', C'..', B'..'. Ein Kommentar beginnt mit * in Spalte 1 oder folgt nach einem Leerzeichen hinter den Operanden.</p>
+    <h3>Ausbaustufen</h3>
+    <ol class="small">
+      <li><b>Stufe 1 (fertig):</b> CPU mit Standard- und Dezimalbefehlssatz, Unterbrechungen, Schutzschlüssel, Intervall-Zeitgeber; Multiplexkanal mit CCW-Ketten (Befehls- und Datenverkettung, TIC, SLI, Skip); 1052, 2540, 1403; IPL von Karte; Bedienfeld; Debugger, Speicheransicht, Trace, Kanalmonitor; Assembler.</li>
+      <li><b>Stufe 2 (diese Seite):</b> hexadezimales Gleitkomma kurz, lang und erweitert (inkl. MXR, MXD, MXDR, AXR, SXR, LRDR, LRER) mit Schutzziffer und allen Ausnahmen; Befehlstest mit 185 Prüfungen; Gleitkomma-Details (Schutzziffer nur kurz, Unterlauf ergibt echte Null, HALVE ohne Normalisierung) nach GA22-6821-0; Watchpoints; Zustand als gzip-Datei sichern und laden; asynchrone Kanäle mit Gerätezeiten und PCI-Zwischenunterbrechung; Intervall-Zeitgeber und E/A in emulierter Zeit (Bezug: gewähltes Modelltempo).</li>
+      <li>Stufe 3: Bedienfeld ausgebaut (Model-65-Stil), Selektorkanäle, PCI, Gerätetiming, Abruf-Schutz.</li>
+      <li>Stufe 4: Platten 2311/2314 im CKD-Format, Hercules-CKD/CCKD, Sicherung nur geänderter Spuren, IPL von Platte.</li>
+      <li>Stufe 5: Magnetband 2400 (AWS), IPL von Band.</li>
+      <li>Stufe 6: DOS/360 bzw. OS/360 MVT 21.8F: Job über den Kartenleser einreichen, Liste auf dem 1403.</li>
+      <li>Stufe 7 (optional): S/370-Erweiterungen (EC-Modus, DAT, Uhren) als Weg zu MVS 3.8j.</li>
+    </ol>
+  </div>
+</main>
+<footer>
+  S/360-Werkbank · ein Projekt von <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a>
+  · weitere Emulatoren unter <a href="https://sky4walk.github.io/SmallCircuits/SmallHtml/" target="_blank" rel="noopener">sky4walk.github.io/SmallCircuits/SmallHtml</a>
+</footer>
+
+<script id="core">
+"use strict";
+/* =====================================================================
+   S/360-Werkbank – Kern (CPU, Kanäle, Geräte, Disassembler, Assembler)
+   Grundlage: IBM System/360 Principles of Operation (GA22-6821)
+   ===================================================================== */
+const HX=(v,n)=>((v>>>0).toString(16).toUpperCase()).padStart(n,'0').slice(-n);
+
+/* ---------- EBCDIC (Codepage 037 mit Umlauten) ---------- */
+const E2A=new Array(256).fill(null), A2E=new Map();
+(()=>{
+  const d=(c,s)=>{E2A[c]=s; if(!A2E.has(s)) A2E.set(s,c);};
+  d(0x40,' ');
+  const a='abcdefghi', j='jklmnopqr', s='stuvwxyz';
+  for(let i=0;i<9;i++){ d(0x81+i,a[i]); d(0xC1+i,a[i].toUpperCase()); d(0x91+i,j[i]); d(0xD1+i,j[i].toUpperCase()); }
+  for(let i=0;i<8;i++){ d(0xA2+i,s[i]); d(0xE2+i,s[i].toUpperCase()); }
+  for(let i=0;i<10;i++) d(0xF0+i,String(i));
+  [[0x4A,'¢'],[0x4B,'.'],[0x4C,'<'],[0x4D,'('],[0x4E,'+'],[0x4F,'|'],[0x50,'&'],[0x5A,'!'],[0x5B,'$'],[0x5C,'*'],[0x5D,')'],
+   [0x5E,';'],[0x5F,'¬'],[0x60,'-'],[0x61,'/'],[0x6A,'¦'],[0x6B,','],[0x6C,'%'],[0x6D,'_'],[0x6E,'>'],[0x6F,'?'],[0x79,'`'],
+   [0x7A,':'],[0x7B,'#'],[0x7C,'@'],[0x7D,"'"],[0x7E,'='],[0x7F,'"'],[0xA1,'~'],[0xB0,'^'],[0xBA,'['],[0xBB,']'],[0xC0,'{'],
+   [0xD0,'}'],[0xE0,'\\'],[0x43,'ä'],[0xCC,'ö'],[0xDC,'ü'],[0x63,'Ä'],[0xEC,'Ö'],[0xFC,'Ü'],[0x59,'ß'],[0xB5,'§'],[0x90,'°']
+  ].forEach(([c,t])=>d(c,t));
+})();
+function s2e(str){ const o=new Uint8Array(str.length); for(let i=0;i<str.length;i++){ const c=A2E.get(str[i]); o[i]=c===undefined?0x6F:c; } return o; }
+function e2s(b,blank){ let s=''; for(let i=0;i<b.length;i++){ const c=E2A[b[i]]; s+= c===null?(blank?' ':'·'):c; } return s; }
+function b64e(u8){ let s=''; for(let i=0;i<u8.length;i+=0x8000) s+=String.fromCharCode.apply(null,u8.subarray(i,i+0x8000)); return btoa(s); }
+function b64d(t){ const s=atob(t), o=new Uint8Array(s.length); for(let i=0;i<s.length;i++) o[i]=s.charCodeAt(i); return o; }
+function textCard(line){ const c=new Uint8Array(80).fill(0x40); c.set(s2e(line.slice(0,80))); return c; }
+
+/* ---------- Lochkartencode (Hollerith) für die Kartendarstellung ---------- */
+/* Zeilenindex: 0=12, 1=11, 2=0, 3..11 = 1..9 */
+function holl(ch){
+  if(ch===' '||ch===null||ch===undefined) return [];
+  const D=n=>n===0?2:n+2;
+  if(ch>='0'&&ch<='9') return [D(+ch)];
+  let i;
+  if((i='ABCDEFGHI'.indexOf(ch))>=0) return [0,D(i+1)];
+  if((i='JKLMNOPQR'.indexOf(ch))>=0) return [1,D(i+1)];
+  if((i='STUVWXYZ'.indexOf(ch))>=0) return [2,D(i+2)];
+  if((i='abcdefghi'.indexOf(ch))>=0) return [0,2,D(i+1)];
+  if((i='jklmnopqr'.indexOf(ch))>=0) return [0,1,D(i+1)];
+  if((i='stuvwxyz'.indexOf(ch))>=0) return [1,2,D(i+2)];
+  const T={'&':[0],'-':[1],'/':[2,3],'¢':[0,4,10],'.':[0,5,10],'<':[0,6,10],'(':[0,7,10],'+':[0,8,10],'|':[0,9,10],
+    '!':[1,4,10],'$':[1,5,10],'*':[1,6,10],')':[1,7,10],';':[1,8,10],'¬':[1,9,10],',':[2,5,10],'%':[2,6,10],'_':[2,7,10],
+    '>':[2,8,10],'?':[2,9,10],':':[4,10],'#':[5,10],'@':[6,10],"'":[7,10],'=':[8,10],'"':[9,10]};
+  return T[ch]||null;
+}
+
+/* ---------- Programmunterbrechung als Ausnahme ---------- */
+class PI{ constructor(c){ this.code=c; } }
+const PICODE={1:'Operation',2:'Privilegierte Operation',3:'Ausführung (EX)',4:'Schutz',5:'Adressierung',6:'Spezifikation',7:'Daten',
+  8:'Festkomma-Überlauf',9:'Festkomma-Division',0xA:'Dezimal-Überlauf',0xB:'Dezimal-Division',0xC:'Exponentenüberlauf',
+  0xD:'Exponentenunterlauf',0xE:'Signifikanz',0xF:'Gleitkomma-Division'};
+
+/* =====================================================================
+   Die Maschine
+   ===================================================================== */
+class Machine{
+  constructor(){
+    this.R=new Int32Array(16); this.FPR=new Uint32Array(8);
+    this.devices=new Map(); this.devList=[];
+    this.TN=4096; this.tIA=new Int32Array(this.TN); this.tW=new Int32Array(this.TN); this.tX=new Int32Array(this.TN);
+    this.tK=new Uint8Array(this.TN); this.tPos=0; this.tCnt=0; this.trOn=true;
+    this.bp=new Set(); this.bpSkip=false;
+    this.timerOn=true;
+    this.clock=0; this.emuIPS=600000; this.ioScale=0.01; this.events=[]; this.nextT=0; this.timerAt=0;
+    this.wp=[]; this.wpHit=null;
+    this.ib=new Uint8Array(6); this.xb=new Uint8Array(6);
+    this.running=false; this.stopMsg=''; this.icount=0;
+    this.onEvent=null;
+    this.powerOn(1048576);
+  }
+  addDev(d){ d.m=this; this.devices.set(d.addr,d); this.devList.push(d); }
+  powerOn(size){
+    this.memSize=size; this.M=new Uint8Array(size); this.keys=new Uint8Array(Math.ceil(size/2048));
+    this.R.fill(0); this.FPR.fill(0); this.systemReset();
+  }
+  systemReset(){
+    this.sysMask=0; this.key=0; this.aBit=0; this.mBit=0; this.wait=0; this.prob=0; this.intCode=0;
+    this.ilc=0; this.cc=0; this.pmask=0; this.ia=0;
+    this.extPending=0; this.irqPending=false; this.progLoop=0; this.loading=false; this.running=false; this.stopMsg='';
+    this.events=[]; this.timerAt=this.clock+this.emuIPS/300; this.nextT=this.timerAt; this.wpHit=null;
+    for(const d of this.devList) d.reset();
+  }
+  halt(msg){ this.running=false; this.stopMsg=msg||''; if(this.onEvent) this.onEvent('halt',msg); }
+
+  /* ---- Speicherzugriffe ---- */
+  rw(a){ const M=this.M; return (M[a]<<24)|(M[a+1]<<16)|(M[a+2]<<8)|M[a+3]; }
+  ww(a,v){ const M=this.M; M[a]=v>>>24; M[a+1]=v>>>16; M[a+2]=v>>>8; M[a+3]=v; }
+  chkA(a,n){ if(a+n>this.memSize) throw new PI(5); }
+  chkS(a,n){
+    if(a+n>this.memSize) throw new PI(5);
+    const k=this.key; if(k){ const K=this.keys; for(let b=a>>>11,e=(a+n-1)>>>11;b<=e;b++) if((K[b]>>>4)!==k) throw new PI(4); }
+    if(this.wp.length) this.wpCheck(a,n,'CPU');
+  }
+  wpCheck(a,n,who){ for(const w of this.wp) if(a<w.a+w.n&&a+n>w.a&&!this.wpHit) this.wpHit={w,a,n,who}; }
+  rd1(a){ if(a>=this.memSize) throw new PI(5); return this.M[a]; }
+  rd2(a){ if(a&1) throw new PI(6); this.chkA(a,2); return (this.M[a]<<8)|this.M[a+1]; }
+  rd4(a){ if(a&3) throw new PI(6); this.chkA(a,4); return this.rw(a); }
+  wr1(a,v){ this.chkS(a,1); this.M[a]=v; }
+  wr2(a,v){ if(a&1) throw new PI(6); this.chkS(a,2); this.M[a]=v>>>8; this.M[a+1]=v; }
+  wr4(a,v){ if(a&3) throw new PI(6); this.chkS(a,4); this.ww(a,v); }
+
+  /* ---- PSW ---- */
+  psw0(){ return ((this.sysMask<<24)|(this.key<<20)|(this.aBit<<19)|(this.mBit<<18)|(this.wait<<17)|(this.prob<<16)|(this.intCode&0xFFFF))>>>0; }
+  psw1(){ return ((this.ilc<<30)|(this.cc<<28)|(this.pmask<<24)|(this.ia&0xFFFFFF))>>>0; }
+  setPSW(w0,w1){
+    this.sysMask=w0>>>24; this.key=(w0>>>20)&15; this.aBit=(w0>>>19)&1; this.mBit=(w0>>>18)&1; this.wait=(w0>>>17)&1;
+    this.prob=(w0>>>16)&1; this.intCode=w0&0xFFFF; this.ilc=w1>>>30; this.cc=(w1>>>28)&3; this.pmask=(w1>>>24)&15; this.ia=w1&0xFFFFFF;
+    this.irqPending=true;
+  }
+  storePSW(a){ this.ww(a,this.psw0()); this.ww(a+4,this.psw1()); }
+  loadPSW(a){ this.setPSW(this.rw(a)>>>0,this.rw(a+4)>>>0); }
+  link(){ return (this.ilc<<30)|(this.cc<<28)|(this.pmask<<24)|this.ia; }
+  priv(){ if(this.prob) throw new PI(2); }
+
+  /* ---- Trace ---- */
+  trIns(ia,b){ const p=this.tPos; this.tIA[p]=ia; this.tW[p]=(b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3]; this.tX[p]=(b[4]<<8)|b[5]; this.tK[p]=0;
+    this.tPos=(p+1)&(this.TN-1); if(this.tCnt<this.TN) this.tCnt++; }
+  trEv(kind,code,oldIA){ const p=this.tPos; this.tIA[p]=this.ia; this.tW[p]=code; this.tX[p]=oldIA; this.tK[p]=kind;
+    this.tPos=(p+1)&(this.TN-1); if(this.tCnt<this.TN) this.tCnt++; }
+
+  /* ---- Unterbrechungen ---- */
+  intr(oldA,newA,code,ilc,kind){
+    const oldIA=this.ia; this.intCode=code&0xFFFF; this.ilc=ilc; this.storePSW(oldA); this.loadPSW(newA);
+    if(this.trOn) this.trEv(kind,code,oldIA);
+  }
+  progInt(code){
+    if(++this.progLoop>64){ this.halt('Programmunterbrechungs-Schleife (Code X\''+HX(code,4)+'\' '+(PICODE[code]||'')+') – neue Programm-PSW auf Adresse 104 prüfen'); return; }
+    this.intr(0x28,0x68,code,this.ilc,1);
+  }
+  recalcIrq(){ let p=this.extPending!==0; if(!p) for(const d of this.devList) if(d.pend||d.pci){ p=true; break; } this.irqPending=p; }
+  tryIrq(){
+    this.irqPending=false;
+    if(this.extPending){
+      if(this.sysMask&1){ const c=this.extPending; this.extPending=0; this.intr(0x18,0x58,c,0,2); this.recalcIrq(); return true; }
+      this.irqPending=true;
+    }
+    for(const d of this.devList){
+      if(!d.pend&&!d.pci) continue;
+      const ch=(d.addr>>8)&7, mk=ch<6?(0x80>>ch):0x02;
+      if(this.sysMask&mk){
+        if(d.pend){ this.storeCSW(d.pend); d.pend=null; }
+        else { this.storeCSW({key:d.ch?d.ch.key:0,ccwAddr:d.ch?d.ch.addr:0,us:0,cs:0x80,count:0}); d.pci=false; }   // PCI: Kanal arbeitet weiter
+        this.intr(0x38,0x78,d.addr,0,3); this.recalcIrq(); return true; }
+      this.irqPending=true;
+    }
+    return false;
+  }
+  /* ---- Emulierte Zeit: eine Zeiteinheit = ein Befehl beim gewählten Modelltempo ---- */
+  ioT(us){ return us*this.ioScale*this.emuIPS/1e6; }
+  schedule(dt,fn){
+    const e={t:this.clock+Math.max(1,Math.round(dt)),fn,dead:false}, E=this.events; let i=E.length;
+    while(i>0&&E[i-1].t>e.t) i--; E.splice(i,0,e); if(e.t<this.nextT) this.nextT=e.t; return e;
+  }
+  service(){
+    if(this.clock>=this.timerAt){ const per=this.emuIPS/300, n=Math.floor((this.clock-this.timerAt)/per)+1; this.timerAt+=n*per;
+      if(this.timerOn){ const old=this.rw(0x50), nw=(old-n*256)|0; this.ww(0x50,nw); if(old>=0&&nw<0){ this.extPending|=0x80; this.irqPending=true; } } }
+    const E=this.events; while(E.length&&E[0].t<=this.clock){ const e=E.shift(); if(!e.dead) e.fn(); }
+    this.nextT=Math.min(this.timerAt,E.length?E[0].t:Infinity);
+  }
+  advance(ms){ this.clock+=Math.min(ms,100)*this.emuIPS/1000; this.service(); }   // Wartezustand: Zeit läuft nach Wanduhr
+
+  /* ---- Ausführungsschleife ---- */
+  run(n){
+    for(let i=0;i<n;i++){
+      if(this.clock>=this.nextT) this.service();
+      if(!this.running) return 'halt';
+      if(this.irqPending&&!this.loading) this.tryIrq();
+      if(this.wait||this.loading){
+        if(this.wait&&!this.loading&&(this.sysMask&0xFF)===0){ this.halt('Gesperrter Wartezustand – PSW '+HX(this.psw0(),8)+' '+HX(this.psw1(),8)); return 'wait'; }
+        const E=this.events; let k=0; while(k<E.length&&E[k].dead) k++;
+        if(k<E.length){ if(E[k].t>this.clock) this.clock=E[k].t; continue; }   // bis zum nächsten E/A-Ereignis vorspulen
+        return 'idle';
+      }
+      if(this.bp.size&&this.bp.has(this.ia)&&!this.bpSkip){ this.halt('Haltepunkt bei '+HX(this.ia,6)); return 'bp'; }
+      this.bpSkip=false;
+      this.step();
+      if(!this.running) return 'halt';
+    }
+    return 'ok';
+  }
+  step(){
+    const M=this.M, ia=this.ia;
+    if(ia&1){ this.ilc=0; this.progInt(6); return; }
+    if(ia+2>this.memSize){ this.ilc=0; this.progInt(5); return; }
+    const op=M[ia], len=op<0x40?2:(op<0xC0?4:6);
+    if(ia+len>this.memSize){ this.ilc=0; this.progInt(5); return; }
+    const b=this.ib; b[0]=op; b[1]=M[ia+1];
+    if(len>2){ b[2]=M[ia+2]; b[3]=M[ia+3]; if(len>4){ b[4]=M[ia+4]; b[5]=M[ia+5]; } }
+    this.ilc=len>>1; this.ia=(ia+len)&0xFFFFFF; this.icount++; this.clock++;
+    if(this.trOn) this.trIns(ia,b);
+    try{ this.exec(b); this.progLoop=0; }
+    catch(e){ if(e instanceof PI) this.progInt(e.code); else throw e; }
+    if(this.wpHit) this.wpStop(ia);
+  }
+  wpStop(ia){ const h=this.wpHit; this.wpHit=null;
+    this.halt('Watchpoint '+HX(h.w.a,6)+'('+h.w.n+'): '+(h.who==='CPU'?'Befehl bei '+HX(ia,6):'Kanal, Gerät '+h.who)+' schrieb '+h.n+' Byte ab '+HX(h.a,6)); }
+
+  /* ---- Rechenhilfen ---- */
+  scmp(x,y){ return x===y?0:(x<y?1:2); }
+  ucmp(x,y){ x>>>=0; y>>>=0; return x===y?0:(x<y?1:2); }
+  addS(x,y){ const r=(x+y)|0; this.cc=(((x^r)&(y^r))<0)?3:(r===0?0:(r<0?1:2)); return r; }
+  subS(x,y){ const r=(x-y)|0; this.cc=(((x^y)&(x^r))<0)?3:(r===0?0:(r<0?1:2)); return r; }
+  addL(x,y,c){ const s=(x>>>0)+(y>>>0)+c; const r=s|0; this.cc=(r!==0?1:0)|(s>0xFFFFFFFF?2:0); return r; }
+  fxo(){ if(this.cc===3&&(this.pmask&8)) throw new PI(8); }
+  get64(r){ return BigInt.asIntN(64,(BigInt(this.R[r])<<32n)|BigInt(this.R[r+1]>>>0)); }
+  set64(r,v){ this.R[r]=Number(BigInt.asIntN(32,v>>32n)); this.R[r+1]=Number(BigInt.asIntN(32,v)); }
+  div(r1,y){
+    if(r1&1) throw new PI(6); if(y===0) throw new PI(9);
+    const d=this.get64(r1), Y=BigInt(y), q=d/Y, r=d%Y;
+    if(q>2147483647n||q< -2147483648n) throw new PI(9);
+    this.R[r1]=Number(r); this.R[r1+1]=Number(q);
+  }
+  sla(v,n,bits){ // v: BigInt mit Vorzeichen
+    const W=BigInt(bits), neg=v<0n, numMask=(1n<<(W-1n))-1n; let ov=false;
+    if(n>0){ if(n>=bits-1) ov=(v&numMask)!==(neg?numMask:0n); else { const t=v>>BigInt(bits-1-n); ov=!(t===0n||t===-1n); } }
+    const num=(BigInt.asUintN(bits,v)<<BigInt(n))&numMask;
+    return {r:neg?num-(1n<<(W-1n)):num, ov};
+  }
+  /* gepackte Dezimalzahlen */
+  dRead(a,L){
+    this.chkA(a,L); const M=this.M; let v=0n;
+    for(let i=0;i<L-1;i++){ const x=M[a+i], h=x>>4, l=x&15; if(h>9||l>9) throw new PI(7); v=v*100n+BigInt(h*10+l); }
+    const x=M[a+L-1], h=x>>4, s=x&15; if(h>9||s<10) throw new PI(7);
+    v=v*10n+BigInt(h); const neg=(s===0xB||s===0xD); return {v:neg?-v:v,neg};
+  }
+  dWrite(a,L,v,neg){
+    let x=v<0n?-v:v; const M=this.M;
+    const sg=neg?(this.aBit?0xB:0xD):(this.aBit?0xA:0xC);
+    M[a+L-1]=(Number(x%10n)<<4)|sg; x/=10n;
+    for(let i=L-2;i>=0;i--){ const lo=Number(x%10n); x/=10n; const hi=Number(x%10n); x/=10n; M[a+i]=(hi<<4)|lo; }
+  }
+  decAddSub(op,a1,L1,a2,L2){
+    this.chkS(a1,L1); const y=this.dRead(a2,L2).v; const x=op===0xF8?0n:this.dRead(a1,L1).v;
+    const r=op===0xFB?x-y:x+y; const cap=10n**BigInt(2*L1-1); const ab=r<0n?-r:r; const ov=ab>=cap; const tr=ab%cap;
+    this.dWrite(a1,L1,tr,r<0n&&(tr!==0n||ov));
+    this.cc=ov?3:(tr===0n?0:(r<0n?1:2));
+    if(ov&&(this.pmask&4)) throw new PI(0xA);
+  }
+  edit(a1,L,a2,mark){
+    const M=this.M, R=this.R; this.chkS(a1,L);
+    const zn=this.aBit?0x50:0xF0; let sig=false, zero=true, fill=M[a1], src=a2, half=false, cur=0, markA=-1;
+    for(let i=0;i<L;i++){
+      const pa=a1+i, pc=M[pa];
+      if(pc===0x20||pc===0x21){
+        let d, sgn=-1;
+        if(!half){ if(src>=this.memSize) throw new PI(5); cur=M[src++]; d=cur>>4; if(d>9) throw new PI(7); const lo=cur&15; if(lo>9) sgn=lo; else half=true; }
+        else { d=cur&15; half=false; }
+        if(d!==0) zero=false;
+        if(sig) M[pa]=zn|d;
+        else if(d!==0){ M[pa]=zn|d; if(mark) markA=pa; sig=true; }
+        else { M[pa]=fill; if(pc===0x21) sig=true; }
+        if(sgn>=0&&!(sgn===0xB||sgn===0xD)) sig=false;
+      } else if(pc===0x22){ M[pa]=fill; sig=false; zero=true; }
+      else if(!sig) M[pa]=fill;
+    }
+    this.cc=zero?0:(sig?1:2);
+    if(mark&&markA>=0) R[1]=(R[1]&0xFF000000)|markA;
+  }
+
+  /* ---- Befehlsausführung ---- */
+  exec(b){
+    const R=this.R, M=this.M, op=b[0], r1=b[1]>>4, r2=b[1]&15;
+    let a=0, a1=0, a2=0;
+    if(op>=0x40&&op<0xC0){ const bb=b[2]>>4; a=((b[2]&15)<<8)|b[3]; if(bb) a+=R[bb]; if(op<0x80&&r2) a+=R[r2]; a&=0xFFFFFF; }
+    else if(op>=0xD0){ const b1=b[2]>>4, b2=b[4]>>4;
+      a1=((((b[2]&15)<<8)|b[3])+(b1?R[b1]:0))&0xFFFFFF; a2=((((b[4]&15)<<8)|b[5])+(b2?R[b2]:0))&0xFFFFFF; }
+    if((op>=0x20&&op<0x40)||(op>=0x60&&op<0x80)) return this.fpExec(op,r1,r2,a);
+    switch(op){
+    /* ---------- RR ---------- */
+    case 0x04:{ const v=R[r1]>>>24; this.cc=(v>>4)&3; this.pmask=v&15; return; }
+    case 0x05:{ const t=R[r2]&0xFFFFFF; R[r1]=this.link(); if(r2) this.ia=t; return; }
+    case 0x06:{ const t=R[r2]&0xFFFFFF; const v=(R[r1]-1)|0; R[r1]=v; if(v!==0&&r2) this.ia=t; return; }
+    case 0x07: if(r2&&(r1&(8>>this.cc))) this.ia=R[r2]&0xFFFFFF; return;
+    case 0x08: case 0x09:{ this.priv(); const ad=R[r2]&0xFFFFFF; if(ad&0x0F) throw new PI(6); if(ad>=this.memSize) throw new PI(5);
+      if(op===0x08) this.keys[ad>>>11]=R[r1]&0xF8; else R[r1]=(R[r1]&~0xFF)|(this.keys[ad>>>11]&0xF8); return; }
+    case 0x0A: this.intr(0x20,0x60,b[1],this.ilc,4); return;
+    case 0x10:{ const v=R[r2]; if(v===-2147483648){ R[r1]=v; this.cc=3; this.fxo(); } else { const w=v<0?-v:v; R[r1]=w; this.cc=w?2:0; } return; }
+    case 0x11:{ const v=R[r2], w=v>0?-v:v; R[r1]=w; this.cc=w?1:0; return; }
+    case 0x12:{ const v=R[r2]; R[r1]=v; this.cc=v===0?0:(v<0?1:2); return; }
+    case 0x13:{ const v=R[r2]; if(v===-2147483648){ R[r1]=v; this.cc=3; this.fxo(); } else { const w=(-v)|0; R[r1]=w; this.cc=w===0?0:(w<0?1:2); } return; }
+    case 0x14:{ const v=R[r1]&R[r2]; R[r1]=v; this.cc=v?1:0; return; }
+    case 0x15: this.cc=this.ucmp(R[r1],R[r2]); return;
+    case 0x16:{ const v=R[r1]|R[r2]; R[r1]=v; this.cc=v?1:0; return; }
+    case 0x17:{ const v=R[r1]^R[r2]; R[r1]=v; this.cc=v?1:0; return; }
+    case 0x18: R[r1]=R[r2]; return;
+    case 0x19: this.cc=this.scmp(R[r1],R[r2]); return;
+    case 0x1A: R[r1]=this.addS(R[r1],R[r2]); this.fxo(); return;
+    case 0x1B: R[r1]=this.subS(R[r1],R[r2]); this.fxo(); return;
+    case 0x1C:{ if(r1&1) throw new PI(6); this.set64(r1,BigInt(R[r1+1])*BigInt(R[r2])); return; }
+    case 0x1D: this.div(r1,R[r2]); return;
+    case 0x1E: R[r1]=this.addL(R[r1],R[r2],0); return;
+    case 0x1F: R[r1]=this.addL(R[r1],~R[r2],1); return;
+    /* ---------- RX ---------- */
+    case 0x40: this.wr2(a,R[r1]&0xFFFF); return;
+    case 0x41: R[r1]=a; return;
+    case 0x42: this.wr1(a,R[r1]&0xFF); return;
+    case 0x43: R[r1]=(R[r1]&~0xFF)|this.rd1(a); return;
+    case 0x44: this.ex(r1,a); return;
+    case 0x45: R[r1]=this.link(); this.ia=a; return;
+    case 0x46:{ const v=(R[r1]-1)|0; R[r1]=v; if(v!==0) this.ia=a; return; }
+    case 0x47: if(r1&(8>>this.cc)) this.ia=a; return;
+    case 0x48: R[r1]=(this.rd2(a)<<16)>>16; return;
+    case 0x49: this.cc=this.scmp(R[r1],(this.rd2(a)<<16)>>16); return;
+    case 0x4A: R[r1]=this.addS(R[r1],(this.rd2(a)<<16)>>16); this.fxo(); return;
+    case 0x4B: R[r1]=this.subS(R[r1],(this.rd2(a)<<16)>>16); this.fxo(); return;
+    case 0x4C: R[r1]=Math.imul(R[r1],(this.rd2(a)<<16)>>16); return;
+    case 0x4E:{ if(a&7) throw new PI(6); this.chkS(a,8); const v=BigInt(R[r1]); this.dWrite(a,8,v,v<0n); return; }
+    case 0x4F:{ if(a&7) throw new PI(6); const d=this.dRead(a,8).v; R[r1]=Number(BigInt.asIntN(32,d)); if(d>2147483647n||d< -2147483648n) throw new PI(9); return; }
+    case 0x50: this.wr4(a,R[r1]); return;
+    case 0x54:{ const v=R[r1]&this.rd4(a); R[r1]=v; this.cc=v?1:0; return; }
+    case 0x55: this.cc=this.ucmp(R[r1],this.rd4(a)); return;
+    case 0x56:{ const v=R[r1]|this.rd4(a); R[r1]=v; this.cc=v?1:0; return; }
+    case 0x57:{ const v=R[r1]^this.rd4(a); R[r1]=v; this.cc=v?1:0; return; }
+    case 0x58: R[r1]=this.rd4(a); return;
+    case 0x59: this.cc=this.scmp(R[r1],this.rd4(a)); return;
+    case 0x5A: R[r1]=this.addS(R[r1],this.rd4(a)); this.fxo(); return;
+    case 0x5B: R[r1]=this.subS(R[r1],this.rd4(a)); this.fxo(); return;
+    case 0x5C:{ if(r1&1) throw new PI(6); this.set64(r1,BigInt(R[r1+1])*BigInt(this.rd4(a))); return; }
+    case 0x5D: this.div(r1,this.rd4(a)); return;
+    case 0x5E: R[r1]=this.addL(R[r1],this.rd4(a),0); return;
+    case 0x5F: R[r1]=this.addL(R[r1],~this.rd4(a),1); return;
+    /* ---------- RS / SI / S ---------- */
+    case 0x80: this.priv(); this.sysMask=this.rd1(a); this.irqPending=true; return;
+    case 0x82:{ this.priv(); if(a&7) throw new PI(6); this.chkA(a,8); this.setPSW(this.rw(a)>>>0,this.rw(a+4)>>>0); return; }
+    case 0x83: this.priv(); return;   // DIAGNOSE: modellabhängig, hier ohne Wirkung
+    case 0x86: case 0x87:{ const inc=R[r2], cmp=R[r2|1], s=(R[r1]+inc)|0; R[r1]=s; if(op===0x86?s>cmp:s<=cmp) this.ia=a; return; }
+    case 0x88:{ const n=a&63; R[r1]=n>31?0:(R[r1]>>>n); return; }
+    case 0x89:{ const n=a&63; R[r1]=n>31?0:(R[r1]<<n); return; }
+    case 0x8A:{ const n=a&63; const v=n>31?(R[r1]>>31):(R[r1]>>n); R[r1]=v; this.cc=v===0?0:(v<0?1:2); return; }
+    case 0x8B:{ const s=this.sla(BigInt(R[r1]),a&63,32); const v=Number(s.r); R[r1]=v; this.cc=s.ov?3:(v===0?0:(v<0?1:2)); this.fxo(); return; }
+    case 0x8C:{ if(r1&1) throw new PI(6); this.set64(r1,BigInt.asUintN(64,this.get64(r1))>>BigInt(a&63)); return; }
+    case 0x8D:{ if(r1&1) throw new PI(6); this.set64(r1,BigInt.asUintN(64,this.get64(r1)<<BigInt(a&63))); return; }
+    case 0x8E:{ if(r1&1) throw new PI(6); const v=this.get64(r1)>>BigInt(a&63); this.set64(r1,v); this.cc=v===0n?0:(v<0n?1:2); return; }
+    case 0x8F:{ if(r1&1) throw new PI(6); const s=this.sla(this.get64(r1),a&63,64); this.set64(r1,s.r); this.cc=s.ov?3:(s.r===0n?0:(s.r<0n?1:2)); this.fxo(); return; }
+    case 0x90:{ if(a&3) throw new PI(6); const n=((r2-r1)&15)+1; this.chkS(a,n*4); for(let i=0;i<n;i++) this.ww(a+4*i,R[(r1+i)&15]); return; }
+    case 0x91:{ const v=this.rd1(a)&b[1]; this.cc=v===0?0:(v===b[1]?3:1); return; }
+    case 0x92: this.wr1(a,b[1]); return;
+    case 0x93:{ this.chkS(a,1); this.cc=M[a]>>7; M[a]=0xFF; return; }
+    case 0x94:{ this.chkS(a,1); const v=M[a]&b[1]; M[a]=v; this.cc=v?1:0; return; }
+    case 0x95:{ const v=this.rd1(a); this.cc=v===b[1]?0:(v<b[1]?1:2); return; }
+    case 0x96:{ this.chkS(a,1); const v=M[a]|b[1]; M[a]=v; this.cc=v?1:0; return; }
+    case 0x97:{ this.chkS(a,1); const v=M[a]^b[1]; M[a]=v; this.cc=v?1:0; return; }
+    case 0x98:{ if(a&3) throw new PI(6); const n=((r2-r1)&15)+1; this.chkA(a,n*4); for(let i=0;i<n;i++) R[(r1+i)&15]=this.rw(a+4*i); return; }
+    case 0x9C: this.priv(); this.cc=this.sio(a&0x7FF); return;
+    case 0x9D: this.priv(); this.cc=this.tio(a&0x7FF); return;
+    case 0x9E: this.priv(); this.cc=this.hio(a&0x7FF); return;
+    case 0x9F: this.priv(); this.cc=this.tch((a>>8)&7); return;
+    /* ---------- SS logisch ---------- */
+    case 0xD1: case 0xD2: case 0xD3: case 0xD4: case 0xD6: case 0xD7:{
+      const L=b[1]+1; this.chkS(a1,L); this.chkA(a2,L); let nz=0;
+      for(let i=0;i<L;i++){ const x=M[a1+i], y=M[a2+i]; let v;
+        switch(op){ case 0xD1: v=(x&0xF0)|(y&0x0F); break; case 0xD2: v=y; break; case 0xD3: v=(x&0x0F)|(y&0xF0); break;
+          case 0xD4: v=x&y; break; case 0xD6: v=x|y; break; default: v=x^y; }
+        M[a1+i]=v; nz|=v; }
+      if(op>=0xD4) this.cc=nz?1:0; return; }
+    case 0xD5:{ const L=b[1]+1; this.chkA(a1,L); this.chkA(a2,L); this.cc=0;
+      for(let i=0;i<L;i++){ const x=M[a1+i], y=M[a2+i]; if(x!==y){ this.cc=x<y?1:2; break; } } return; }
+    case 0xDC:{ const L=b[1]+1; this.chkS(a1,L); for(let i=0;i<L;i++){ const t=a2+M[a1+i]; if(t>=this.memSize) throw new PI(5); M[a1+i]=M[t]; } return; }
+    case 0xDD:{ const L=b[1]+1; this.chkA(a1,L);
+      for(let i=0;i<L;i++){ const t=a2+M[a1+i]; if(t>=this.memSize) throw new PI(5); const f=M[t];
+        if(f){ R[1]=(R[1]&0xFF000000)|(a1+i); R[2]=(R[2]&~0xFF)|f; this.cc=i===L-1?2:1; return; } }
+      this.cc=0; return; }
+    case 0xDE: case 0xDF: this.edit(a1,b[1]+1,a2,op===0xDF); return;
+    /* ---------- SS dezimal ---------- */
+    case 0xF1: case 0xF2: case 0xF3: case 0xF8: case 0xF9: case 0xFA: case 0xFB: case 0xFC: case 0xFD:{
+      const L1=(b[1]>>4)+1, L2=(b[1]&15)+1;
+      switch(op){
+      case 0xF1:{ this.chkS(a1,L1); this.chkA(a2,L2); const src=M.slice(a2,a2+L2), sg=M[a1+L1-1]&15;
+        const nib=k=>k<0?0:((k&1)?src[k>>1]&15:src[k>>1]>>4); let k=2*L2-1;
+        M[a1+L1-1]=(nib(k--)<<4)|sg; for(let i=L1-2;i>=0;i--){ const lo=nib(k--), hi=nib(k--); M[a1+i]=(hi<<4)|lo; } return; }
+      case 0xF2:{ this.chkS(a1,L1); this.chkA(a2,L2); const src=M.slice(a2,a2+L2); let j=L2-1; const x=src[j--];
+        M[a1+L1-1]=((x<<4)|(x>>4))&0xFF;
+        for(let i=L1-2;i>=0;i--){ let lo=0,hi=0; if(j>=0) lo=src[j--]&15; if(j>=0) hi=src[j--]&15; M[a1+i]=(hi<<4)|lo; } return; }
+      case 0xF3:{ this.chkS(a1,L1); this.chkA(a2,L2); const src=M.slice(a2,a2+L2), z=this.aBit?0x50:0xF0; let j=L2-1; const x=src[j--];
+        M[a1+L1-1]=((x<<4)|(x>>4))&0xFF; let i=L1-2;
+        while(i>=0){ if(j<0){ M[a1+i--]=z; continue; } const y=src[j--]; M[a1+i--]=z|(y&15); if(i>=0) M[a1+i--]=z|(y>>4); } return; }
+      case 0xF9:{ const x=this.dRead(a1,L1).v, y=this.dRead(a2,L2).v; this.cc=x===y?0:(x<y?1:2); return; }
+      case 0xFC:{ if(L2>8||L2>=L1) throw new PI(6); this.chkS(a1,L1); const y=this.dRead(a2,L2), x=this.dRead(a1,L1);
+        for(let i=0;i<L2;i++) if(M[a1+i]!==0) throw new PI(7);
+        this.dWrite(a1,L1,x.v*y.v,x.neg!==y.neg); return; }
+      case 0xFD:{ if(L2>8||L2>=L1) throw new PI(6); this.chkS(a1,L1); const y=this.dRead(a2,L2), x=this.dRead(a1,L1);
+        if(y.v===0n) throw new PI(0xB);
+        const ax=x.v<0n?-x.v:x.v, ay=y.v<0n?-y.v:y.v, q=ax/ay, r=ax%ay, qL=L1-L2;
+        if(q>=10n**BigInt(2*qL-1)) throw new PI(0xB);
+        this.dWrite(a1,qL,q,x.neg!==y.neg); this.dWrite(a1+qL,L2,r,x.neg); return; }
+      default: this.decAddSub(op,a1,L1,a2,L2); return;
+      } }
+    }
+    throw new PI(1);   // nicht vorhanden (auch Gleitkomma bis Stufe 2, WRD/RDD)
+  }
+  /* =================== Gleitkomma (hexadezimal, Basis 16) ===================
+     Register 0,2,4,6 je 64 Bit; kurz = linke 32 Bit (6 Hexziffern Mantisse), lang = 14 Ziffern,
+     erweitert = Registerpaar 0/2 bzw. 4/6 mit 28 Ziffern (rechte Hälfte: Charakteristik − 14).
+     Nach GA22-6821-0: Addition kurz mit einer Schutzziffer, lang OHNE Schutzziffer; Ergebnis abgeschnitten.
+     Exponentenunterlauf liefert immer eine echte Null (Unterbrechung nur bei gesetzter Maske),
+     Signifikanz mit gesetzter Maske: Mantisse 0, Charakteristik bleibt, Vorzeichen plus.
+     Die erweiterten Befehle (MXR, AXR, LRDR …) stammen aus späteren Ausgaben (Model 85). */
+  fReg(r,L){ const F=this.FPR, w0=F[r], s=w0>>>31, c=(w0>>>24)&127;
+    if(L===4) return {s,c,f:BigInt(w0&0xFFFFFF)};
+    const f=(BigInt(w0&0xFFFFFF)<<32n)|BigInt(F[r+1]);
+    if(L===8) return {s,c,f};
+    return {s,c,f:(f<<56n)|(BigInt(F[r+2]&0xFFFFFF)<<32n)|BigInt(F[r+3])}; }
+  fMem(a,L){ if(a&(L-1)) throw new PI(6); this.chkA(a,L); const w0=this.rw(a)>>>0, s=w0>>>31, c=(w0>>>24)&127;
+    if(L===4) return {s,c,f:BigInt(w0&0xFFFFFF)};
+    return {s,c,f:(BigInt(w0&0xFFFFFF)<<32n)|BigInt(this.rw(a+4)>>>0)}; }
+  fPut(r,x,L){ const F=this.FPR, hd=(x.s<<31)|(x.c<<24);
+    if(L===4){ F[r]=(hd|Number(x.f&0xFFFFFFn))>>>0; return; }
+    const hi=L===16?x.f>>56n:x.f;
+    F[r]=(hd|Number(hi>>32n))>>>0; F[r+1]=Number(hi&0xFFFFFFFFn);
+    if(L===16){ const lo=x.f&0xFFFFFFFFFFFFFFn, lc=x.f===0n?0:((x.c-14)&127);
+      F[r+2]=((x.s<<31)|(lc<<24)|Number(lo>>32n))>>>0; F[r+3]=Number(lo&0xFFFFFFFFn); } }
+  fNorm(x,D){ const y={s:x.s,c:x.c,f:x.f}; if(y.f===0n) return y; const t=1n<<BigInt(4*(D-1)); while(y.f<t){ y.f<<=4n; y.c--; } return y; }
+  fFin(x,sigZero){
+    if(x.f===0n){ x.s=0; if(sigZero&&(this.pmask&1)) return 0xE; x.c=0; return 0; }
+    if(x.c>127){ x.c&=127; return 0xC; }                       // Ergebnis laut Handbuch unvorhersehbar
+    if(x.c<0){ x.s=0; x.c=0; x.f=0n; return (this.pmask&2)?0xD:0; }   // immer echte Null
+    return 0; }
+  fAdd(a,b,D,norm){
+    if(a.c<b.c){ const t=a; a=b; b=t; }
+    const g=D===14?0:1, G=BigInt(4*g);   // Schutzziffer nur kurz (und erweitert)
+    const d=a.c-b.c; let fa=a.f<<G, fb=b.f<<G; fb=d>D+g?0n:fb>>BigInt(4*d);
+    let v=(a.s?-fa:fa)+(b.s?-fb:fb); const raw0=v===0n; const s=v<0n?1:0; if(v<0n) v=-v; let c=a.c;
+    if(v>=(1n<<BigInt(4*(D+g)))){ v>>=4n; c++; }
+    if(norm&&v!==0n){ const top=1n<<BigInt(4*(D+g-1)); while(v<top){ v<<=4n; c--; } }
+    return {s,c,f:v>>G,raw0}; }
+  fMul(a,b,D,R){
+    if(a.f===0n||b.f===0n) return {s:0,c:0,f:0n};
+    a=this.fNorm(a,D); b=this.fNorm(b,D);
+    let f=a.f*b.f, c=a.c+b.c-64;
+    f= 2*D>R ? f>>BigInt(4*(2*D-R)) : f<<BigInt(4*(R-2*D));   // lang: erst abschneiden, dann normalisieren
+    if(f<(1n<<BigInt(4*(R-1)))){ f<<=4n; c--; }
+    return {s:a.s^b.s,c,f}; }
+  fDiv(a,b,D){
+    if(b.f===0n) throw new PI(0xF);
+    if(a.f===0n) return {s:0,c:0,f:0n};
+    a=this.fNorm(a,D); b=this.fNorm(b,D);
+    let c=a.c-b.c+64, q=(a.f<<BigInt(4*D))/b.f;
+    if(q>=(1n<<BigInt(4*D))){ q>>=4n; c++; }
+    return {s:a.s^b.s,c,f:q}; }
+  fpExec(op,r1,r2,a){
+    const F=this.FPR, rr=op<0x40, n=op&0x0F, sh=rr?op>=0x30:op>=0x70, L=sh?4:8, D=sh?6:14;
+    const reg=r=>{ if(r&1||r>6) throw new PI(6); return r; };
+    const xreg=r=>{ if(r&3) throw new PI(6); return r; };
+    const src=()=>rr?this.fReg(reg(r2),L):this.fMem(a,L);
+    const ccx=x=>x.f===0n?0:(x.s?1:2);
+    const put=(r,x,LL,sig)=>{ const e=this.fFin(x,sig); this.fPut(r,x,LL); if(e) throw new PI(e); };
+    const addPut=(r,x,LL)=>{ const e=this.fFin(x,x.f===0n); this.cc=e===0xC?3:ccx(x); this.fPut(r,x,LL); if(e) throw new PI(e); };
+    if(rr&&n<=3){   // LPxR, LNxR, LTxR, LCxR
+      reg(r1); reg(r2); const w0=F[r2], w1=F[r2+1]; let s=w0>>>31; s=n===0?0:(n===1?1:(n===2?s:s^1));
+      F[r1]=((w0&0x7FFFFFFF)|(s<<31))>>>0; let z=(w0&0xFFFFFF)===0; if(!sh){ F[r1+1]=w1; z=z&&w1===0; }
+      this.cc=z?0:(s?1:2); return; }
+    if(!rr&&n===0){ reg(r1); if(sh) this.wr4(a,F[r1]|0); else { if(a&7) throw new PI(6); this.chkS(a,8); this.ww(a,F[r1]); this.ww(a+4,F[r1+1]); } return; }
+    switch(op){
+      case 0x24: case 0x34:{ const x=this.fReg(reg(r2),L); x.f>>=1n; this.fPut(reg(r1),x,L); return; }   // HALVE
+      case 0x25:{ const x=this.fReg(xreg(r2),16); let f=(x.f+(8n<<52n))>>56n, c=x.c; if(f>=(1n<<56n)){ f>>=4n; c++; } put(reg(r1),{s:x.s,c,f},8,false); return; }   // LRDR
+      case 0x35:{ const x=this.fReg(reg(r2),8); let f=(x.f+(8n<<28n))>>32n, c=x.c; if(f>=(1n<<24n)){ f>>=4n; c++; } put(reg(r1),{s:x.s,c,f},4,false); return; }     // LRER
+      case 0x26:{ const r=this.fMul(this.fReg(xreg(r1),16),this.fReg(xreg(r2),16),28,28); put(r1,r,16,false); return; }   // MXR
+      case 0x27:{ const r=this.fMul(this.fReg(xreg(r1),8),this.fReg(reg(r2),8),14,28); put(r1,r,16,false); return; }      // MXDR
+      case 0x67:{ const r=this.fMul(this.fReg(xreg(r1),8),this.fMem(a,8),14,28); put(r1,r,16,false); return; }           // MXD
+      case 0x36: case 0x37:{ const x=this.fReg(xreg(r1),16), y=this.fReg(xreg(r2),16); if(op===0x37) y.s^=1;           // AXR, SXR
+        const r=this.fAdd(x,y,28,true); addPut(r1,r,16); return; }
+    }
+    switch(n){
+      case 0x8: reg(r1); if(rr){ reg(r2); F[r1]=F[r2]; if(!sh) F[r1+1]=F[r2+1]; } else { const x=this.fMem(a,L); this.fPut(r1,x,L); } return;
+      case 0x9:{ const x=this.fReg(reg(r1),L), y=src(); y.s^=1; const r=this.fAdd(x,y,D,false); this.cc=r.raw0?0:(r.s?1:2); return; }
+      case 0xA: case 0xB: case 0xE: case 0xF:{ const x=this.fReg(reg(r1),L), y=src(); if(n&1) y.s^=1;
+        const r=this.fAdd(x,y,D,n<0xE); addPut(r1,r,L); return; }
+      case 0xC:{ const x=this.fReg(reg(r1),L), y=src(); const r=this.fMul(x,y,D,14); put(r1,r,8,false); return; }   // ME liefert lang
+      case 0xD:{ const x=this.fReg(reg(r1),L), y=src(); const r=this.fDiv(x,y,D); put(r1,r,L,false); return; }
+    }
+    throw new PI(1);
+  }
+  fpValue(r){ const w0=this.FPR[r]; const f=(w0&0xFFFFFF)*2**32+this.FPR[r+1]; if(!f) return 0; return (w0>>>31?-1:1)*f/2**56*16**(((w0>>>24)&127)-64); }
+  ex(r1,a){
+    if(a&1) throw new PI(6);
+    if(a+2>this.memSize) throw new PI(5);
+    const M=this.M, x=this.xb, op=M[a]; if(op===0x44) throw new PI(3);
+    const len=op<0x40?2:(op<0xC0?4:6); this.chkA(a,len);
+    for(let i=0;i<len;i++) x[i]=M[a+i];
+    if(r1) x[1]|=this.R[r1]&0xFF;
+    this.exec(x);
+  }
+
+  /* =================== Ein-/Ausgabe =================== */
+  storeCSW(st){ this.ww(0x40,((st.key<<28)|(st.ccwAddr&0xFFFFFF))>>>0); this.ww(0x44,((st.us<<24)|(st.cs<<16)|(st.count&0xFFFF))>>>0); }
+  sio(da){
+    const d=this.devices.get(da); if(!d) return 3;
+    if(d.busy) return 2;
+    if(d.pend){ this.storeCSW({...d.pend,us:d.pend.us|0x10}); d.pend=null; this.recalcIrq(); return 1; }   // SIO: CSW mit Busy-Bit
+    const caw=this.rw(0x48), key=(caw>>>28)&15, ccw=caw&0xFFFFFF;
+    d.sioCount++;
+    if(ccw&7){ this.storeCSW({key,ccwAddr:0,us:0,cs:0x20,count:0}); return 1; }
+    d.busy=true; d.ch={key,addr:ccw,first:true,held:null,ipl:false,res:null}; d.phase='cmd';
+    d.ev=this.schedule(this.ioT(20),()=>this.chanEvent(d));   // Anlaufzeit des Kanals
+    return 0;
+  }
+  tio(da){ const d=this.devices.get(da); if(!d) return 3; if(d.busy) return 2;
+    if(d.pend){ this.storeCSW(d.pend); d.pend=null; this.recalcIrq(); return 1; } return 0; }
+  hio(da){ const d=this.devices.get(da); if(!d) return 3;
+    if(d.busy){   // Multiplexkanal: Statusfeld des CSW wird genullt (CC1), die Beendigung meldet später eine E/A-Unterbrechung
+      if(d.ev) d.ev.dead=true; d.ev=null; d.waiting=false; d.held=null; if(d.ch) d.ch.held=null; if(d.onHalt) d.onHalt();
+      this.ww(0x44,this.rw(0x44)&0x0000FFFF);
+      const resid=d.ch&&d.ch.res?(d.ch.res.r.resid|0):0;
+      d.ev=this.schedule(this.ioT(1000),()=>this.chanEnd(d,0x0C,0,resid)); d.phase='halt'; return 1; }
+    return 0; }
+  tch(c){ if(c>6) return 3; for(const d of this.devList) if(((d.addr>>8)&7)===c&&(d.pend||d.pci)) return 1; return 0; }
+  attention(d){ if(d.busy||d.pend) return; d.pend={key:0,ccwAddr:0,us:0x80,cs:0,count:0}; this.irqPending=true; }
+  resumeDev(d){ if(d.busy&&d.phase==='wait'){ d.phase='cmd'; d.ev=this.schedule(this.ioT(100),()=>this.chanEvent(d)); } }
+  fetchCCW(ch){
+    const M=this.M;
+    for(let n=0;n<2;n++){
+      const a=ch.addr;
+      if((a&7)||a+8>this.memSize) return null;
+      const cmd=M[a], da=(M[a+1]<<16)|(M[a+2]<<8)|M[a+3], fl=M[a+4], cnt=(M[a+6]<<8)|M[a+7];
+      ch.addr=(a+8)&0xFFFFFF;
+      if((cmd&0x0F)===0x08){ if(ch.first||n>0||(da&7)) return null; ch.addr=da; continue; }
+      ch.first=false;
+      if(cnt===0) return null;
+      return {cmd,da,fl,cnt,at:a};
+    }
+    return null;
+  }
+  chanKeyOK(k,a,n){ for(let b=a>>>11,e=(a+n-1)>>>11;b<=e;b++) if((this.keys[b]>>>4)!==k) return false; return true; }
+  /* Kanal als Zustandsautomat: Phase 'cmd' führt eine CCW (samt Datenverkettung) aus,
+     Phase 'post' wertet nach Ablauf der Gerätezeit den Status aus und verkettet weiter. */
+  chanEvent(d){
+    d.ev=null; const ch=d.ch; if(!ch||!d.busy) return;
+    if(d.phase==='post'){
+      const {r,job}=ch.res; ch.res=null;
+      const us=r.us|0; let cs=r.cs|0;
+      if(r.il&&!(job.fl&0x20)) cs|=0x40;
+      if(cs||(us&0x03)||!(job.fl&0x40)) return this.chanEnd(d,us,cs,r.resid|0);
+      if(us&0x40) ch.addr=(ch.addr+8)&0xFFFFFF;   // Statusmodifizierer: nächste CCW überspringen
+      d.phase='cmd';
+    }
+    let job=ch.held; ch.held=null;
+    if(!job){
+      const c=this.fetchCCW(ch); if(!c||(c.cmd&0x0F)===0) return this.chanEnd(d,0,0x20,0);
+      const segs=[c]; let last=c, pci=c.fl&0x08;
+      while(last.fl&0x80){ const n=this.fetchCCW(ch); if(!n) return this.chanEnd(d,0,0x20,0); segs.push(n); last=n; pci|=n.fl&0x08; }
+      job={cmd:c.cmd,segs,fl:last.fl}; d.lastCCW=c; d.ccwCount++;
+      if(pci){ d.pci=true; this.irqPending=true; }    // programmgesteuerte Zwischenunterbrechung
+    }
+    const r=this.doCmd(d,job,ch);
+    if(this.wpHit){ const h=this.wpHit; h.who=HX(d.addr,3); this.wpStop(this.ia); }
+    if(r.wait){ ch.held=job; d.waiting=true; d.phase='wait'; return; }
+    d.waiting=false; ch.res={r,job}; d.phase='post';
+    d.ev=this.schedule(this.ioT(d.timeUs(job.cmd,r.n|0,r)),()=>this.chanEvent(d));
+  }
+  doCmd(d,job,ch){
+    const cmd=job.cmd, segs=job.segs, t=cmd&0x0F, M=this.M; let total=0; for(const s of segs) total+=s.cnt;
+    if((cmd&3)===1){   // Schreiben
+      const data=new Uint8Array(total); let p=0;
+      for(const s of segs){ if(s.da+s.cnt>this.memSize) return {us:0,cs:0x20,resid:total-p}; data.set(M.subarray(s.da,s.da+s.cnt),p); p+=s.cnt; }
+      const r=d.write(cmd,data); if(r.wait) return r;
+      const acc=r.acc===undefined?total:r.acc;
+      return {us:r.us,resid:total-acc,il:acc!==total&&!(r.us&3),n:acc};
+    }
+    if((cmd&3)===2||t===0x04||t===0x0C){   // Lesen, Abfühlen (Sense), Rückwärtslesen
+      const r=t===0x04?{us:0x0C,data:d.senseBytes()}:d.read(cmd,total);
+      if(r.wait) return r;
+      const data=r.data||new Uint8Array(0); let p=0;
+      for(const s of segs){ if(p>=data.length) break; const n=Math.min(s.cnt,data.length-p);
+        if(!(s.fl&0x10)){ if(s.da+n>this.memSize) return {us:r.us,cs:0x20,resid:0};
+          if(ch.key&&!this.chanKeyOK(ch.key,s.da,n)) return {us:r.us,cs:0x10,resid:0};
+          if(this.wp.length) this.wpCheck(s.da,n,'Kanal');
+          M.set(data.subarray(p,p+n),s.da); }
+        p+=n; }
+      return {us:r.us,resid:Math.max(0,total-data.length),il:data.length!==total&&!(r.us&3),n:data.length};
+    }
+    const r=d.control(cmd); return {us:r.us,resid:total,il:false,n:0,ctl:r.ctl};
+  }
+  chanEnd(d,us,cs,resid){
+    const ch=d.ch; d.busy=false; d.waiting=false; d.phase=null; if(d.ev) d.ev.dead=true; d.ev=null;
+    if(d.pci){ cs|=0x80; d.pci=false; }
+    const st={key:ch?ch.key:0,ccwAddr:ch?ch.addr:0,us,cs,count:resid&0xFFFF};
+    d.lastStatus=st;
+    if(ch&&ch.ipl){ d.ch=null; this.iplDone(d,st); return; }
+    d.pend=st; this.irqPending=true;
+  }
+  /* ---- Urladen (IPL) ---- */
+  ipl(da){
+    const d=this.devices.get(da); if(!d) return 'Kein Gerät unter Adresse '+HX(da,3);
+    this.systemReset(); this.loading=true; this.iplOK=false; this.running=true;
+    if(this.trOn) this.trEv(5,da,0);
+    d.busy=true; d.ch={key:0,addr:8,first:false,ipl:true,res:null,held:{cmd:0x02,segs:[{cmd:2,da:0,fl:0x60,cnt:24}],fl:0x60}}; d.phase='cmd';
+    d.ev=this.schedule(this.ioT(20),()=>this.chanEvent(d));
+    return null;
+  }
+  iplDone(d,st){
+    this.loading=false;
+    if(st.cs||(st.us&0x03)){ this.halt('IPL fehlgeschlagen: Einheitenstatus '+HX(st.us,2)+', Kanalstatus '+HX(st.cs,2)); return; }
+    this.M[2]=(d.addr>>8)&0xFF; this.M[3]=d.addr&0xFF;
+    this.loadPSW(0); this.iplOK=true; this.running=true; this.stopMsg='';
+    if(this.onEvent) this.onEvent('ipl',d.addr);
+  }
+  /* ---- Zustand sichern/laden (ohne Speicherkodierung; die übernimmt die Oberfläche) ---- */
+  snapshot(){
+    const evs=[]; for(const d of this.devList) if(d.ev&&!d.ev.dead) evs.push({addr:d.addr,dt:d.ev.t-this.clock});
+    return {format:'S360-Werkbank-Zustand',version:2,memSize:this.memSize,R:Array.from(this.R),FPR:Array.from(this.FPR),
+      psw:[this.psw0(),this.psw1()],loading:this.loading,clock:this.clock,timerAt:this.timerAt,icount:this.icount,
+      extPending:this.extPending,timerOn:this.timerOn,keys:Array.from(this.keys),bp:[...this.bp],wp:this.wp,
+      devs:this.devList.map(d=>d.save()),evs};
+  }
+  restore(o,mem){
+    if(o.format!=='S360-Werkbank-Zustand') throw new Error('Keine Zustandsdatei der S/360-Werkbank');
+    this.powerOn(o.memSize); this.M.set(mem.subarray(0,o.memSize)); this.keys.set(o.keys);
+    this.R.set(o.R); this.FPR.set(o.FPR); this.setPSW(o.psw[0],o.psw[1]);
+    this.clock=o.clock; this.timerAt=o.timerAt; this.icount=o.icount; this.extPending=o.extPending; this.timerOn=o.timerOn; this.loading=o.loading;
+    this.bp=new Set(o.bp); this.wp=o.wp||[]; this.events=[]; this.nextT=this.timerAt;
+    for(const ds of o.devs){ const d=this.devices.get(ds.addr); if(d) d.load(ds); }
+    for(const e of o.evs){ const d=this.devices.get(e.addr); if(!d) continue;
+      d.ev=this.schedule(e.dt,d.phase==='halt'?()=>this.chanEnd(d,0x0C,0,0):()=>this.chanEvent(d)); }
+    this.recalcIrq(); this.running=false; this.stopMsg='';
+  }
+}
+
+/* =====================================================================
+   Geräte
+   ===================================================================== */
+class Dev{
+  constructor(addr,type,name){ this.addr=addr; this.type=type; this.name=name; this.m=null; this.busy=false; this.pend=null; this.ch=null;
+    this.waiting=false; this.sns=0; this.sioCount=0; this.ccwCount=0; this.lastCCW=null; this.lastStatus=null; }
+  reset(){ this.busy=false; this.pend=null; this.ch=null; this.waiting=false; this.sns=0; this.phase=null; this.ev=null; this.pci=false; }
+  timeUs(cmd,n){ return 1000; }   // Gerätezeit je Befehl in Mikrosekunden (bei E/A-Zeit „realistisch“)
+  save(){ return {addr:this.addr,busy:this.busy,pend:this.pend,ch:this.ch,waiting:this.waiting,sns:this.sns,phase:this.phase,pci:this.pci,
+    sioCount:this.sioCount,ccwCount:this.ccwCount,x:this.saveX()}; }
+  load(o){ Object.assign(this,{busy:o.busy,pend:o.pend,ch:o.ch,waiting:o.waiting,sns:o.sns,phase:o.phase,pci:o.pci,sioCount:o.sioCount,ccwCount:o.ccwCount,ev:null});
+    this.loadX(o.x||{}); }
+  saveX(){ return {}; } loadX(x){}
+  write(c,d){ return this.rej(); }
+  read(c,n){ return this.rej(); }
+  control(c){ return c===0x03?{us:0x0C}:this.rej(); }
+  senseBytes(){ const s=new Uint8Array([this.sns]); this.sns=0; return s; }
+  rej(){ this.sns=0x80; return {us:0x0E}; }
+  stateText(){ return this.busy?(this.waiting?'wartet auf Bediener':'belegt'):(this.pend?'Unterbrechung anstehend':'frei'); }
+}
+/* Konsolschreibmaschine 1052: 01 Schreiben, 09 Schreiben+Wagenrücklauf, 0A Lesen, 0B Alarm, 03 NOP, 04 Sense */
+class Con1052 extends Dev{
+  constructor(a){ super(a,'1052','Konsolschreibmaschine'); this.inq=[]; this.out=null; this.onRead=null; this.reading=false; }
+  reset(){ super.reset(); this.setReading(false); }
+  setReading(v){ this.reading=v; if(this.onRead) this.onRead(v); }
+  write(cmd,data){ if(cmd!==0x01&&cmd!==0x09) return this.rej(); let s=e2s(data,true); if(cmd===0x09) s+='\n'; if(this.out) this.out(s,'out'); return {us:0x0C}; }
+  read(cmd){ if(cmd!==0x0A) return this.rej();
+    if(!this.inq.length){ this.setReading(true); return {wait:true}; }
+    this.setReading(false); const s=this.inq.shift(); if(this.out) this.out(s+'\n','in'); return {us:0x0C,data:s2e(s)}; }
+  control(cmd){ if(cmd===0x03) return {us:0x0C}; if(cmd===0x0B){ if(this.out) this.out('','bell'); return {us:0x0C}; } return this.rej(); }
+  onHalt(){ this.setReading(false); }
+  timeUs(cmd,n){ return (cmd&3)===1?65000*n+20000:20000; }   // ca. 15,5 Zeichen/s
+  saveX(){ return {inq:this.inq}; } loadX(x){ this.inq=x.inq||[]; this.setReading(this.phase==='wait'); }
+  input(line){
+    this.inq.push(line);
+    if(this.busy&&this.waiting) this.m.resumeDev(this);
+    else if(!this.busy) this.m.attention(this);
+  }
+}
+/* Kartenleser 2540: x2 Lesen (mit Fächerwahl), x3 Steuern */
+class Rdr2540 extends Dev{
+  constructor(a){ super(a,'2540R','Kartenleser'); this.hopper=[]; this.stacked=0; this.eof=true; this.onChange=null; }
+  read(cmd){
+    if((cmd&3)!==2) return this.rej();
+    if(!this.hopper.length){ if(this.eof) return {us:0x0D,data:new Uint8Array(0)}; this.sns=0x40; return {us:0x0E}; }
+    const c=this.hopper.shift(); this.stacked++; if(this.onChange) this.onChange(); return {us:0x0C,data:c};
+  }
+  control(cmd){ return (cmd&3)===3?{us:0x0C}:this.rej(); }
+  timeUs(cmd){ return (cmd&3)===2?60000:5000; }   // 1000 Karten/min
+  saveX(){ return {hopper:this.hopper.map(b64e),stacked:this.stacked,eof:this.eof}; }
+  loadX(x){ this.hopper=(x.hopper||[]).map(b64d); this.stacked=x.stacked||0; this.eof=x.eof!==false; if(this.onChange) this.onChange(); }
+}
+/* Kartenstanzer 2540 */
+class Pun2540 extends Dev{
+  constructor(a){ super(a,'2540P','Kartenstanzer'); this.cards=[]; this.onChange=null; }
+  write(cmd,data){ if((cmd&3)!==1) return this.rej(); const c=new Uint8Array(80).fill(0x40); c.set(data.subarray(0,80)); this.cards.push(c);
+    if(this.onChange) this.onChange(); return {us:0x0C,acc:Math.min(80,data.length)}; }
+  control(cmd){ return (cmd&3)===3?{us:0x0C}:this.rej(); }
+  timeUs(cmd){ return (cmd&3)===1?200000:5000; }   // 300 Karten/min
+  saveX(){ return {cards:this.cards.map(b64e)}; } loadX(x){ this.cards=(x.cards||[]).map(b64d); if(this.onChange) this.onChange(); }
+}
+/* Zeilendrucker 1403: Schreiben 01/09/11/19 (0–3 Zeilen Vorschub danach), 89.. Sprung auf Kanal n danach;
+   Steuern 0B/13/1B sofort Vorschub, 8B.. sofort Sprung. 66 Zeilen je Seite, Kanal 1 = Zeile 1, Kanal 12 = Zeile 60 */
+class Prt1403 extends Dev{
+  constructor(a){ super(a,'1403','Zeilendrucker'); this.onLine=null; this.onPage=null; this.clear(); }
+  clear(){ this.pages=[[]]; this.lineNo=0; this.cur=null; this.any=false; }
+  put(data){ const s=e2s(data,true);
+    if(this.cur===null) this.cur=s;
+    else { let o=''; const n=Math.max(this.cur.length,s.length); for(let i=0;i<n;i++){ const c=s[i]; o+=(c!==undefined&&c!==' ')?c:(this.cur[i]??' '); } this.cur=o; }
+    this.any=true; }
+  adv(){ const line=(this.cur??'').replace(/\s+$/,''); this.pages[this.pages.length-1].push(line); if(this.onLine) this.onLine(line,this.lineNo);
+    this.cur=null; this.lineNo++; if(this.lineNo>=66){ this.lineNo=0; this.pages.push([]); if(this.onPage) this.onPage(); } }
+  chLine(c){ return c===1?0:(c===12?59:(c-1)*6); }
+  move(cmd){
+    if(cmd&0x80){ const c=((cmd>>3)&0x1F)-16; if(c<1||c>12) return; const tgt=this.chLine(c);
+      if(!this.any&&this.lineNo===tgt) return; let g=0; do{ this.adv(); }while(this.lineNo!==tgt&&++g<70); return; }
+    const n=(cmd>>3)&3; for(let i=0;i<n;i++) this.adv();
+  }
+  write(cmd,data){ if((cmd&3)!==1) return this.rej(); this.put(data.subarray(0,132)); this.move(cmd); return {us:0x0C,acc:Math.min(data.length,132)}; }
+  control(cmd){ if(cmd===0x03) return {us:0x0C}; if((cmd&3)===3){ this.move(cmd); return {us:0x0C}; } return this.rej(); }
+  text(){ return this.pages.map(p=>p.join('\n')).join('\n\f'); }
+  timeUs(cmd){ if((cmd&3)===1) return 55000; if(cmd&0x80) return 60000; return 3500*((cmd>>3)&3)+1000; }   // 1100 Zeilen/min
+  saveX(){ return {pages:this.pages,lineNo:this.lineNo,cur:this.cur,any:this.any}; }
+  loadX(x){ this.pages=x.pages||[[]]; this.lineNo=x.lineNo||0; this.cur=x.cur??null; this.any=!!x.any; if(this.onReload) this.onReload(); }
+}
+
+/* =====================================================================
+   Befehlstabellen, Disassembler
+   ===================================================================== */
+const FMT={}, OPN={};
+function dop(f,l){ for(let i=0;i<l.length;i+=2){ FMT[l[i]]={op:l[i+1],f}; OPN[l[i+1]]={n:l[i],f}; } }
+dop('RR',['BALR',5,'BCTR',6,'SSK',8,'ISK',9,'LPR',0x10,'LNR',0x11,'LTR',0x12,'LCR',0x13,'NR',0x14,'CLR',0x15,'OR',0x16,'XR',0x17,
+  'LR',0x18,'CR',0x19,'AR',0x1A,'SR',0x1B,'MR',0x1C,'DR',0x1D,'ALR',0x1E,'SLR',0x1F,
+  'LPDR',0x20,'LNDR',0x21,'LTDR',0x22,'LCDR',0x23,'HDR',0x24,'LRDR',0x25,'MXR',0x26,'MXDR',0x27,'LDR',0x28,'CDR',0x29,'ADR',0x2A,
+  'SDR',0x2B,'MDR',0x2C,'DDR',0x2D,'AWR',0x2E,'SWR',0x2F,'LPER',0x30,'LNER',0x31,'LTER',0x32,'LCER',0x33,'HER',0x34,'LRER',0x35,
+  'AXR',0x36,'SXR',0x37,'LER',0x38,'CER',0x39,'AER',0x3A,'SER',0x3B,'MER',0x3C,'DER',0x3D,'AUR',0x3E,'SUR',0x3F]);
+dop('RRM',['BCR',7]); dop('R1',['SPM',4]); dop('I',['SVC',0x0A]);
+dop('RX',['STH',0x40,'LA',0x41,'STC',0x42,'IC',0x43,'EX',0x44,'BAL',0x45,'BCT',0x46,'LH',0x48,'CH',0x49,'AH',0x4A,'SH',0x4B,'MH',0x4C,
+  'CVD',0x4E,'CVB',0x4F,'ST',0x50,'N',0x54,'CL',0x55,'O',0x56,'X',0x57,'L',0x58,'C',0x59,'A',0x5A,'S',0x5B,'M',0x5C,'D',0x5D,'AL',0x5E,'SL',0x5F,
+  'STD',0x60,'MXD',0x67,'LD',0x68,'CD',0x69,'AD',0x6A,'SD',0x6B,'MD',0x6C,'DD',0x6D,'AW',0x6E,'SW',0x6F,
+  'STE',0x70,'LE',0x78,'CE',0x79,'AE',0x7A,'SE',0x7B,'ME',0x7C,'DE',0x7D,'AU',0x7E,'SU',0x7F]);
+dop('RXM',['BC',0x47]);
+dop('RS',['BXH',0x86,'BXLE',0x87,'STM',0x90,'LM',0x98]);
+dop('RSH',['SRL',0x88,'SLL',0x89,'SRA',0x8A,'SLA',0x8B,'SRDL',0x8C,'SLDL',0x8D,'SRDA',0x8E,'SLDA',0x8F]);
+dop('SI',['DIAG',0x83,'WRD',0x84,'RDD',0x85,'TM',0x91,'MVI',0x92,'NI',0x94,'CLI',0x95,'OI',0x96,'XI',0x97]);
+dop('S',['SSM',0x80,'LPSW',0x82,'TS',0x93,'SIO',0x9C,'TIO',0x9D,'HIO',0x9E,'TCH',0x9F]);
+dop('SS1',['MVN',0xD1,'MVC',0xD2,'MVZ',0xD3,'NC',0xD4,'CLC',0xD5,'OC',0xD6,'XC',0xD7,'TR',0xDC,'TRT',0xDD,'ED',0xDE,'EDMK',0xDF]);
+dop('SS2',['MVO',0xF1,'PACK',0xF2,'UNPK',0xF3,'ZAP',0xF8,'CP',0xF9,'AP',0xFA,'SP',0xFB,'MP',0xFC,'DP',0xFD]);
+const XM={B:15,NOP:0,BH:2,BL:4,BE:8,BNH:13,BNL:11,BNE:7,BO:1,BP:2,BM:4,BZ:8,BNP:13,BNM:11,BNZ:7,BNO:14};
+const XN={15:'B',0:'NOP',2:'BH',4:'BL',8:'BE',13:'BNH',11:'BNL',7:'BNE',1:'BO',14:'BNO'};
+function insLen(op){ return op<0x40?2:(op<0xC0?4:6); }
+function disasmB(b,ia,R){
+  const op=b[0], len=insLen(op), d=OPN[op];
+  let hex=''; for(let i=0;i<len;i++) hex+=HX(b[i],2);
+  if(!d) return {len,hex,txt:"DC    X'"+hex+"'"};
+  const r1=b[1]>>4, r2=b[1]&15, DD=(h,l)=>((h&15)<<8)|l;
+  let mn=d.n, ops='', ea=null;
+  const eaB=(h,l)=>{ if(!R) return; const bb=h>>4; ea=(DD(h,l)+(bb?R[bb]:0))&0xFFFFFF; };
+  const fB=(h,l)=>HX(DD(h,l),3)+'('+(h>>4)+')';
+  switch(d.f){
+    case 'RR': ops=r1+','+r2; break;
+    case 'RRM': if(XN[r1]!==undefined){ mn=XN[r1]+'R'; ops=''+r2; } else ops=r1+','+r2; break;
+    case 'R1': ops=''+r1; break;
+    case 'I': ops=''+b[1]; break;
+    case 'RX': case 'RXM':{
+      const ad=HX(DD(b[2],b[3]),3)+'('+r2+','+(b[2]>>4)+')';
+      if(d.f==='RXM'&&XN[r1]!==undefined){ mn=XN[r1]; ops=ad; } else ops=r1+','+ad;
+      if(R){ const bb=b[2]>>4; ea=(DD(b[2],b[3])+(bb?R[bb]:0)+(r2?R[r2]:0))&0xFFFFFF; } break; }
+    case 'RS': ops=r1+','+r2+','+fB(b[2],b[3]); eaB(b[2],b[3]); break;
+    case 'RSH': ops=r1+','+fB(b[2],b[3]); eaB(b[2],b[3]); break;
+    case 'SI': ops=fB(b[2],b[3])+",X'"+HX(b[1],2)+"'"; eaB(b[2],b[3]); break;
+    case 'S': ops=fB(b[2],b[3]); eaB(b[2],b[3]); break;
+    case 'SS1': ops=HX(DD(b[2],b[3]),3)+'('+(b[1]+1)+','+(b[2]>>4)+'),'+fB(b[4],b[5]); eaB(b[2],b[3]); break;
+    case 'SS2': ops=HX(DD(b[2],b[3]),3)+'('+((b[1]>>4)+1)+','+(b[2]>>4)+'),'+HX(DD(b[4],b[5]),3)+'('+((b[1]&15)+1)+','+(b[4]>>4)+')'; eaB(b[2],b[3]); break;
+  }
+  return {len,hex,txt:mn.padEnd(6)+' '+ops+(ea!==null?'   → '+HX(ea,6):'')};
+}
+function disasm(m,a,withR){
+  const b=new Uint8Array(6); for(let i=0;i<6;i++) b[i]=a+i<m.memSize?m.M[a+i]:0;
+  return disasmB(b,a,withR?m.R:null);
+}
+
+/* =====================================================================
+   Assembler (Teilmenge)
+   ===================================================================== */
+class AsmErr extends Error{ constructor(m){ super(m); this.asm=true; } }
+const aerr=m=>new AsmErr(m);
+function intBytes(v,n){ let x=BigInt.asUintN(8*n,BigInt(Math.trunc(v))); const o=new Uint8Array(n); for(let i=n-1;i>=0;i--){ o[i]=Number(x&255n); x>>=8n; } return o; }
+function hexFloat(x,n){
+  const o=new Uint8Array(n); if(!x) return o;
+  const neg=x<0; let f=Math.abs(x), e=0;
+  while(f>=1){ f/=16; e++; } while(f<1/16){ f*=16; e--; }
+  const mb=n===4?24:56; let mant=BigInt(Math.round(f*2**mb));
+  if(mant>=(1n<<BigInt(mb))){ mant>>=4n; e++; }
+  const ch=e+64; if(ch<0||ch>127) throw aerr('Gleitkommazahl außerhalb des Bereichs');
+  o[0]=(neg?0x80:0)|ch; for(let i=n-1;i>=1;i--){ o[i]=Number(mant&255n); mant>>=8n; } return o;
+}
+class Asm{
+  constructor(src){ this.src=src; }
+  run(){
+    this.stmts=this.src.replace(/\r/g,'').split('\n').map((t,i)=>this.parse(t,i+1));
+    this.sym=new Map(); this.lits=new Map();
+    for(this.pass=1;this.pass<=2;this.pass++) this.doPass();
+    this.errors=this.stmts.filter(s=>s.err||s.err1).map(s=>({no:s.no,msg:s.err1||s.err}));
+    return this;
+  }
+  isAttr(t,k){ return k>0&&/[LTlt]/.test(t[k-1])&&(k<2||!/[A-Za-z0-9@#$_]/.test(t[k-2]))&&/[A-Za-z@#$_]/.test(t[k+1]||''); }
+  parse(t,no){
+    const s={no,text:t,label:null,op:'',opnd:'',skip:false};
+    if(/^\s*$/.test(t)||t[0]==='*'||t.startsWith('.*')){ s.skip=true; return s; }
+    let i=0; if(!/\s/.test(t[0])){ while(i<t.length&&!/\s/.test(t[i])) i++; s.label=t.slice(0,i); }
+    while(i<t.length&&/\s/.test(t[i])) i++;
+    let j=i; while(j<t.length&&!/\s/.test(t[j])) j++; s.op=t.slice(i,j).toUpperCase();
+    i=j; while(i<t.length&&/\s/.test(t[i])) i++;
+    let q=false, p=0, k=i;
+    for(;k<t.length;k++){ const c=t[k];
+      if(q){ if(c==="'"){ if(t[k+1]==="'") k++; else q=false; } continue; }
+      if(c==="'"){ if(this.isAttr(t,k)) continue; q=true; continue; }
+      if(c==='(') p++; else if(c===')') p--; else if(/\s/.test(c)&&p<=0) break; }
+    s.opnd=t.slice(i,k);
+    if(!s.op) s.skip=true;
+    return s;
+  }
+  splitTop(s){ if(s==='') return []; const out=[]; let q=false,p=0,st=0;
+    for(let k=0;k<s.length;k++){ const c=s[k];
+      if(q){ if(c==="'"){ if(s[k+1]==="'") k++; else q=false; } continue; }
+      if(c==="'"){ if(this.isAttr(s,k)) continue; q=true; continue; }
+      if(c==='(') p++; else if(c===')') p--; else if(c===','&&p===0){ out.push(s.slice(st,k)); st=k+1; } }
+    out.push(s.slice(st)); return out; }
+  look(n){ return this.sym.get(n.toUpperCase()); }
+  /* --- Ausdrücke --- */
+  ev(str){ this._s=str.trim(); this._i=0; this._first=null; if(this._s==='') throw aerr('Ausdruck fehlt');
+    const r=this.eExpr(); if(this._i<this._s.length) throw aerr('Ausdruck nicht verstanden: '+str);
+    return {v:r.v,rel:r.rel,sym:this._first}; }
+  eExpr(){ let a=this.eTerm(); for(;;){ const c=this._s[this._i];
+    if(c==='+'||c==='-'){ this._i++; const b=this.eTerm(); a=c==='+'?{v:a.v+b.v,rel:a.rel+b.rel}:{v:a.v-b.v,rel:a.rel-b.rel}; } else return a; } }
+  eTerm(){ let a=this.eFac(); for(;;){ const c=this._s[this._i];
+    if(c==='*'||c==='/'){ this._i++; const b=this.eFac(); if(a.rel||b.rel) throw aerr('Verschiebliche Adresse in * oder /');
+      a={v:c==='*'?a.v*b.v:(b.v?Math.trunc(a.v/b.v):0),rel:0}; } else return a; } }
+  eFac(){
+    const s=this._s, c=s[this._i];
+    if(c==='+'){ this._i++; return this.eFac(); }
+    if(c==='-'){ this._i++; const a=this.eFac(); return {v:-a.v,rel:-a.rel}; }
+    if(c==='('){ this._i++; const a=this.eExpr(); if(s[this._i]!==')') throw aerr('Schließende Klammer fehlt'); this._i++; return a; }
+    if(c==='*'){ this._i++; return {v:this.loc,rel:1}; }
+    const rest=s.slice(this._i); let m;
+    if((m=/^\d+/.exec(rest))){ this._i+=m[0].length; return {v:parseInt(m[0],10),rel:0}; }
+    if((m=/^([XxCcBb])'((?:[^']|'')*)'/.exec(rest))){ this._i+=m[0].length; return {v:this.selfDef(m[1].toUpperCase(),m[2].replace(/''/g,"'")),rel:0}; }
+    if((m=/^[Ll]'([A-Za-z@#$_][A-Za-z0-9@#$_]*)/.exec(rest))){ this._i+=m[0].length; const e=this.look(m[1]);
+      if(!e&&this.pass===2) throw aerr('Undefiniertes Symbol: '+m[1].toUpperCase()); return {v:e?e.len:1,rel:0}; }
+    if((m=/^[A-Za-z@#$_][A-Za-z0-9@#$_]*/.exec(rest))){ this._i+=m[0].length; const n=m[0].toUpperCase(); if(!this._first) this._first=n;
+      const e=this.look(n); if(!e){ if(this.pass===2) throw aerr('Undefiniertes Symbol: '+n); return {v:0,rel:0}; } return {v:e.v,rel:e.rel}; }
+    throw aerr('Unerwartetes Zeichen im Ausdruck: '+rest);
+  }
+  selfDef(t,s){
+    if(t==='X'){ if(!/^[0-9A-Fa-f]+$/.test(s)) throw aerr("Ungültiges X'..'"); return parseInt(s,16); }
+    if(t==='B'){ if(!/^[01]+$/.test(s)) throw aerr("Ungültiges B'..'"); return parseInt(s,2); }
+    const e=s2e(s); if(e.length>4) throw aerr("C'..' als Wert höchstens 4 Zeichen"); let v=0; for(const x of e) v=v*256+x; return v;
+  }
+  absv(str){ const e=this.ev(str); if(e.rel&&this.pass===2) throw aerr('Absoluter Ausdruck erwartet: '+str); return e.v; }
+  reg(str){ if(str===undefined||str.trim()==='') return 0; const v=this.absv(str); if(this.pass===2&&(v<0||v>15)) throw aerr('Registernummer ungültig: '+str); return v&15; }
+  /* --- Literale --- */
+  lit(text){
+    let e=this.lits.get(text);
+    if(!e){ const dc=this.parseDC(text.slice(1)); const g=this.genDC(dc,true); e={text,dc,len:g.len,align:g.align,addr:null}; this.lits.set(text,e); }
+    if(this.pass===1&&e.addr===null&&!this.pendLits.includes(e)) this.pendLits.push(e);
+    return e;
+  }
+  placeLits(s){
+    if(this.pass===1){   // wie im IBM-Assembler: Gruppen nach Länge (Vielfache von 8, 4, 2, 1) – so sind alle Literale ausgerichtet
+      const grp=e=>Math.max(e.align,e.len%8===0?8:(e.len%4===0?4:(e.len%2===0?2:1)));
+      const L=this.pendLits.slice().sort((x,y)=>grp(y)-grp(x)); this.pendLits=[];
+      for(const e of L){ const g=grp(e); this.loc=Math.ceil(this.loc/g)*g; e.addr=this.loc; this.loc+=e.len; } s.lits=L; }
+    else if(s.lits){ for(const e of s.lits){ const g=this.genDC(e.dc,false); this.emit(e.addr,g.bytes,s); this.loc=e.addr+e.len; } }
+    if(s.lits&&s.lits.length) s.loc=s.lits[0].addr;
+  }
+  /* --- Adressoperanden --- */
+  addrOf(str,mode){
+    str=str.trim(); let disp=str, inner=null;
+    if(str.endsWith(')')){
+      let p=0,k=str.length-1,q=false;
+      for(;k>=0;k--){ const c=str[k]; if(c==="'"&&!this.isAttr(str,k)){ q=!q; continue; } if(q) continue;
+        if(c===')') p++; else if(c==='('){ p--; if(p===0) break; } }
+      if(k>0){ disp=str.slice(0,k); inner=str.slice(k+1,-1).split(',').map(x=>x.trim()); }
+    }
+    const lit=disp.startsWith('=');
+    const evD=()=>{ if(lit){ const l=this.lit(disp); return {v:l.addr??0,rel:1,litLen:l.len}; } return this.ev(disp); };
+    const res={d:0,x:0,b:0,l:null};
+    const absD=e=>{ if(this.pass===2&&(e.v<0||e.v>4095)) throw aerr('Verschiebung außerhalb 0..4095'); return e.v&4095; };
+    if(inner){
+      if(mode==='X'){ if(inner.length===2){ res.x=this.reg(inner[0]); res.b=this.reg(inner[1]); res.d=absD(evD()); return res; }
+        if(inner.length!==1) throw aerr('Operand nicht verstanden: '+str); res.x=this.reg(inner[0]); }
+      else if(mode==='B'){ if(inner.length!==1) throw aerr('Operand nicht verstanden: '+str); res.b=this.reg(inner[0]); res.d=absD(evD()); return res; }
+      else { if(inner.length===2){ res.l=this.absv(inner[0]); res.b=this.reg(inner[1]); res.d=absD(evD()); return res; }
+        if(inner.length!==1) throw aerr('Operand nicht verstanden: '+str); res.l=this.absv(inner[0]); }
+    }
+    const e=evD();
+    if(mode==='L'&&res.l===null){
+      if(e.litLen!==undefined) res.l=e.litLen;
+      else if(e.sym){ const s=this.look(e.sym); res.l=s?s.len:1; }
+      else if(this.pass===2) throw aerr('Länge fehlt: '+str); else res.l=1;
+    }
+    if(e.rel){ if(this.pass===2){ const u=this.findUsing(e.v); res.b=u.reg; res.d=u.d; } }
+    else { res.d=absD(e); res.b=0; }
+    return res;
+  }
+  findUsing(v){ let best=null;
+    for(const u of this.usings){ const d=v-u.base; if(d>=0&&d<4096&&(!best||d<best.d)) best={reg:u.reg,d}; }
+    if(!best) throw aerr('Keine Adressierbarkeit (USING fehlt) für Adresse '+HX(v,6)); return best; }
+  lenCode(l,max){ if(this.pass===2&&(l<0||l>max)) throw aerr('Länge außerhalb 1..'+max); return l?(l-1)&(max-1):0; }
+  encode(f,op,o){
+    const g=i=>{ if(o[i]===undefined||o[i].trim()==='') throw aerr('Operand '+(i+1)+' fehlt'); return o[i]; };
+    const bd=a=>[(a.b<<4)|(a.d>>8),a.d&255];
+    switch(f){
+      case 'RR': return [op,(this.reg(g(0))<<4)|this.reg(g(1))];
+      case 'RRM': return [op,((this.absv(g(0))&15)<<4)|this.reg(g(1))];
+      case 'R1': return [op,this.reg(g(0))<<4];
+      case 'I': return [op,this.absv(g(0))&255];
+      case 'RX': case 'RXM':{ const r=f==='RXM'?(this.absv(g(0))&15):this.reg(g(0)); const a=this.addrOf(g(1),'X'); return [op,(r<<4)|a.x,...bd(a)]; }
+      case 'RS':{ const r1=this.reg(g(0)), r3=this.reg(g(1)), a=this.addrOf(g(2),'B'); return [op,(r1<<4)|r3,...bd(a)]; }
+      case 'RSH':{ const r1=this.reg(g(0)), a=this.addrOf(g(1),'B'); return [op,r1<<4,...bd(a)]; }
+      case 'SI':{ const a=this.addrOf(g(0),'B'); return [op,this.absv(g(1))&255,...bd(a)]; }
+      case 'S':{ const a=this.addrOf(g(0),'B'); return [op,0,...bd(a)]; }
+      case 'SS1':{ const a1=this.addrOf(g(0),'L'), a2=this.addrOf(g(1),'B'); return [op,this.lenCode(a1.l,256),...bd(a1),...bd(a2)]; }
+      case 'SS2':{ const a1=this.addrOf(g(0),'L'), a2=this.addrOf(g(1),'L'); return [op,(this.lenCode(a1.l,16)<<4)|this.lenCode(a2.l,16),...bd(a1),...bd(a2)]; }
+    }
+    throw aerr('Format?');
+  }
+  /* --- Konstanten --- */
+  parseDC(t){
+    const m=/^(\d+|\([^)]*\))?([A-Za-z])(?:[Ll](\d+|\([^)]*\)))?(?:'((?:[^']|'')*)'|\((.*)\))?$/.exec(t.trim());
+    if(!m) throw aerr('Konstante nicht verstanden: '+t);
+    return {dup:m[1]??null,type:m[2].toUpperCase(),len:m[3]??null,q:m[4],p:m[5]};
+  }
+  genDC(dc,lenOnly){
+    const T=dc.type, unp=s=>s.replace(/^\(|\)$/g,'');
+    if(!'CXBFHAYPZED'.includes(T)) throw aerr('Konstantentyp '+T+' nicht unterstützt');
+    const dup=dc.dup===null?1:this.absv(unp(dc.dup));
+    const expl=dc.len!==null?this.absv(unp(dc.len)):null;
+    const AL={F:4,A:4,E:4,H:2,Y:2,D:8}; const align=expl!==null?1:(AL[T]||1);
+    let items=[];
+    if(dc.q!==undefined){ const raw=dc.q.replace(/''/g,"'").replace(/&&/g,'&'); items=T==='C'?[raw]:raw.split(',').map(x=>x.trim()); }
+    else if(dc.p!==undefined){ if(T!=='A'&&T!=='Y') throw aerr('Klammerwerte nur bei A und Y'); items=this.splitTop(dc.p).map(x=>x.trim()); }
+    if(!items.length){ const ul=expl??(AL[T]||1); return {align,len:ul*dup,unit:ul,bytes:null}; }
+    const parts=items.map(it=>this.dcItem(T,it,expl,lenOnly));
+    let one=[]; for(const p of parts) for(const x of p) one.push(x);
+    const unit=parts[0].length, total=one.length*dup;
+    if(lenOnly) return {align,len:total,unit,bytes:null};
+    const out=new Uint8Array(total); for(let i=0;i<dup;i++) out.set(one,i*one.length);
+    return {align,len:total,unit,bytes:out};
+  }
+  dcItem(T,it,L,lenOnly){
+    switch(T){
+      case 'C':{ const e=s2e(it); const n=L??e.length; const o=new Uint8Array(n).fill(0x40); o.set(e.subarray(0,n)); return o; }
+      case 'X':{ const h=it.replace(/\s/g,''); if(!/^[0-9A-Fa-f]*$/.test(h)) throw aerr("Ungültige X-Konstante"); const n=L??Math.ceil(h.length/2);
+        const o=new Uint8Array(n); let k=h.length; for(let i=n-1;i>=0&&k>0;i--){ const lo=parseInt(h[--k],16), hi=k>0?parseInt(h[--k],16):0; o[i]=(hi<<4)|lo; } return o; }
+      case 'B':{ if(!/^[01]*$/.test(it)) throw aerr('Ungültige B-Konstante'); const n=L??Math.ceil(it.length/8); return intBytes(it?parseInt(it,2):0,n); }
+      case 'F': case 'H':{ const n=L??(T==='F'?4:2); if(!/^[+-]?\d+$/.test(it)) throw aerr('Ungültige '+T+'-Konstante: '+it); return intBytes(parseInt(it,10),n); }
+      case 'A': case 'Y':{ const n=L??(T==='A'?4:2); if(lenOnly||this.pass===1) return new Uint8Array(n); return intBytes(this.ev(it).v,n); }
+      case 'P': case 'Z':{ const m=/^([+-]?)(\d*)(?:\.(\d*))?$/.exec(it); if(!m) throw aerr('Ungültige '+T+'-Konstante: '+it);
+        const dg=(m[2]+(m[3]||''))||'0', neg=m[1]==='-';
+        if(T==='Z'){ const n=L??dg.length; const o=new Uint8Array(n).fill(0xF0); for(let i=0;i<n&&i<dg.length;i++) o[n-1-i]=0xF0|+dg[dg.length-1-i];
+          o[n-1]=(neg?0xD0:0xC0)|(o[n-1]&15); return o; }
+        const n=L??Math.ceil((dg.length+1)/2); const nib=[]; for(const ch of dg) nib.push(+ch); nib.push(neg?0xD:0xC);
+        const o=new Uint8Array(n); let k=nib.length-1; for(let i=n-1;i>=0;i--){ const lo=k>=0?nib[k--]:0, hi=k>=0?nib[k--]:0; o[i]=(hi<<4)|lo; } return o; }
+      case 'E': case 'D':{ const n=L??(T==='E'?4:8); const v=parseFloat(it); if(isNaN(v)) throw aerr('Ungültige Gleitkommakonstante'); return hexFloat(v,n); }
+    }
+  }
+  emit(a,bytes,s){ if(!bytes||!bytes.length) return; const b=Uint8Array.from(bytes); this.chunks.push({a,b}); s.obj=s.obj?[...s.obj,...b]:[...b]; }
+  /* --- Durchläufe --- */
+  doPass(){
+    this.loc=0; this.usings=[]; this.pendLits=[]; this.chunks=[]; this.entry=null; this.started=false; this.maxLoc=0; this.firstLoc=null;
+    for(const s of this.stmts){
+      if(s.skip) continue;
+      s.err=null; s.obj=null; if(this.pass===1){ s.err1=null; s.loc=null; }
+      try{ if(this.stmt(s)==='END') break; }
+      catch(e){ if(e.asm){ if(this.pass===1) s.err1=null; s.err=e.message; } else throw e; }
+      if(this.loc>this.maxLoc) this.maxLoc=this.loc;
+    }
+    if(this.pass===2) this.finish();
+  }
+  defSym(s,v,rel,len){
+    if(!s.label) return; const n=s.label.toUpperCase();
+    if(!/^[A-Z@#$_][A-Z0-9@#$_]{0,62}$/.test(n)) throw aerr('Ungültiger Name: '+s.label);
+    if(this.pass===1){ if(this.sym.has(n)){ s.err1='Symbol doppelt definiert: '+n; return; } this.sym.set(n,{v,rel,len}); }
+    else { const e=this.sym.get(n); if(e&&!s.err1){ e.v=v; e.rel=rel; e.len=len; } }
+  }
+  stmt(s){
+    const op=s.op, P=this.pass, ops=()=>this.splitTop(s.opnd);
+    const al=n=>{ this.loc=Math.ceil(this.loc/n)*n; };
+    switch(op){
+      case 'START': case 'CSECT':
+        if(!this.started){ this.loc=s.opnd?this.absv(s.opnd):0; this.started=true; }
+        s.loc=this.loc; this.defSym(s,this.loc,1,1); if(this.firstLoc===null) this.firstLoc=this.loc; return;
+      case 'EQU':{ const o=ops(); const e=this.ev(o[0]); let len=1; if(o[1]) len=this.absv(o[1]); else if(e.sym){ const y=this.look(e.sym); if(y&&e.rel) len=y.len; }
+        this.defSym(s,e.v,e.rel>0?1:0,len); s.loc=e.v; return; }
+      case 'USING':{ const o=ops(); if(o.length<2) throw aerr('USING braucht Basisadresse und Register'); const base=this.ev(o[0]).v;
+        for(let i=1;i<o.length;i++){ const r=this.reg(o[i]); this.usings=this.usings.filter(u=>u.reg!==r); this.usings.push({base:base+4096*(i-1),reg:r}); } return; }
+      case 'DROP':{ const o=ops(); if(!o.length) this.usings=[]; else for(const x of o){ const r=this.reg(x); this.usings=this.usings.filter(u=>u.reg!==r); } return; }
+      case 'ORG': this.loc=s.opnd?this.ev(s.opnd).v:this.maxLoc; s.loc=this.loc; return;
+      case 'DC': case 'DS':{ const o=ops(); if(!o.length) throw aerr('Operand fehlt');
+        o.forEach((t,k)=>{ const dc=this.parseDC(t); const g=this.genDC(dc,op==='DS'||P===1); al(g.align);
+          if(k===0){ s.loc=this.loc; this.defSym(s,this.loc,1,g.unit); }
+          if(op==='DC'&&P===2) this.emit(this.loc,g.bytes,s); this.loc+=g.len; });
+        if(this.firstLoc===null) this.firstLoc=s.loc; return; }
+      case 'CCW':{ al(8); s.loc=this.loc; this.defSym(s,this.loc,1,8);
+        if(P===2){ const o=ops(); if(o.length!==4) throw aerr('CCW braucht 4 Operanden'); const c=this.absv(o[0]), ad=this.ev(o[1]).v, f=this.absv(o[2]), n=this.absv(o[3]);
+          this.emit(this.loc,[c&255,(ad>>16)&255,(ad>>8)&255,ad&255,f&255,0,(n>>8)&255,n&255],s); }
+        this.loc+=8; return; }
+      case 'CNOP':{ const o=ops(); const bb=this.absv(o[0]), w=this.absv(o[1]); al(2); s.loc=this.loc;
+        while(this.loc%w!==bb){ if(P===2) this.emit(this.loc,[0x07,0x00],s); this.loc+=2; } return; }
+      case 'LTORG': this.placeLits(s); return;
+      case 'END': this.placeLits(s); if(P===2&&s.opnd) this.entry=this.ev(s.opnd).v; return 'END';
+      case 'TITLE': case 'EJECT': case 'SPACE': case 'PRINT': return;
+    }
+    let def=FMT[op], o=ops();
+    if(!def){ let m=XM[op];
+      if(m!==undefined){ def=FMT.BC; o=[String(m),...o]; }
+      else if(op.endsWith('R')&&XM[op.slice(0,-1)]!==undefined){ def=FMT.BCR; o=[String(XM[op.slice(0,-1)]),...o]; } }
+    if(!def) throw aerr('Unbekannte Operation: '+op);
+    al(2); s.loc=this.loc; const len=insLen(def.op); this.defSym(s,this.loc,1,len); if(this.firstLoc===null) this.firstLoc=this.loc;
+    if(P===2){ this.emit(this.loc,this.encode(def.f,def.op,o),s); } else { /* Literale im ersten Durchlauf erfassen */ for(const x of o) if(x.trim().startsWith('=')) this.lit(x.trim().replace(/\(.*$/,'')); }
+    this.loc+=len;
+  }
+  finish(){
+    let lo=Infinity, hi=-1; for(const c of this.chunks){ lo=Math.min(lo,c.a); hi=Math.max(hi,c.a+c.b.length); }
+    if(hi<0){ this.image=null; return; }
+    const img=new Uint8Array(hi-lo); for(const c of this.chunks) img.set(c.b,c.a-lo);
+    this.image={lo,bytes:img};
+    if(this.entry===null) this.entry=this.firstLoc??lo;
+  }
+  listing(){
+    const out=[];
+    for(const s of this.stmts){
+      const ob=s.obj?s.obj.slice(0,8).map(x=>HX(x,2)).join(''):''; 
+      out.push({t:(s.loc!==null&&s.loc!==undefined&&!s.skip?HX(s.loc,6):'      ')+'  '+ob.padEnd(16)+' '+String(s.no).padStart(4)+'  '+s.text,err:false});
+      if(s.err1||s.err) out.push({t:'***** FEHLER: '+(s.err1||s.err),err:true});
+    }
+    return out;
+  }
+}
+
+/* =====================================================================
+   Selbstladendes Kartendeck aus einem Speicherabbild
+   Karte 1: IPL-PSW + CCW (Steuerkarte nach L lesen) + TIC nach L
+   Steuerkarte: bis zu 8 Lese-CCWs für Datenkarten, dann Lesen der nächsten Steuerkarte nach L und TIC nach L
+   ===================================================================== */
+function buildDeck(image,entry){
+  let base=image.lo, data=image.bytes;
+  const psw=[0,0,0,0,0,(entry>>16)&255,(entry>>8)&255,entry&255];
+  if(base<8){ const n=new Uint8Array(data.length+base); n.set(data,base); for(let i=0;i<8;i++) n[i]=psw[i]; base=0; data=n; }
+  const nData=Math.ceil(data.length/80); if(!nData) throw new Error('Leeres Programm');
+  const end=base+nData*80;
+  const L=(0x150<=base||0x100>=end)?0x100:((end+7)&~7);
+  const ccw=(c,o,cmd,ad,fl,n)=>{ c[o]=cmd; c[o+1]=ad>>16; c[o+2]=ad>>8; c[o+3]=ad; c[o+4]=fl; c[o+5]=0; c[o+6]=n>>8; c[o+7]=n; };
+  const deck=[]; const c0=new Uint8Array(80); c0.set(psw,0); ccw(c0,8,0x02,L,0x60,80); ccw(c0,16,0x08,L,0,1); deck.push(c0);
+  for(let i=0;i<nData;i+=8){
+    const k=Math.min(8,nData-i), more=i+8<nData, ctl=new Uint8Array(80);
+    for(let j=0;j<k;j++) ccw(ctl,8*j,0x02,base+80*(i+j),(!more&&j===k-1)?0x20:0x60,80);
+    if(more) ccw(ctl,64,0x02,L,0x60,80);
+    ccw(ctl,72,0x08,L,0,1);   // jede Steuerkarte endet mit TIC nach L (wird nach dem Nachladen ausgeführt)
+    deck.push(ctl);
+    for(let j=0;j<k;j++){ const c=new Uint8Array(80); c.set(data.subarray(80*(i+j),80*(i+j)+80)); deck.push(c); }
+  }
+  return deck;
+}
+
+/* =====================================================================
+   Beispielprogramme
+   ===================================================================== */
+const EXAMPLES=[
+{name:'1 · Hallo Welt auf der Konsole 1052',data:'',src:
+`* ---------------------------------------------------------------
+*  HALLO WELT AUF DER KONSOLSCHREIBMASCHINE 1052 (ADRESSE 009)
+* ---------------------------------------------------------------
+HALLO    START X'200'
+         BALR  12,0               BASISREGISTER LADEN
+         USING *,12
+         LA    1,KANAL            ADRESSE DES KANALPROGRAMMS
+         ST    1,X'48'            INS CAW (ADRESSE 72), SCHLUESSEL 0
+         SIO   X'009'             KANALPROGRAMM STARTEN
+WARTE    TIO   X'009'             SCHON FERTIG?
+         BC    2,WARTE            CC=2: GERAET NOCH BELEGT
+         LPSW  ENDE               ANHALTEN
+*
+         DS    0D
+ENDE     DC    X'0002000000000000'  GESPERRTER WARTEZUSTAND
+KANAL    CCW   X'09',TEXT,X'20',L'TEXT   SCHREIBEN + WAGENRUECKLAUF
+TEXT     DC    C'Hallo Welt! Gruesse von der S/360-Werkbank.'
+         END   HALLO
+`},
+{name:'2 · Zahlentabelle auf dem Drucker 1403',data:'',src:
+`* ---------------------------------------------------------------
+*  ZAHLENTABELLE N, N**2, N**3 AUF DEM ZEILENDRUCKER 1403 (00E)
+*  FESTKOMMA (MR), UMWANDLUNG MIT CVD, AUFBEREITUNG MIT ED
+* ---------------------------------------------------------------
+TABELLE  START X'200'
+         BALR  12,0
+         USING *,12
+         LA    1,CCWKOPF          SEITENVORSCHUB UND KOPFZEILEN
+         BAL   14,DRUCK
+         LA    3,1                N = 1
+SCHLEIFE LR    5,3
+         MR    4,3                R4/R5 = N*N
+         LR    9,5                N**2 MERKEN
+         LR    7,5
+         MR    6,3                R6/R7 = N*N*N
+         MVC   ZEILE,LEER         ZEILE LOESCHEN
+         CVD   3,DW               N GEPACKT
+         MVC   ZEILE(10),MUSTER
+         ED    ZEILE(10),DW+4
+         CVD   9,DW               N**2
+         MVC   ZEILE+12(10),MUSTER
+         ED    ZEILE+12(10),DW+4
+         CVD   7,DW               N**3
+         MVC   ZEILE+24(10),MUSTER
+         ED    ZEILE+24(10),DW+4
+         LA    1,CCWZEILE
+         BAL   14,DRUCK
+         LA    3,1(3)             N = N + 1
+         C     3,=F'25'
+         BNH   SCHLEIFE
+         LA    1,CCWFUSS
+         BAL   14,DRUCK
+         LPSW  ENDE
+*        --- UNTERPROGRAMM: KANALPROGRAMM AB R1 AUF DEM 1403 ---
+DRUCK    ST    1,X'48'            CAW
+         SIO   X'00E'
+DRWARTE  TIO   X'00E'
+         BC    2,DRWARTE
+         BR    14
+*
+         DS    0D
+ENDE     DC    X'0002000000000000'
+CCWKOPF  CCW   X'8B',0,X'60',1           SPRUNG AUF KANAL 1
+         CCW   X'11',TITEL,X'60',L'TITEL DRUCKEN, 2 ZEILEN VORSCHUB
+         CCW   X'11',KOPF,X'20',L'KOPF
+CCWZEILE CCW   X'09',ZEILE,X'20',L'ZEILE
+CCWFUSS  CCW   X'0B',0,X'60',1           LEERZEILE
+         CCW   X'09',FUSS,X'20',L'FUSS
+DW       DS    D
+MUSTER   DC    X'40204B2020204B202120'   EDITIERMUSTER  D.DDD.DDD
+TITEL    DC    C'ZAHLENTABELLE - ERZEUGT AUF DER S/360-WERKBANK'
+KOPF     DC    C'         N        N**2        N**3'
+ZEILE    DS    CL40
+LEER     DC    CL40' '
+FUSS     DC    C'*** ENDE DER TABELLE ***'
+         END   TABELLE
+`},
+{name:'3 · Dezimalarithmetik: Fakultäten und Zinseszins',data:'',src:
+`* ---------------------------------------------------------------
+*  DEZIMALARITHMETIK: FAKULTAETEN 1! BIS 25! (GEPACKT, 31 STELLEN)
+*  UND ZINSESZINS 10.000,00 EUR ZU 3,5 % UEBER 10 JAHRE
+*  AUSGABE AUF DER KONSOLSCHREIBMASCHINE 1052 (009)
+* ---------------------------------------------------------------
+DEZIMAL  START X'200'
+         BALR  12,0
+         USING *,12
+         MVC   AUSGABE,LEER
+         MVC   AUSGABE(L'UEB1),UEB1
+         LA    4,L'UEB1
+         BAL   14,SCHREIB
+*        --- FAKULTAETEN ---
+         ZAP   FAK,=P'1'
+         ZAP   NN,=P'0'
+FSCHL    AP    NN,=P'1'           N = N + 1
+         MP    FAK,NN             FAK = FAK * N
+         MVC   AUSGABE(4),MUST3
+         ED    AUSGABE(4),NN
+         MVC   AUSGABE+4(4),=C'! = '
+         MVC   AUSGABE+8(32),MUST31
+         ED    AUSGABE+8(32),FAK
+         LA    4,40
+         BAL   14,SCHREIB
+         CP    NN,=P'25'
+         BL    FSCHL
+*        --- ZINSESZINS ---
+         MVC   AUSGABE(L'UEB2),UEB2
+         LA    4,L'UEB2
+         BAL   14,SCHREIB
+         ZAP   KAPITAL,=P'1000000'   10.000,00 EUR IN CENT
+         ZAP   JAHR,=P'0'
+ZSCHL    AP    JAHR,=P'1'
+         ZAP   WORK,KAPITAL
+         MP    WORK,=P'1035'      KAPITAL * 1035
+         AP    WORK,=P'500'       KAUFMAENNISCH RUNDEN
+         DP    WORK,=P'1000'      / 1000 -> QUOTIENT IN WORK(5)
+         ZAP   KAPITAL,WORK(5)
+         MVC   AUSGABE(L'ZTEXT),ZTEXT
+         MVC   AUSGABE+5(4),MUST3
+         ED    AUSGABE+5(4),JAHR
+         MVC   AUSGABE+12(13),MUSTK
+         ED    AUSGABE+12(13),KAPITAL
+         LA    4,L'ZTEXT
+         BAL   14,SCHREIB
+         CP    JAHR,=P'10'
+         BL    ZSCHL
+         LPSW  ENDE
+*        --- UNTERPROGRAMM: AUSGABE (LAENGE IN R4) AUF DER 1052 ---
+SCHREIB  STH   4,KONCCW+6         LAENGE INS CCW
+         LA    1,KONCCW
+         ST    1,X'48'
+         SIO   X'009'
+SWARTE   TIO   X'009'
+         BC    2,SWARTE
+         MVC   AUSGABE,LEER
+         BR    14
+*
+         DS    0D
+ENDE     DC    X'0002000000000000'
+KONCCW   CCW   X'09',AUSGABE,X'20',1
+FAK      DC    PL16'0'
+NN       DC    PL2'0'
+KAPITAL  DC    PL5'0'
+JAHR     DC    PL2'0'
+WORK     DC    PL8'0'
+MUST3    DC    X'40202120'
+MUST31   DC    X'40',29X'20',X'2120'
+MUSTK    DC    X'40204B2020204B2020216B2020'   D.DDD.DDD,DD
+UEB1     DC    C'Fakultaeten in gepackter Dezimalarithmetik (MP, 31 Stellen):'
+UEB2     DC    C'Zinseszins: 10.000,00 EUR zu 3,5 % ueber 10 Jahre (MP/DP):'
+ZTEXT    DC    C'Jahr      :               EUR'
+AUSGABE  DS    CL80
+LEER     DC    CL80' '
+         END   DEZIMAL
+`},
+{name:'4 · Karten lesen und auflisten (2540 → 1403)',data:
+`DIES IST DIE ERSTE DATENKARTE.
+IBM SYSTEM/360 - ANGEKUENDIGT AM 7. APRIL 1964
+     0123456789 ABCDEFGHIJKLMNOPQRSTUVWXYZ  .,;:+-*/()'=<>
+DIE LETZTE KARTE.`,src:
+`* ---------------------------------------------------------------
+*  KARTEN LESEN (2540, 00C) UND AUF DEM 1403 (00E) AUFLISTEN
+*  DIE DATENKARTEN LIEGEN IM STAPEL HINTER DEM PROGRAMMDECK
+* ---------------------------------------------------------------
+LISTE    START X'200'
+         BALR  12,0
+         USING *,12
+         LA    1,CCWKOPF
+         BAL   14,DRUCK
+         ZAP   ZAHL,=P'0'
+LESEN    LA    1,CCWLESEN         EINE KARTE LESEN
+         ST    1,X'48'
+         SIO   X'00C'
+LWARTE   TIO   X'00C'
+         BC    2,LWARTE
+         TM    X'44',X'01'        EINHEITENAUSNAHME = DATEIENDE?
+         BO    FERTIG
+         AP    ZAHL,=P'1'
+         MVC   DZEILE(4),MUST3
+         ED    DZEILE(4),ZAHL
+         MVC   DZEILE+6(80),KARTE
+         LA    1,CCWZEILE
+         BAL   14,DRUCK
+         B     LESEN
+FERTIG   MVC   FZAHL,MUST3
+         ED    FZAHL,ZAHL
+         LA    1,CCWFUSS
+         BAL   14,DRUCK
+         LPSW  ENDE
+*
+DRUCK    ST    1,X'48'
+         SIO   X'00E'
+DRWARTE  TIO   X'00E'
+         BC    2,DRWARTE
+         BR    14
+*
+         DS    0D
+ENDE     DC    X'0002000000000000'
+CCWLESEN CCW   X'02',KARTE,X'20',80
+CCWKOPF  CCW   X'8B',0,X'60',1
+         CCW   X'11',TITEL,X'20',L'TITEL
+CCWZEILE CCW   X'09',DZEILE,X'20',L'DZEILE
+CCWFUSS  CCW   X'0B',0,X'60',1
+         CCW   X'09',FUSS,X'20',L'FUSS+4
+ZAHL     DC    PL2'0'
+MUST3    DC    X'40202120'
+TITEL    DC    C'KARTENLISTE (2540 -> 1403)'
+KARTE    DS    CL80
+DZEILE   DC    CL86' '
+FUSS     DC    C'ANZAHL GELESENER KARTEN:'
+FZAHL    DC    CL4' '
+         END   LISTE
+`},
+{name:'5 · Befehlstest (alle Befehle, Unterbrechungen, E/A)',data:'',src:
+`* ---------------------------------------------------------------
+*  BEFEHLSTEST: PRUEFT DIE BEFEHLE DER S/360 – STANDARD, DEZIMAL,
+*  GLEITKOMMA (KURZ, LANG, ERWEITERT), UNTERBRECHUNGEN, E/A, ZEITGEBER
+*  ERGEBNISLISTE AUF DEM 1403, ZUSAMMENFASSUNG AUF DER 1052.
+*  JEDER TEST ENDET MIT   BAL 14,PRUEF   UND   DC X'MM',CL23'NAME'
+*  MM = ERLAUBTE BEDINGUNGSCODES: X'08'=CC0 X'04'=CC1 X'02'=CC2 X'01'=CC3
+*  VORAUSSETZUNG: HAUPTSPEICHER 128 KB BIS 8 MB, ZEITGEBER EIN.
+*  REGISTER: R9-R12 BASIS, R2-R8 TESTS, R0/R1/R14/R15 PRUEFROUTINE.
+* ---------------------------------------------------------------
+BEFTEST  START X'200'
+         BALR  12,0
+         USING *,12,11,10,9
+         LA    11,2048(12)
+         LA    11,2048(11)
+         LA    10,2048(11)
+         LA    10,2048(10)
+         LA    9,2048(10)
+         LA    9,2048(9)
+         MVC   X'68'(8),PGMPSW    NEUE PROGRAMM-PSW
+         MVC   X'60'(8),SVCPSW    NEUE SVC-PSW
+         LA    1,CCWKOPF
+         BAL   14,DRUCK
+*
+*  ===== VERGLEICHE =====
+         L     2,=F'5'
+         C     2,=F'5'
+         BAL   14,PRUEF
+         DC    X'08',CL23'C    GLEICH'
+         C     2,=F'7'
+         BAL   14,PRUEF
+         DC    X'04',CL23'C    KLEINER'
+         LA    3,3
+         CR    2,3
+         BAL   14,PRUEF
+         DC    X'02',CL23'CR   GROESSER'
+         CH    2,=H'5'
+         BAL   14,PRUEF
+         DC    X'08',CL23'CH'
+         L     3,=F'-1'
+         CL    3,=F'1'
+         BAL   14,PRUEF
+         DC    X'02',CL23'CL   VORZEICHENLOS'
+         LA    4,1
+         CLR   4,3
+         BAL   14,PRUEF
+         DC    X'04',CL23'CLR'
+         MVI   B1,C'M'
+         CLI   B1,C'A'
+         BAL   14,PRUEF
+         DC    X'02',CL23'CLI'
+         CLC   =C'ABC',=C'ABD'
+         BAL   14,PRUEF
+         DC    X'04',CL23'CLC'
+*  ===== LADEN UND SPEICHERN =====
+         L     2,=F'-7'
+         ST    2,W1
+         CLC   W1,=F'-7'
+         BAL   14,PRUEF
+         DC    X'08',CL23'L / ST'
+         LR    3,2
+         C     3,=F'-7'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LR'
+         LH    2,=H'-2'
+         C     2,=F'-2'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LH   VORZEICHEN'
+         L     2,=X'12345678'
+         STH   2,H1
+         CLC   H1,=X'5678'
+         BAL   14,PRUEF
+         DC    X'08',CL23'STH'
+         LA    3,10
+         LA    4,20
+         LA    2,5(3,4)
+         C     2,=F'35'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LA   INDEX+BASIS'
+         L     2,=F'-1'
+         IC    2,=X'41'
+         C     2,=X'FFFFFF41'
+         BAL   14,PRUEF
+         DC    X'08',CL23'IC'
+         STC   2,B1
+         CLI   B1,X'41'
+         BAL   14,PRUEF
+         DC    X'08',CL23'STC'
+         LM    2,4,=F'1,2,3'
+         STM   2,4,W3
+         CLC   W3(12),=F'1,2,3'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LM / STM'
+         L     2,=F'-3'
+         LTR   3,2
+         BAL   14,PRUEF
+         DC    X'04',CL23'LTR'
+         L     2,=F'5'
+         LCR   3,2
+         C     3,=F'-5'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LCR'
+         L     2,=F'-5'
+         LPR   3,2
+         C     3,=F'5'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LPR'
+         L     2,=F'5'
+         LNR   3,2
+         C     3,=F'-5'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LNR'
+         L     2,=X'80000000'
+         LPR   3,2
+         BAL   14,PRUEF
+         DC    X'01',CL23'LPR  UEBERLAUF CC3'
+*  ===== FESTKOMMA-ARITHMETIK =====
+         LA    2,7
+         LA    3,8
+         AR    2,3
+         C     2,=F'15'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AR'
+         L     2,=F'-10'
+         A     2,=F'4'
+         BAL   14,PRUEF
+         DC    X'04',CL23'A    CC NEGATIV'
+         C     2,=F'-6'
+         BAL   14,PRUEF
+         DC    X'08',CL23'A    ERGEBNIS'
+         AH    2,=H'10'
+         C     2,=F'4'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AH'
+         L     2,=X'7FFFFFFF'
+         A     2,=F'1'
+         BAL   14,PRUEF
+         DC    X'01',CL23'A    UEBERLAUF CC3'
+         LA    2,7
+         LA    3,9
+         SR    2,3
+         C     2,=F'-2'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SR'
+         L     2,=F'100'
+         S     2,=F'1'
+         C     2,=F'99'
+         BAL   14,PRUEF
+         DC    X'08',CL23'S'
+         SH    2,=H'-1'
+         C     2,=F'100'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SH'
+         L     3,=F'100000'
+         MR    2,3
+         STM   2,3,D1
+         CLC   D1,=X'00000002540BE400'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MR   64-BIT-PRODUKT'
+         L     3,=F'-6'
+         M     2,=F'7'
+         STM   2,3,D1
+         CLC   D1,=X'FFFFFFFFFFFFFFD6'
+         BAL   14,PRUEF
+         DC    X'08',CL23'M    NEGATIV'
+         L     2,=F'1000'
+         MH    2,=H'-3'
+         C     2,=F'-3000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MH'
+         SR    2,2
+         LA    3,100
+         LA    4,7
+         DR    2,4
+         STM   2,3,D1
+         CLC   D1,=F'2,14'
+         BAL   14,PRUEF
+         DC    X'08',CL23'DR   REST/QUOTIENT'
+         L     2,=F'-1'
+         L     3,=F'-100'
+         D     2,=F'7'
+         STM   2,3,D1
+         CLC   D1,=F'-2,-14'
+         BAL   14,PRUEF
+         DC    X'08',CL23'D    NEGATIV'
+         L     2,=X'FFFFFFFF'
+         AL    2,=F'1'
+         BAL   14,PRUEF
+         DC    X'02',CL23'AL   NULL MIT UEBERTRAG'
+         LA    2,1
+         LA    3,2
+         ALR   2,3
+         BAL   14,PRUEF
+         DC    X'04',CL23'ALR  OHNE UEBERTRAG'
+         L     2,=F'5'
+         SL    2,=F'5'
+         BAL   14,PRUEF
+         DC    X'02',CL23'SL   NULL MIT UEBERTRAG'
+         LA    2,3
+         LA    3,5
+         SLR   2,3
+         BAL   14,PRUEF
+         DC    X'04',CL23'SLR  OHNE UEBERTRAG'
+*  ===== LOGISCHE VERKNUEPFUNGEN =====
+         L     2,=X'0F0F0F0F'
+         N     2,=X'00FF00FF'
+         C     2,=X'000F000F'
+         BAL   14,PRUEF
+         DC    X'08',CL23'N'
+         L     2,=X'0F0F0F0F'
+         L     3,=X'F0F0F0F0'
+         NR    2,3
+         BAL   14,PRUEF
+         DC    X'08',CL23'NR   ERGEBNIS NULL'
+         L     2,=X'0F000000'
+         O     2,=X'000000F0'
+         C     2,=X'0F0000F0'
+         BAL   14,PRUEF
+         DC    X'08',CL23'O'
+         OR    2,3
+         C     2,=X'FFF0F0F0'
+         BAL   14,PRUEF
+         DC    X'08',CL23'OR'
+         L     2,=X'FFFF0000'
+         X     2,=X'0F0F0F0F'
+         C     2,=X'F0F00F0F'
+         BAL   14,PRUEF
+         DC    X'08',CL23'X'
+         XR    2,2
+         BAL   14,PRUEF
+         DC    X'08',CL23'XR'
+         MVI   B1,X'F3'
+         NI    B1,X'0F'
+         CLI   B1,X'03'
+         BAL   14,PRUEF
+         DC    X'08',CL23'NI'
+         OI    B1,X'C0'
+         CLI   B1,X'C3'
+         BAL   14,PRUEF
+         DC    X'08',CL23'OI'
+         XI    B1,X'FF'
+         CLI   B1,X'3C'
+         BAL   14,PRUEF
+         DC    X'08',CL23'XI'
+         MVC   W1,=X'FF00FF00'
+         NC    W1,=X'0FF00FF0'
+         CLC   W1,=X'0F000F00'
+         BAL   14,PRUEF
+         DC    X'08',CL23'NC'
+         OC    W1,=X'00000001'
+         CLC   W1,=X'0F000F01'
+         BAL   14,PRUEF
+         DC    X'08',CL23'OC'
+         XC    W1,W1
+         BAL   14,PRUEF
+         DC    X'08',CL23'XC'
+         MVI   B1,X'C3'
+         TM    B1,X'C0'
+         BAL   14,PRUEF
+         DC    X'01',CL23'TM   ALLE EINS'
+         TM    B1,X'F0'
+         BAL   14,PRUEF
+         DC    X'04',CL23'TM   GEMISCHT'
+         TM    B1,X'3C'
+         BAL   14,PRUEF
+         DC    X'08',CL23'TM   ALLE NULL'
+*  ===== SCHIEBEBEFEHLE =====
+         LA    2,1
+         SLL   2,4
+         C     2,=F'16'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SLL'
+         L     2,=X'80000000'
+         SRL   2,31
+         C     2,=F'1'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SRL'
+         L     2,=F'-16'
+         SRA   2,2
+         BAL   14,PRUEF
+         DC    X'04',CL23'SRA  CC'
+         C     2,=F'-4'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SRA  ERGEBNIS'
+         LA    2,3
+         SLA   2,2
+         BAL   14,PRUEF
+         DC    X'02',CL23'SLA  CC'
+         C     2,=F'12'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SLA  ERGEBNIS'
+         L     2,=X'40000000'
+         SLA   2,1
+         BAL   14,PRUEF
+         DC    X'01',CL23'SLA  UEBERLAUF'
+         L     2,=F'1'
+         L     3,=X'80000000'
+         SLDL  2,1
+         STM   2,3,D1
+         CLC   D1,=X'0000000300000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SLDL'
+         LA    2,1
+         SR    3,3
+         SRDL  2,4
+         STM   2,3,D1
+         CLC   D1,=X'0000000010000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SRDL'
+         L     2,=F'-1'
+         L     3,=F'-16'
+         SRDA  2,2
+         STM   2,3,D1
+         CLC   D1,=F'-1,-4'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SRDA'
+         SR    2,2
+         LA    3,5
+         SLDA  2,32
+         BAL   14,PRUEF
+         DC    X'02',CL23'SLDA CC'
+         STM   2,3,D1
+         CLC   D1,=F'5,0'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SLDA ERGEBNIS'
+*  ===== SPRUENGE =====
+         LA    3,1
+         CR    3,3
+         BC    8,BC1
+         LA    3,2
+BC1      C     3,=F'1'
+         BAL   14,PRUEF
+         DC    X'08',CL23'BC'
+         LA    3,1
+         LA    4,BCR1
+         CR    3,3
+         BCR   8,4
+         LA    3,2
+BCR1     C     3,=F'1'
+         BAL   14,PRUEF
+         DC    X'08',CL23'BCR'
+         BAL   2,BAL1
+BAL1     LA    2,0(2)
+         LA    3,BAL1
+         CR    2,3
+         BAL   14,PRUEF
+         DC    X'08',CL23'BAL  RUECKSPRUNGADRESSE'
+         LA    4,BALR1
+         BALR  2,4
+BALR1    LA    2,0(2)
+         LA    3,BALR1
+         CR    2,3
+         BAL   14,PRUEF
+         DC    X'08',CL23'BALR'
+         LA    2,5
+         SR    3,3
+BCT1     LA    3,1(3)
+         BCT   2,BCT1
+         C     3,=F'5'
+         BAL   14,PRUEF
+         DC    X'08',CL23'BCT'
+         LA    2,4
+         SR    3,3
+         LA    4,BCTR1
+BCTR1    LA    3,1(3)
+         BCTR  2,4
+         C     3,=F'4'
+         BAL   14,PRUEF
+         DC    X'08',CL23'BCTR'
+         LA    2,1
+         LA    4,1
+         LA    5,10
+         SR    3,3
+BXLE1    AR    3,2
+         BXLE  2,4,BXLE1
+         C     3,=F'55'
+         BAL   14,PRUEF
+         DC    X'08',CL23'BXLE SUMME 1..10'
+         LA    2,10
+         L     4,=F'-1'
+         SR    5,5
+         SR    3,3
+BXH1     AR    3,2
+         BXH   2,4,BXH1
+         C     3,=F'55'
+         BAL   14,PRUEF
+         DC    X'08',CL23'BXH  SUMME 10..1'
+*  ===== EX, SPM, SVC, TS =====
+         LA    2,X'5A'
+         EX    2,EXMVI
+         CLI   B1,X'5A'
+         BAL   14,PRUEF
+         DC    X'08',CL23'EX   MIT MVI'
+         LA    2,2
+         EX    2,EXMVC
+         CLC   W1(3),=C'ABC'
+         BAL   14,PRUEF
+         DC    X'08',CL23'EX   MIT MVC-LAENGE'
+         L     2,=X'20000000'
+         SPM   2
+         BAL   14,PRUEF
+         DC    X'02',CL23'SPM  SETZT CC'
+         SVC   42
+         CLC   SVCCODE,=H'42'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SVC  UNTERBRECHUNG'
+         MVI   B1,0
+         TS    B1
+         BAL   14,PRUEF
+         DC    X'08',CL23'TS   FREI'
+         TS    B1
+         BAL   14,PRUEF
+         DC    X'04',CL23'TS   BELEGT'
+*  ===== DEZIMAL UND ZEICHEN =====
+         ZAP   DW,=P'-123'
+         CVB   2,DW
+         C     2,=F'-123'
+         BAL   14,PRUEF
+         DC    X'08',CL23'CVB'
+         L     2,=F'-456'
+         CVD   2,DW
+         CLC   DW,=X'000000000000456D'
+         BAL   14,PRUEF
+         DC    X'08',CL23'CVD'
+         PACK  P3,=C'12345'
+         CLC   P3,=X'12345F'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PACK'
+         UNPK  Z5,=X'12345C'
+         CLC   Z5,=X'F1F2F3F4C5'
+         BAL   14,PRUEF
+         DC    X'08',CL23'UNPK'
+         MVC   P3,=X'00000C'
+         MVO   P3,=X'1234'
+         CLC   P3,=X'01234C'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MVO'
+         MVC   W1(2),=X'F1F2'
+         MVN   W1(2),=X'0506'
+         CLC   W1(2),=X'F5F6'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MVN'
+         MVC   W1(2),=X'F1F2'
+         MVZ   W1(2),=X'C0D0'
+         CLC   W1(2),=X'C1D2'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MVZ'
+         MVI   B4,C'*'
+         MVC   B4+1(3),B4
+         CLC   B4,=C'****'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MVC  UEBERLAPPEND'
+         MVC   W1,=X'00010203'
+         TR    W1,=C'ABCD'
+         CLC   W1,=C'ABCD'
+         BAL   14,PRUEF
+         DC    X'08',CL23'TR'
+         SR    1,1
+         SR    2,2
+         TRT   TXT,TRTAB
+         LR    5,1
+         LR    6,2
+         BAL   14,PRUEF
+         DC    X'04',CL23'TRT  CC'
+         LA    3,TXT+2
+         CR    5,3
+         BAL   14,PRUEF
+         DC    X'08',CL23'TRT  ADRESSE IN R1'
+         C     6,=F'153'
+         BAL   14,PRUEF
+         DC    X'08',CL23'TRT  FUNKTIONSBYTE R2'
+         MVC   E10,EPAT
+         ED    E10,=P'1234567'
+         CLC   E10,=C' 12,345.67'
+         BAL   14,PRUEF
+         DC    X'08',CL23'ED'
+         MVC   E10,EPAT
+         ED    E10,=P'-0000005'
+         BAL   14,PRUEF
+         DC    X'04',CL23'ED   CC NEGATIV'
+         CLC   E10,=C'      0.05'
+         BAL   14,PRUEF
+         DC    X'08',CL23'ED   NULLENUNTERDRUECKUNG'
+         MVC   E10,EPAT
+         LA    1,E10
+         EDMK  E10,=P'0001234'
+         LR    5,1
+         CLC   E10,=C'     12.34'
+         BAL   14,PRUEF
+         DC    X'08',CL23'EDMK'
+         LA    3,E10+5
+         CR    5,3
+         BAL   14,PRUEF
+         DC    X'08',CL23'EDMK ADRESSE IN R1'
+         ZAP   P8,=P'999'
+         AP    P8,=P'1'
+         BAL   14,PRUEF
+         DC    X'02',CL23'AP   CC POSITIV'
+         CP    P8,=P'1000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'CP'
+         ZAP   P8,=P'5'
+         SP    P8,=P'8'
+         BAL   14,PRUEF
+         DC    X'04',CL23'SP   CC NEGATIV'
+         CP    P8,=P'-3'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SP   ERGEBNIS'
+         ZAP   P8,=P'25'
+         MP    P8,=P'-4'
+         CP    P8,=P'-100'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MP'
+         ZAP   P8,=P'100'
+         DP    P8,=P'7'
+         CP    P8(7),=P'14'
+         BAL   14,PRUEF
+         DC    X'08',CL23'DP   QUOTIENT'
+         CP    P8+7(1),=P'2'
+         BAL   14,PRUEF
+         DC    X'08',CL23'DP   REST'
+         ZAP   P8,=P'-0'
+         BAL   14,PRUEF
+         DC    X'08',CL23'ZAP  MINUS NULL CC'
+         CLC   P8,=X'000000000000000C'
+         BAL   14,PRUEF
+         DC    X'08',CL23'ZAP  NULL POSITIV'
+         ZAP   P2,=P'999'
+         AP    P2,=P'1'
+         BAL   14,PRUEF
+         DC    X'01',CL23'AP   UEBERLAUF CC3'
+*  ===== PROGRAMMUNTERBRECHUNGEN =====
+         XC    LASTINT,LASTINT
+         DC    H'0'               UNGUELTIGER OPERATIONSCODE
+         CLC   LASTINT,=H'1'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 1 OPERATION'
+         XC    LASTINT,LASTINT
+         LPSW  PSWPROB            IN DEN PROBLEMZUSTAND
+PRIV1    SSM   NULL               PRIVILEGIERT
+         SVC   255                ZURUECK IN DEN SUPERVISOR
+         CLC   LASTINT,=H'2'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 2 PRIVILEGIERT'
+         XC    LASTINT,LASTINT
+         EX    0,EXEX
+         CLC   LASTINT,=H'3'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 3 EX AUF EX'
+         XC    LASTINT,LASTINT
+         L     4,=F'65536'        BLOCK BEI 64 KB
+         LA    2,X'30'            SCHLUESSEL 3
+         SSK   2,4
+         LPSW  PSWK5              PSW-SCHLUESSEL 5
+PROT1    MVI   0(4),1             SCHREIBEN VERBOTEN
+         LPSW  PSWK0
+PROT2    CLC   LASTINT,=H'4'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 4 SPEICHERSCHUTZ'
+         SR    3,3
+         ISK   3,4
+         C     3,=F'48'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SSK / ISK'
+         SR    2,2
+         SSK   2,4
+         XC    LASTINT,LASTINT
+         L     4,=F'16777200'
+         L     2,0(4)
+         CLC   LASTINT,=H'5'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 5 ADRESSIERUNG'
+         XC    LASTINT,LASTINT
+         L     2,W1+1
+         CLC   LASTINT,=H'6'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 6 SPEZIFIKATION'
+         XC    LASTINT,LASTINT
+         AP    P8,BADP
+         CLC   LASTINT,=H'7'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 7 DATEN'
+         XC    LASTINT,LASTINT
+         L     2,=X'08000000'
+         SPM   2
+         L     3,=X'7FFFFFFF'
+         A     3,=F'1'
+         SR    2,2
+         SPM   2
+         CLC   LASTINT,=H'8'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 8 FESTKOMMA-UEBERL.'
+         XC    LASTINT,LASTINT
+         SR    2,2
+         LA    3,5
+         D     2,=F'0'
+         CLC   LASTINT,=H'9'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 9 FESTKOMMA-DIVISION'
+         XC    LASTINT,LASTINT
+         L     2,=X'04000000'
+         SPM   2
+         ZAP   P2,=P'999'
+         AP    P2,=P'1'
+         SR    2,2
+         SPM   2
+         CLC   LASTINT,=H'10'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI A DEZIMAL-UEBERLAUF'
+         XC    LASTINT,LASTINT
+         ZAP   P8,=P'5'
+         DP    P8,=P'0'
+         CLC   LASTINT,=H'11'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI B DEZIMAL-DIVISION'
+         XC    LASTINT,LASTINT
+         LE    0,BIGE
+         ME    0,BIGE
+         CLC   LASTINT,=H'12'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI C EXPONENTENUEBERL.'
+         XC    LASTINT,LASTINT
+         L     2,=X'02000000'
+         SPM   2
+         LE    0,TINYE
+         ME    0,TINYE
+         SR    2,2
+         SPM   2
+         CLC   LASTINT,=H'13'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI D EXPONENTENUNTERL.'
+         STD   0,D1
+         CLC   D1,=X'0000000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'UNTERLAUF: ECHTE NULL'
+         XC    LASTINT,LASTINT
+         L     2,=X'01000000'
+         SPM   2
+         LE    0,=E'1.0'
+         SE    0,=E'1.0'
+         SR    2,2
+         SPM   2
+         CLC   LASTINT,=H'14'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI E SIGNIFIKANZ'
+         STE   0,W1
+         CLC   W1,=X'41000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SIGNIF.: CHAR. BLEIBT'
+         XC    LASTINT,LASTINT
+         LE    0,=E'1.0'
+         SDR   2,2
+         DER   0,2
+         CLC   LASTINT,=H'15'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI F GLEITKOMMA-DIV.'
+         XC    LASTINT,LASTINT
+         LER   1,0
+         CLC   LASTINT,=H'6'
+         BAL   14,PRUEF
+         DC    X'08',CL23'PI 6 UNGERADES FPR'
+         XC    LASTINT,LASTINT
+         WRD   B1,0
+         CLC   LASTINT,=H'1'
+         BAL   14,PRUEF
+         DC    X'08',CL23'WRD  NICHT INSTALLIERT'
+*  ===== GLEITKOMMA KURZ =====
+         LE    0,=E'1.5'
+         STE   0,W1
+         CLC   W1,=X'41180000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LE / STE'
+         LER   4,0
+         STE   4,W1
+         CLC   W1,=X'41180000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LER'
+         AE    0,=E'2.25'
+         STE   0,W1
+         CLC   W1,=X'413C0000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AE   1,5+2,25'
+         LE    2,=E'-5.0'
+         AER   0,2
+         BAL   14,PRUEF
+         DC    X'04',CL23'AER  CC NEGATIV'
+         LE    0,=E'1.0'
+         SE    0,=E'0.9375'
+         STE   0,W1
+         CLC   W1,=X'40100000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SE   NORMALISIERT'
+         LE    0,=E'3.0'
+         LE    2,=E'1.0'
+         SER   0,2
+         STE   0,W1
+         CLC   W1,=X'41200000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SER'
+         LE    0,=E'1.0'
+         AU    0,=E'1.0'
+         STE   0,W1
+         CLC   W1,=X'41200000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AU'
+         LE    0,=E'1.0'
+         SU    0,=E'0.9375'
+         STE   0,W1
+         CLC   W1,=X'41010000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SU   UNNORMALISIERT'
+         LE    0,=E'1.0'
+         LE    2,=E'0.9375'
+         SUR   0,2
+         STE   0,W1
+         CLC   W1,=X'41010000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SUR'
+         LE    0,=E'1.0'
+         LE    2,=E'1.0'
+         AUR   0,2
+         STE   0,W1
+         CLC   W1,=X'41200000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AUR'
+         LE    0,=E'1.5'
+         ME    0,=E'2.0'
+         STD   0,D1
+         CLC   D1,=X'4130000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'ME   LANGES PRODUKT'
+         LE    0,=E'-1.5'
+         LE    2,=E'2.0'
+         MER   0,2
+         STD   0,D1
+         CLC   D1,=X'C130000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MER'
+         LE    0,=E'7.0'
+         DE    0,=E'2.0'
+         STE   0,W1
+         CLC   W1,=X'41380000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'DE'
+         LE    0,=E'1.0'
+         LE    2,=E'4.0'
+         DER   0,2
+         STE   0,W1
+         CLC   W1,=X'40400000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'DER'
+         LE    0,=E'3.75'
+         CE    0,=E'3.75'
+         BAL   14,PRUEF
+         DC    X'08',CL23'CE   GLEICH'
+         LE    2,=E'4.0'
+         CER   0,2
+         BAL   14,PRUEF
+         DC    X'04',CL23'CER  KLEINER'
+         LE    0,=E'5.0'
+         HER   2,0
+         STE   2,W1
+         CLC   W1,=X'41280000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'HER'
+         LE    0,=E'-1.0'
+         LTER  2,0
+         BAL   14,PRUEF
+         DC    X'04',CL23'LTER'
+         LE    0,=E'1.5'
+         LCER  2,0
+         STE   2,W1
+         CLC   W1,=X'C1180000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LCER'
+         LE    0,=E'-1.5'
+         LPER  2,0
+         STE   2,W1
+         CLC   W1,=X'41180000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LPER'
+         LE    0,=E'1.5'
+         LNER  2,0
+         STE   2,W1
+         CLC   W1,=X'C1180000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LNER'
+         LE    0,=E'1.0'
+         SE    0,=E'1.0'
+         STE   0,W1
+         CLC   W1,=F'0'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SE   ECHTE NULL'
+         LE    0,=E'1.0'
+         SE    0,KLEINE
+         STE   0,W1
+         CLC   W1,=X'40FFFFFF'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SE   MIT SCHUTZZIFFER'
+*  ===== GLEITKOMMA LANG =====
+         LD    2,=D'-2.5'
+         STD   2,D1
+         CLC   D1,=X'C128000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LD / STD'
+         LDR   6,2
+         STD   6,D1
+         CLC   D1,=X'C128000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LDR'
+         LD    0,=D'1.5'
+         AD    0,=D'2.25'
+         STD   0,D1
+         CLC   D1,=X'413C000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AD'
+         LD    2,=D'0.25'
+         ADR   0,2
+         STD   0,D1
+         CLC   D1,=X'4140000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'ADR'
+         LD    0,=D'1.0'
+         SD    0,=D'0.9375'
+         STD   0,D1
+         CLC   D1,=X'4010000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SD'
+         LD    0,=D'3.0'
+         LD    2,=D'1.0'
+         SDR   0,2
+         STD   0,D1
+         CLC   D1,=X'4120000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SDR'
+         LD    0,=D'1.0'
+         AW    0,=D'1.0'
+         STD   0,D1
+         CLC   D1,=X'4120000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AW'
+         LD    0,=D'1.0'
+         SW    0,=D'0.9375'
+         STD   0,D1
+         CLC   D1,=X'4101000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SW   UNNORMALISIERT'
+         LD    0,=D'1.0'
+         LD    2,=D'0.9375'
+         SWR   0,2
+         STD   0,D1
+         CLC   D1,=X'4101000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SWR'
+         LD    0,=D'1.0'
+         LD    2,=D'1.0'
+         AWR   0,2
+         STD   0,D1
+         CLC   D1,=X'4120000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AWR'
+         LD    0,=D'1.5'
+         MD    0,=D'-2.0'
+         STD   0,D1
+         CLC   D1,=X'C130000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MD'
+         LD    0,=D'3.0'
+         LD    2,=D'0.5'
+         MDR   0,2
+         STD   0,D1
+         CLC   D1,=X'4118000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MDR'
+         LD    0,=D'1.0'
+         DD    0,=D'4.0'
+         STD   0,D1
+         CLC   D1,=X'4040000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'DD'
+         LD    0,=D'9.0'
+         LD    2,=D'3.0'
+         DDR   0,2
+         STD   0,D1
+         CLC   D1,=X'4130000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'DDR'
+         LD    0,=D'1.0'
+         CD    0,=D'2.0'
+         BAL   14,PRUEF
+         DC    X'04',CL23'CD   KLEINER'
+         LD    2,=D'0.5'
+         CDR   0,2
+         BAL   14,PRUEF
+         DC    X'02',CL23'CDR  GROESSER'
+         LD    0,=D'3.0'
+         HDR   2,0
+         STD   2,D1
+         CLC   D1,=X'4118000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'HDR'
+         LD    0,=D'0'
+         LTDR  2,0
+         BAL   14,PRUEF
+         DC    X'08',CL23'LTDR NULL'
+         LD    0,=D'2.0'
+         LCDR  2,0
+         STD   2,D1
+         CLC   D1,=X'C120000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LCDR'
+         LD    0,=D'-2.0'
+         LPDR  2,0
+         STD   2,D1
+         CLC   D1,=X'4120000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LPDR'
+         LD    0,=D'2.0'
+         LNDR  2,0
+         STD   2,D1
+         CLC   D1,=X'C120000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LNDR'
+         LD    0,=D'1.0'
+         SD    0,KLEIND
+         STD   0,D1
+         CLC   D1,=X'4110000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SD   OHNE SCHUTZZIFFER'
+*  ===== GLEITKOMMA ERWEITERT =====
+         LD    0,=D'1.0'
+         SDR   2,2
+         LD    4,=D'1.0'
+         SDR   6,6
+         AXR   0,4
+         STD   0,D1
+         CLC   D1,=X'4120000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'AXR'
+         LD    0,=D'3.0'
+         SDR   2,2
+         SXR   0,4
+         STD   0,D1
+         CLC   D1,=X'4120000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SXR'
+         LD    0,=D'3.0'
+         SDR   2,2
+         LD    4,=D'0.5'
+         SDR   6,6
+         MXR   0,4
+         STD   0,D1
+         CLC   D1,=X'4118000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MXR'
+         LD    0,=D'2.0'
+         LD    2,=D'3.0'
+         MXDR  0,2
+         STD   0,D1
+         CLC   D1,=X'4160000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MXDR'
+         LD    4,=D'2.0'
+         MXD   4,=D'0.5'
+         STD   4,D1
+         CLC   D1,=X'4110000000000000'
+         BAL   14,PRUEF
+         DC    X'08',CL23'MXD'
+         LD    0,XHI
+         LD    2,XLO
+         LRDR  4,0
+         STD   4,D1
+         CLC   D1,=X'4110000000000001'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LRDR RUNDEN'
+         LD    0,LRV
+         LRER  2,0
+         STE   2,W1
+         CLC   W1,=X'41100001'
+         BAL   14,PRUEF
+         DC    X'08',CL23'LRER RUNDEN'
+*  ===== EIN-/AUSGABE, ZEITGEBER, SYSTEMSTEUERUNG =====
+         SIO   X'0FF'
+         BAL   14,PRUEF
+         DC    X'01',CL23'SIO  GERAET FEHLT CC3'
+         TIO   X'00E'
+         BAL   14,PRUEF
+         DC    X'08',CL23'TIO  DRUCKER FREI'
+         HIO   X'00E'
+         BAL   14,PRUEF
+         DC    X'08',CL23'HIO  DRUCKER FREI'
+         TCH   X'000'
+         BAL   14,PRUEF
+         DC    X'0C',CL23'TCH  KANAL 0'
+         TCH   X'700'
+         BAL   14,PRUEF
+         DC    X'01',CL23'TCH  KANAL 7 FEHLT'
+         XC    LASTINT,LASTINT
+         SSM   NULL
+         CLC   LASTINT,=H'0'
+         BAL   14,PRUEF
+         DC    X'08',CL23'SSM'
+         L     2,X'50'
+         L     6,=F'30000'
+TLOOP    BCT   6,TLOOP
+         L     3,X'50'
+         CR    2,3
+         BAL   14,PRUEF
+         DC    X'02',CL23'ZEITGEBER ZAEHLT'
+*
+*  ===== ZUSAMMENFASSUNG =====
+         MVC   PZEILE,LEER
+         MVC   PZEILE(4),MUST3
+         ED    PZEILE(4),TNR
+         MVC   PZEILE+5(19),=C'TESTS AUSGEFUEHRT, '
+         MVC   PZEILE+24(4),MUST3
+         ED    PZEILE+24(4),FEHLER
+         MVC   PZEILE+29(6),=C'FEHLER'
+         LA    1,CCWSUMM
+         BAL   14,DRUCK
+         MVC   KZEILE,PZEILE
+         LA    1,CCWKON
+         ST    1,X'48'
+         SIO   X'009'
+KWARTE   TIO   X'009'
+         BC    2,KWARTE
+         CP    FEHLER,=P'0'
+         BNE   SCHLECHT
+         LPSW  STOPOK
+SCHLECHT LPSW  STOPF
+*
+*  ===== PRUEFROUTINE: CC AUS DER RUECKSPRUNGINFORMATION IN R14 =====
+PRUEF    LR    15,14
+         SRL   15,28              ILC UND CC
+         N     15,=F'3'           NUR CC
+         LA    14,0(14)           ADRESSE VON MASKE UND NAME
+         SR    1,1
+         IC    1,0(14)            MASKE
+         LA    0,8
+         SRL   0,0(15)            BIT FUER DIESEN CC
+         MVC   PZEILE,LEER
+         AP    TNR,=P'1'
+         MVC   PZEILE(4),MUST3
+         ED    PZEILE(4),TNR
+         MVC   PZEILE+6(23),1(14)
+         MVC   PZEILE+31(3),=C'CC='
+         STC   15,PZEILE+34
+         OI    PZEILE+34,X'F0'
+         NR    0,1
+         BZ    PFEHL
+         MVC   PZEILE+38(2),=C'OK'
+         B     PDRUCK
+PFEHL    MVC   PZEILE+38(14),=C'*** FEHLER ***'
+         AP    FEHLER,=P'1'
+PDRUCK   ST    14,PSAVE
+         LA    1,CCWZEILE
+         BAL   14,DRUCK
+         L     14,PSAVE
+         B     24(14)
+*  ===== DRUCKEN (KANALPROGRAMM AB R1) =====
+DRUCK    ST    1,X'48'
+         SIO   X'00E'
+DRWARTE  TIO   X'00E'
+         BC    2,DRWARTE
+         BR    14
+*  ===== UNTERBRECHUNGSBEHANDLUNG =====
+PGMINT   MVC   LASTINT,X'2A'      CODE AUS DER ALTEN PROGRAMM-PSW
+         LPSW  X'28'              WEITER HINTER DEM BEFEHL
+SVCINT   MVC   SVCCODE,X'22'
+         CLI   X'23',255
+         BNE   SVCRET
+         NI    X'21',X'FE'        SVC 255: PROBLEMZUSTAND AUS
+SVCRET   LPSW  X'20'
+*  ===== AUSZUFUEHRENDE BEFEHLE FUER EX =====
+EXMVI    MVI   B1,0
+EXMVC    MVC   W1(1),=C'ABCD'
+EXEX     EX    0,EXEX
+*  ===== DATEN =====
+         DS    0D
+PGMPSW   DC    X'00000000',A(PGMINT)
+SVCPSW   DC    X'00000000',A(SVCINT)
+PSWPROB  DC    X'00010000',A(PRIV1)
+PSWK5    DC    X'00500000',A(PROT1)
+PSWK0    DC    X'00000000',A(PROT2)
+STOPOK   DC    X'0002000000000000'
+STOPF    DC    X'00020000000BAD00'
+XHI      DC    X'4110000000000000'
+XLO      DC    X'3380000000000000'
+LRV      DC    X'4110000080000000'
+KLEIND   DC    X'4000000000000001'
+KLEINE   DC    X'40000001'
+BIGE     DC    X'7F100000'
+TINYE    DC    X'01100000'
+DW       DS    D
+D1       DS    D
+W1       DS    F
+W3       DS    3F
+H1       DS    H
+LASTINT  DC    H'0'
+SVCCODE  DC    H'0'
+B1       DS    C
+NULL     DC    X'00'
+B4       DS    CL4
+P8       DS    PL8
+P3       DS    PL3
+P2       DS    PL2
+Z5       DS    CL5
+E10      DS    CL10
+TNR      DC    PL2'0'
+FEHLER   DC    PL2'0'
+BADP     DC    X'1234'
+TXT      DC    C'AB,C'
+EPAT     DC    X'4020206B2021204B2020'
+MUST3    DC    X'40202120'
+CCWKOPF  CCW   X'8B',0,X'60',1
+         CCW   X'09',TITEL,X'60',L'TITEL
+         CCW   X'09',UNTER,X'20',L'UNTER
+CCWZEILE CCW   X'09',PZEILE,X'20',60
+CCWSUMM  CCW   X'0B',0,X'60',1
+         CCW   X'09',PZEILE,X'20',60
+CCWKON   CCW   X'09',KZEILE,X'20',40
+TITEL    DC    C'BEFEHLSTEST DER S/360-WERKBANK'
+UNTER    DC    C'=============================='
+PSAVE    DS    F
+PZEILE   DS    CL60
+KZEILE   DS    CL40
+LEER     DC    CL60' '
+TRTAB    DC    256X'00'
+         ORG   TRTAB+C','
+         DC    X'99'
+         ORG
+         END   BEFTEST
+`},
+{name:'6 · Gleitkomma: Quadratwurzeln nach Newton',data:'',src:
+`* ---------------------------------------------------------------
+*  GLEITKOMMA: QUADRATWURZELN NACH NEWTON (LANGES FORMAT)
+*  X(N+1) = (X(N) + A/X(N)) / 2   MIT DDR, ADR, HDR
+*  AUSGABE AUF DER 1052. UMWANDLUNG IN EINE GANZE ZAHL MIT DEM
+*  KLASSISCHEN TRICK: UNNORMALISIERTE ADDITION VON X'4E00000000000000'
+* ---------------------------------------------------------------
+WURZEL   START X'200'
+         BALR  12,0
+         USING *,12
+         LA    9,ZAHLEN           ZEIGER AUF DIE RADIKANDEN
+         LA    8,5                ANZAHL
+NAECHSTE LD    0,0(9)             A
+         LDR   2,0                STARTWERT X0 = A
+         LA    7,8                8 NEWTON-SCHRITTE
+NEWTON   LDR   4,0                A
+         DDR   4,2                A / X
+         ADR   4,2                X + A / X
+         HDR   2,4                X = (X + A / X) / 2
+         BCT   7,NEWTON
+*        --- A ALS GANZE ZAHL ---
+         LDR   4,0
+         AW    4,MAGIC            BRUCHTEIL ABSCHNEIDEN
+         STD   4,DW
+         L     3,DW+4
+         CVD   3,DW
+         MVC   ZEILE,TEXT
+         MVC   ZEILE+12(4),MUST3
+         ED    ZEILE+12(4),DW+6
+*        --- WURZEL * 10**8 ALS GANZE ZAHL ---
+         LDR   4,2
+         MD    4,=D'1E8'
+         AW    4,MAGIC
+         STD   4,DW
+         L     3,DW+4
+         CVD   3,DW
+         MVC   ZEILE+18(11),MUST9
+         ED    ZEILE+18(11),DW+3
+         LA    1,KONCCW
+         ST    1,X'48'
+         SIO   X'009'
+WARTE    TIO   X'009'
+         BC    2,WARTE
+         LA    9,8(9)
+         BCT   8,NAECHSTE
+         LPSW  ENDE
+*
+         DS    0D
+ENDE     DC    X'0002000000000000'
+MAGIC    DC    X'4E00000000000000'
+ZAHLEN   DC    D'2',D'3',D'5',D'10',D'99'
+DW       DS    D
+KONCCW   CCW   X'09',ZEILE,X'20',L'ZEILE
+MUST3    DC    X'40202120'
+MUST9    DC    X'40216B2020202020202020'
+TEXT     DC    CL40'Wurzel aus       ='
+ZEILE    DS    CL40
+         END   WURZEL
+`}
+];
+
+/* =====================================================================
+   Deck-Analyse: lädt das Deck probeweise in einer eigenen Maschine per IPL
+   und protokolliert, welche Karte wohin gelesen wurde (ohne das Programm zu starten)
+   ===================================================================== */
+function ccwText(c,o){ const cmd=c[o], ad=(c[o+1]<<16)|(c[o+2]<<8)|c[o+3], fl=c[o+4], n=(c[o+6]<<8)|c[o+7];
+  const F=[]; if(fl&0x80)F.push('CD'); if(fl&0x40)F.push('CC'); if(fl&0x20)F.push('SLI'); if(fl&0x10)F.push('SKIP'); if(fl&0x08)F.push('PCI');
+  const what=(cmd&0x0F)===8?'TIC':((cmd&3)===2?'Lesen':((cmd&3)===1?'Schreiben':((cmd&0x0F)===4?'Sense':'Steuern')));
+  return HX(cmd,2)+' '+HX(ad,6)+' '+HX(fl,2)+' '+HX(n,4)+'  '+what+((cmd&0x0F)===8?' nach '+HX(ad,6):' '+n+' Byte nach/von '+HX(ad,6))+(F.length?' ['+F.join(',')+']':''); }
+function analyzeDeck(cards){
+  const m=new Machine(), r=new Rdr2540(0x00C); m.addDev(r); m.powerOn(16777216); m.trOn=false; m.ioScale=0;
+  r.hopper=cards.slice(); const info=cards.map(()=>({role:'data'})); let idx=0, last=-1, ccwFetch=[];
+  const rd=r.read.bind(r); r.read=(cmd,n)=>{ const x=rd(cmd,n); last=x.data&&x.data.length?idx++:-1; return x; };
+  const fc=m.fetchCCW.bind(m); m.fetchCCW=ch=>{ const c=fc(ch); if(c) ccwFetch.push(c.at); return c; };
+  const dc=m.doCmd.bind(m); m.doCmd=(d,job,ch)=>{ const x=dc(d,job,ch);
+    if(last>=0&&(job.cmd&3)===2){ info[last]={role:'load',addr:job.segs[0].da,len:Math.min(80,job.segs.reduce((a,q)=>a+q.cnt,0))}; last=-1; } return x; };
+  m.onEvent=k=>{ if(k==='ipl') m.running=false; };
+  const err=m.ipl(0x00C); let g=0; while(!err&&m.loading&&g++<2000) m.run(10000);
+  const res={ok:!!m.iplOK,msg:err||m.stopMsg,info,nLoaded:idx,M:m.M,entry:m.ia,psw:[m.psw0(),m.psw1()]};
+  if(info.length) info[0].role=res.ok||idx?'ipl':'data';
+  for(let i=1;i<idx;i++){ const q=info[i]; if(q.role==='load'&&ccwFetch.some(a=>a>=q.addr&&a<q.addr+q.len)) q.role='ctl'; }
+  return res;
+}
+function deckReport(cards){
+  const a=analyzeDeck(cards), L=[];
+  if(!a.ok){ L.push('Kein selbstladendes Deck ('+(a.msg||'IPL nicht abgeschlossen')+').'); L.push('');
+    cards.forEach((c,i)=>L.push(String(i+1).padStart(4)+'  '+e2s(c).replace(/\s+$/,''))); return L.join('\n'); }
+  const c0=cards[0];
+  L.push('IPL von 00C erfolgreich: '+a.nLoaded+' Karten gelesen, '+(cards.length-a.nLoaded)+' Datenkarten bleiben für das Programm im Magazin.');
+  L.push('Geladene PSW: '+HX(a.psw[0],8)+' '+HX(a.psw[1],8)+'  →  Einsprungadresse '+HX(a.entry,6)); L.push('');
+  L.push('Karte 1 – IPL-Karte (Bytes 0–23 nach Adresse 0):');
+  L.push('      PSW   '+Array.from(c0.subarray(0,8),x=>HX(x,2)).join(''));
+  L.push('      CCW 1 '+ccwText(c0,8)); L.push('      CCW 2 '+ccwText(c0,16));
+  let lo=Infinity, hi=-1;
+  for(let i=1;i<cards.length;i++){ const q=a.info[i], c=cards[i];
+    if(q.role==='ctl'){ L.push('Karte '+(i+1)+' – Steuerkarte (Kanalprogramm ab '+HX(q.addr,6)+'):');
+      for(let o=0;o<80;o+=8){ let z=true; for(let k=0;k<8;k++) if(c[o+k]) z=false; if(!z) L.push('      '+HX(q.addr+o,6)+'  '+ccwText(c,o)); } }
+    else if(q.role==='load'){ L.push('Karte '+(i+1)+' – Programmtext '+HX(q.addr,6)+'–'+HX(q.addr+q.len-1,6)); lo=Math.min(lo,q.addr); hi=Math.max(hi,q.addr+q.len); }
+    else L.push('Karte '+(i+1)+' – Datenkarte: '+e2s(c).replace(/\s+$/,'')); }
+  if(hi>lo){ L.push(''); L.push('Disassemblierung des geladenen Programms ('+HX(lo,6)+'–'+HX(hi-1,6)+'; Datenbereiche erscheinen als Befehle oder DC):');
+    const mm={M:a.M,memSize:a.M.length,R:null}; let ad=lo, n=0;
+    while(ad<hi&&n++<3000){ const d=disasm(mm,ad,false); const t=e2s(a.M.subarray(ad,ad+d.len));
+      L.push((ad===a.entry?'▶ ':'  ')+HX(ad,6)+'  '+d.hex.padEnd(12)+'  '+d.txt.padEnd(34)+' '+t); ad+=d.len; } }
+  return L.join('\n');
+}
+
+if(typeof module!=='undefined') module.exports={analyzeDeck,deckReport,Machine,Con1052,Rdr2540,Pun2540,Prt1403,Asm,buildDeck,EXAMPLES,disasm,disasmB,s2e,e2s,textCard,HX};
+</script>
+
+<script>
+"use strict";
+/* =====================================================================
+   Oberfläche
+   ===================================================================== */
+const $=id=>document.getElementById(id);
+const m=new Machine();
+const con=new Con1052(0x009), rdr=new Rdr2540(0x00C), pun=new Pun2540(0x00D), prt=new Prt1403(0x00E);
+[con,rdr,pun,prt].forEach(d=>m.addDev(d));
+m.powerOn(+$('memSel').value);
+
+function msg(t){ $('msg').textContent=t; }
+function download(name,data,type){ const b=new Blob([data],{type:type||'application/octet-stream'}); const a=document.createElement('a');
+  a.href=URL.createObjectURL(b); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500); }
+
+/* ---------- Reiter ---------- */
+let curTab='tCon';
+$('tabs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+  document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('act',x===b));
+  document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('act',x.id===b.dataset.t)); curTab=b.dataset.t; refreshTab(); });
+
+/* ---------- Bedienfeld ---------- */
+function mkLamps(host,groups){ const arr=[];
+  for(const [label,n] of groups){ const g=document.createElement('div'); g.className='lgrp';
+    g.innerHTML='<div class="gl">'+label+'</div>'; const ls=document.createElement('div'); ls.className='ls';
+    for(let i=0;i<n;i++){ const l=document.createElement('span'); l.className='lamp'+(i&&i%4===0?' q':''); ls.appendChild(l); arr.push(l); }
+    g.appendChild(ls); host.appendChild(g); }
+  return arr; }
+const pswL=mkLamps($('pswLamps'),[['SYS.-MASKE',8],['SCHL.',4],['AMWP',4],['UNTERBRECHUNGSCODE',16],['ILC',2],['CC',2],['PROG.-M.',4],['BEFEHLSADRESSE',24]]);
+const dispL=mkLamps($('dispLamps'),[['BYTE 0',8],['BYTE 1',8],['BYTE 2',8],['BYTE 3',8]]);
+function setL(arr,off,n,v){ for(let i=0;i<n;i++) arr[off+i].classList.toggle('on',!!((v>>>(n-1-i))&1)); }
+const stNames=['SYSTEM','MANUELL','WARTEN','LADEN','HALT'];
+const stL=stNames.map(n=>{ const s=document.createElement('span'); s.className='slamp'+(n==='HALT'?' red':''); s.textContent=n; $('statusLamps').appendChild(s); return s; });
+function mkKnobs(host,n,init){ const v=[]; for(let i=0;i<n;i++){ const k=document.createElement('button'); k.className='knob'; v.push(init[i]||0); k.textContent=HX(v[i],1);
+    const upd=d=>{ v[i]=(v[i]+d+16)&15; k.textContent=HX(v[i],1); };
+    k.onclick=()=>upd(1); k.oncontextmenu=e=>{ e.preventDefault(); upd(-1); }; k.onwheel=e=>{ e.preventDefault(); upd(e.deltaY>0?-1:1); };
+    host.appendChild(k); } return { val:()=>v.reduce((a,x)=>a*16+x,0) }; }
+const swAddr=mkKnobs($('swAddr'),6,[0,0,0,2,0,0]), swData=mkKnobs($('swData'),8,[]), swLoad=mkKnobs($('swLoad'),3,[0,0,12]);
+const SELS=['SPEICHER','REGISTER','PSW-ADR.']; let selIx=0;
+$('swSel').onclick=()=>{ selIx=(selIx+1)%SELS.length; $('swSel').textContent=SELS[selIx]; refreshPanel(); };
+let dispVal=0, dispLabel='ANZEIGE';
+function doDisplay(){ const a=swAddr.val();
+  if(selIx===0){ const w=a&~3; if(w+4>m.memSize){ msg('Adresse außerhalb des Hauptspeichers'); return; } dispVal=m.rw(w)>>>0; dispLabel='SP '+HX(w,6); }
+  else if(selIx===1){ const r=a&15; dispVal=m.R[r]>>>0; dispLabel='GPR '+r; }
+  else { dispVal=m.ia; dispLabel='BEF.-ADR.'; }
+  refreshPanel(); }
+$('kDisp').onclick=doDisplay;
+$('kStore').onclick=()=>{ if(m.running){ msg('Erst STOP drücken.'); return; } const a=swAddr.val(), v=swData.val();
+  if(selIx===0){ const w=a&~3; if(w+4>m.memSize) return; m.ww(w,v); msg('X\''+HX(v,8)+'\' nach Adresse '+HX(w,6)+' gespeichert.'); }
+  else if(selIx===1){ m.R[a&15]=v|0; msg('Register '+(a&15)+' gesetzt.'); }
+  else { m.ia=v&0xFFFFFF; msg('Befehlsadresse gesetzt.'); }
+  doDisplay(); refreshTab(); };
+$('kReset').onclick=()=>{ m.systemReset(); conState(); msg('SYSTEM RESET ausgeführt (Speicher und Register bleiben erhalten).'); refreshAll(); };
+$('kLoad').onclick=()=>doIPL(swLoad.val());
+$('kStart').onclick=()=>start();
+$('kStop').onclick=()=>{ m.running=false; msg('Angehalten bei '+HX(m.ia,6)+'.'); refreshAll(); };
+$('kStep').onclick=()=>singleStep(1);
+$('kInt').onclick=()=>{ m.extPending|=0x40; m.irqPending=true; msg('Externe Unterbrechung (Unterbrechungstaste) angemeldet.'); if(m.wait&&!m.running&&(m.sysMask&1)) start(); };
+$('kTimer').onchange=e=>{ m.timerOn=e.target.checked; };
+$('memSel').onchange=e=>{ if(!confirm('Hauptspeichergröße ändern? Das entspricht dem Aus- und Einschalten: Speicherinhalt geht verloren.')){ e.target.value=String(m.memSize); return; }
+  m.powerOn(+e.target.value); msg('Neu eingeschaltet mit '+(m.memSize/1024)+' KB Hauptspeicher.'); refreshAll(); };
+
+function start(){ if(m.wait&&(m.sysMask&0xFF)===0&&!m.loading){ msg('CPU im gesperrten Wartezustand – erst neues Programm laden.'); return; }
+  m.running=true; m.bpSkip=true; m.stopMsg=''; msg('Läuft …'); }
+function singleStep(n){ m.running=false;
+  for(let i=0;i<n;i++){ if(m.irqPending) m.tryIrq(); if(m.wait){ msg('CPU im Wartezustand.'); break; } m.step(); }
+  if(m.stopMsg) msg(m.stopMsg); else msg('Einzelschritt: nächste Adresse '+HX(m.ia,6)); refreshAll(); }
+function doIPL(addr){
+  const err=m.ipl(addr); if(err){ msg(err); return; }
+  conState();
+  msg('LADEN von '+HX(addr,3)+' …');
+  refreshAll(); }
+m.onEvent=(k,a)=>{ if(k==='halt'){ msg(a); refreshAll(); } if(k==='ipl'){ msg('IPL von '+HX(a,3)+' erfolgreich, Programm läuft.'); } };
+
+function refreshPanel(){
+  const w0=m.psw0(), w1=m.psw1();
+  setL(pswL,0,32,w0); setL(pswL,32,32,w1);
+  setL(dispL,0,32,dispVal); $('dispLabel').textContent=dispLabel;
+  const st=[m.running&&!m.wait, !m.running, !!m.wait, m.loading, !!m.stopMsg&&!m.running];
+  st.forEach((v,i)=>stL[i].classList.toggle('on',v));
+}
+
+/* ---------- Konsole ---------- */
+const conOut=$('conOut');
+con.out=(s,kind)=>{ if(kind==='bell'){ conOut.classList.add('reqon'); setTimeout(()=>conOut.classList.remove('reqon'),300); return; }
+  const sp=document.createElement('span'); if(kind==='in') sp.className='in'; sp.textContent=s; conOut.appendChild(sp);
+  while(conOut.childNodes.length>3000) conOut.removeChild(conOut.firstChild);
+  conOut.scrollTop=conOut.scrollHeight; };
+function conState(){ $('conState').textContent=con.reading?'Leseanforderung aktiv – das Programm wartet auf Ihre Eingabe.':'Keine Leseanforderung.'; $('conIn').classList.toggle('reqon',con.reading); }
+con.onRead=conState;
+function conSend(){ const t=$('conIn').value; $('conIn').value=''; con.input(t); conState(); }
+$('conSend').onclick=conSend; $('conIn').onkeydown=e=>{ if(e.key==='Enter') conSend(); };
+$('conReq').onclick=()=>{ m.attention(con); msg('ANFORDERN: Achtung-Status (Attention) der 1052 gemeldet.'); };
+$('conClr').onclick=()=>{ conOut.textContent=''; };
+$('conSave').onclick=()=>download('konsole1052.txt',conOut.textContent,'text/plain');
+
+/* ---------- Kartenleser ---------- */
+function drawCard(cv,card,label){
+  const g=cv.getContext('2d'), W=cv.width, H=cv.height, x0=20, y0=34, cw=(W-40)/80, rh=(H-50)/12;
+  g.clearRect(0,0,W,H);
+  g.fillStyle='#f2e3b8'; g.beginPath(); g.moveTo(18,0); g.lineTo(W,0); g.lineTo(W,H); g.lineTo(0,H); g.lineTo(0,18); g.closePath(); g.fill();
+  g.strokeStyle='#c9b27a'; g.stroke();
+  g.font='9px monospace'; g.textAlign='center'; g.fillStyle='#b08a52';
+  for(let r=2;r<12;r++){ const d=r-2; for(let c=0;c<80;c+=1) g.fillText(String(d),x0+c*cw+cw/2,y0+r*rh+rh*0.75); }
+  if(!card){ g.fillStyle='#7a6a4a'; g.font='16px sans-serif'; g.fillText(label||'Magazin leer',W/2,H/2-30); return; }
+  let txt=''; for(let c=0;c<80;c++){ const ch=E2A[card[c]]; txt+=ch??'·'; }
+  g.font='11px monospace'; g.fillStyle='#222';
+  for(let c=0;c<80;c++){ const ch=E2A[card[c]]; if(ch&&ch!==' ') g.fillText(ch,x0+c*cw+cw/2,20); }
+  g.fillStyle='#111';
+  let bin=0;
+  for(let c=0;c<80;c++){ const ch=E2A[card[c]]; let rows=card[c]===0x40?[]:holl(ch);
+    if(ch===null||rows===null){ bin++; rows=[]; for(let bit=0;bit<8;bit++) if(card[c]&(0x80>>bit)) rows.push(bit+4);   // Binärbyte: 8 Bits in Zeilen 2–9, schematisch
+      g.fillStyle='#d9c48e'; g.fillRect(x0+c*cw+1,y0+4*rh,cw-2,8*rh); g.fillStyle='#111'; }
+    for(const r of rows) g.fillRect(x0+c*cw+cw*0.2,y0+r*rh+rh*0.12,cw*0.6,rh*0.6); }
+  if(bin){ g.fillStyle='#7a5a2a'; g.font='12px sans-serif'; g.textAlign='left'; g.fillText(bin+' Binärspalten: Bits 0–7 schematisch in den Zeilen 2–9 (dunkler Hintergrund)',12,H-8); }
+  if(label){ g.fillStyle='#7a5a2a'; g.font='12px sans-serif'; g.textAlign='right'; g.fillText(label,W-12,H-8); }
+}
+let rdrSel=0;
+function isText(c){ for(const x of c) if(E2A[x]===null) return false; return true; }
+function refreshRdr(){
+  rdr.eof=$('rdrEof').checked;
+  if(rdrSel>=rdr.hopper.length) rdrSel=0;
+  drawCard($('cardCv'),rdr.hopper[rdrSel],rdr.hopper.length?('Karte '+(rdrSel+1)+' von '+rdr.hopper.length+(rdrSel?'':' (als nächste gelesen)')):null);
+  $('rdrInfo').textContent='Magazin: '+rdr.hopper.length+' Karten · Ablagefach: '+rdr.stacked+' Karten';
+  const L=[]; for(let i=0;i<Math.min(40,rdr.hopper.length);i++){ const c=rdr.hopper[i]; L.push(String(i+1).padStart(4)+'  '+(isText(c)?e2s(c).replace(/\s+$/,''):'[Binärkarte] '+Array.from(c.subarray(0,16),x=>HX(x,2)).join('')+'…')); }
+  if(rdr.hopper.length>40) L.push('      … und '+(rdr.hopper.length-40)+' weitere');
+  $('rdrList').innerHTML=L.map((t,i)=>'<div data-i="'+i+'"'+(i===rdrSel?' style="background:#fff3b8"':'')+'>'+t.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</div>').join('');
+  $('punInfo').textContent=pun.cards.length+' Karten gestanzt.';
+}
+rdr.onChange=()=>{ rdrDirty=true; }; pun.onChange=()=>{ rdrDirty=true; };
+let rdrDirty=true;
+$('rdrEof').onchange=refreshRdr;
+$('rdrList').onclick=e=>{ const d=e.target.closest('[data-i]'); if(d){ rdrSel=+d.dataset.i; refreshRdr(); } };
+$('deckAna').onclick=()=>{ if(!rdr.hopper.length){ $('deckView').textContent='Das Magazin ist leer.'; return; } $('deckView').textContent=deckReport(rdr.hopper); };
+$('rdrClear').onclick=()=>{ rdr.hopper=[]; refreshRdr(); };
+$('rdrAdd').onclick=()=>{ const t=$('rdrText').value.replace(/\r/g,''); if(!t) return; t.replace(/\n$/,'').split('\n').forEach(l=>rdr.hopper.push(textCard(l))); refreshRdr(); };
+$('rdrFileTxt').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; const t=(await f.text()).replace(/\r/g,'');
+  t.replace(/\n$/,'').split('\n').forEach(l=>rdr.hopper.push(textCard(l))); e.target.value=''; refreshRdr(); msg(f.name+' als Kartenstapel eingelegt.'); };
+$('rdrFileBin').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; const b=new Uint8Array(await f.arrayBuffer());
+  for(let i=0;i<b.length;i+=80){ const c=new Uint8Array(80).fill(0x40); c.set(b.subarray(i,i+80)); rdr.hopper.push(c); }
+  if(b.length%80) msg('Hinweis: Dateilänge ist kein Vielfaches von 80, letzte Karte aufgefüllt.'); e.target.value=''; refreshRdr(); };
+$('punClear').onclick=()=>{ pun.cards=[]; refreshRdr(); };
+$('punSaveTxt').onclick=()=>download('stanzer.txt',pun.cards.map(c=>e2s(c,true).replace(/\s+$/,'')).join('\n'),'text/plain');
+$('punSaveBin').onclick=()=>{ const o=new Uint8Array(pun.cards.length*80); pun.cards.forEach((c,i)=>o.set(c,i*80)); download('stanzer.deck',o); };
+
+/* ---------- Drucker ---------- */
+const prtPages=$('prtPages'); let pageDiv=null, prtLines=0;
+function newPageDiv(){ pageDiv=document.createElement('div'); pageDiv.className='page'; prtPages.appendChild(pageDiv);
+  while(prtPages.childNodes.length>60) prtPages.removeChild(prtPages.firstChild); }
+prt.onLine=(line,no)=>{ if(!pageDiv) newPageDiv(); const d=document.createElement('div'); d.className='pl'+((Math.floor(no/3)&1)?'':' g'); d.textContent=line; pageDiv.appendChild(d); prtLines++;
+  if(curTab==='tPrt'){ const w=$('prtWrap'); w.scrollTop=w.scrollHeight; } };
+prt.onPage=()=>{ newPageDiv(); };
+$('prtClear').onclick=()=>{ prt.clear(); prtPages.textContent=''; pageDiv=null; prtLines=0; };
+$('prtSave').onclick=()=>download('drucker1403.txt',prt.text(),'text/plain');
+
+/* ---------- Assembler ---------- */
+EXAMPLES.forEach((e,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=e.name; $('exSel').appendChild(o); });
+function loadExample(i){ $('asmSrc').value=EXAMPLES[i].src; $('asmData').value=EXAMPLES[i].data; $('asmList').textContent=''; $('asmInfo').textContent=''; }
+$('exLoad').onclick=()=>loadExample(+$('exSel').value);
+loadExample(0);
+let lastAsm=null;
+function assemble(){
+  const a=new Asm($('asmSrc').value).run(); lastAsm=a;
+  const box=$('asmList'); box.textContent='';
+  for(const l of a.listing()){ const d=document.createElement('div'); if(l.err) d.className='err'; d.textContent=l.t; box.appendChild(d); }
+  if(a.errors.length){ $('asmInfo').textContent=a.errors.length+' Fehler – siehe Liste.'; return null; }
+  if(!a.image){ $('asmInfo').textContent='Kein Code erzeugt.'; return null; }
+  const deck=buildDeck(a.image,a.entry);
+  $('asmInfo').textContent='OK: '+a.image.bytes.length+' Bytes ab '+HX(a.image.lo,6)+', Einsprung '+HX(a.entry,6)+', Deck '+deck.length+' Karten.';
+  return deck; }
+function deckWithData(deck){ const t=$('asmData').value.replace(/\r/g,''); const d=deck.slice();
+  if(t.trim()) t.replace(/\n$/,'').split('\n').forEach(l=>d.push(textCard(l))); return d; }
+$('asmOnly').onclick=()=>assemble();
+$('asmDeck').onclick=()=>{ const d=assemble(); if(!d) return; rdr.hopper.push(...deckWithData(d)); refreshRdr(); msg('Deck ins Magazin des 2540 gelegt ('+rdr.hopper.length+' Karten).'); };
+$('asmRun').onclick=()=>{ const d=assemble(); if(!d) return; rdr.hopper=deckWithData(d); rdr.stacked=0; refreshRdr();
+  m.R.fill(0); doIPL(0x00C); };
+$('asmSaveDeck').onclick=()=>{ const d=assemble(); if(!d) return; const all=deckWithData(d); const o=new Uint8Array(all.length*80); all.forEach((c,i)=>o.set(c,i*80)); download('programm.deck',o); };
+$('asmSaveSrc').onclick=()=>download('programm.asm',$('asmSrc').value,'text/plain');
+$('asmFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('asmSrc').value=(await f.text()).replace(/\r/g,''); e.target.value=''; };
+
+/* ---------- Debugger ---------- */
+let disBase=null;
+function refreshDbg(){
+  const follow=$('dFollow').checked; let a=(follow||disBase===null)?m.ia:disBase;
+  // ein paar Befehle zurück: einfache Heuristik über den Trace
+  const box=$('dis'); box.textContent='';
+  for(let i=0;i<26&&a<m.memSize;i++){ const d=disasm(m,a,a===m.ia); const div=document.createElement('div');
+    div.textContent=(m.bp.has(a)?'●':' ')+' '+HX(a,6)+'  '+d.hex.padEnd(12)+'  '+d.txt;
+    if(a===m.ia) div.classList.add('cur'); if(m.bp.has(a)) div.classList.add('bp');
+    const ad=a; div.onclick=()=>{ if(m.bp.has(ad)) m.bp.delete(ad); else m.bp.add(ad); refreshDbg(); };
+    box.appendChild(div); a+=d.len; }
+  $('bpList').textContent=m.bp.size?[...m.bp].map(x=>HX(x,6)).join(', '):'–';
+  const w0=m.psw0(), w1=m.psw1();
+  $('pswText').innerHTML=HX(w0,8)+' '+HX(w1,8)+'<br>Systemmaske '+HX(m.sysMask,2)+' · Schlüssel '+m.key+' · AMWP '+[m.aBit,m.mBit,m.wait,m.prob].join('')+
+    ' ('+(m.prob?'Problem':'Supervisor')+(m.wait?', Warten':'')+')<br>Unterbrechungscode '+HX(m.intCode,4)+' · ILC '+m.ilc+' · CC '+m.cc+' · Prog.-Maske '+HX(m.pmask,1)+
+    '<br>Befehlsadresse '+HX(m.ia,6)+' · Befehle ausgeführt: '+m.icount.toLocaleString('de-DE');
+  let h=''; for(let r=0;r<16;r+=4){ h+='<tr>'; for(let k=r;k<r+4;k++) h+='<th>R'+k+'</th><td>'+HX(m.R[k],8)+'</td>'; h+='</tr>'; } $('regTab').innerHTML=h;
+  let f=''; for(let r=0;r<8;r+=2){ const v=m.fpValue(r); f+='<tr><th>F'+r+'</th><td>'+HX(m.FPR[r],8)+' '+HX(m.FPR[r+1],8)+'</td><td>'+(v===0?'0':v.toPrecision(15).replace('.',','))+'</td></tr>'; } $('fprTab').innerHTML=f;
+}
+$('dStep').onclick=()=>singleStep(1); $('dStep10').onclick=()=>singleStep(10);
+$('dRun').onclick=()=>start(); $('dStop').onclick=()=>{ m.running=false; refreshAll(); };
+$('dGo').onclick=()=>{ const v=parseInt($('dAddr').value,16); if(!isNaN(v)){ disBase=v&0xFFFFFE; $('dFollow').checked=false; refreshDbg(); } };
+$('regSet').onclick=()=>{ const r=parseInt($('regNo').value,10), v=parseInt($('regVal').value,16); if(r>=0&&r<16&&!isNaN(v)){ m.R[r]=v|0; refreshDbg(); } };
+
+/* ---------- Speicher ---------- */
+let memBase=0x200;
+function refreshMem(){ const L=[]; for(let r=0;r<24;r++){ const a=memBase+r*16; if(a>=m.memSize) break; let h='', t='';
+    for(let i=0;i<16;i++){ const x=m.M[a+i]; h+=HX(x,2)+(i%4===3?'  ':' '); const c=E2A[x]; t+=c===null?'·':c; }
+    L.push(HX(a,6)+'  '+h+' '+t); } $('memv').textContent=L.join('\n'); }
+$('mGo').onclick=()=>{ const v=parseInt($('mAddr').value,16); if(!isNaN(v)){ memBase=v&~15; refreshMem(); } };
+$('mPrev').onclick=()=>{ memBase=Math.max(0,memBase-384); $('mAddr').value=HX(memBase,6); refreshMem(); };
+$('mNext').onclick=()=>{ memBase=Math.min(m.memSize-16,memBase+384); $('mAddr').value=HX(memBase,6); refreshMem(); };
+$('mPoke').onclick=()=>{ const a=parseInt($('mPokeA').value,16), h=$('mPokeV').value.replace(/\s/g,''); if(isNaN(a)||!/^([0-9A-Fa-f]{2})+$/.test(h)) return;
+  for(let i=0;i<h.length/2;i++) if(a+i<m.memSize) m.M[a+i]=parseInt(h.substr(2*i,2),16); refreshMem(); };
+
+/* ---------- Kanäle ---------- */
+const CS={0x80:'PCI',0x40:'Längenfehler',0x20:'Programmprüfung',0x10:'Schutzprüfung',0x08:'Datenprüfung',0x04:'Steuerprüfung'};
+const US={0x80:'Attention',0x40:'Statusmod.',0x20:'CU-Ende',0x10:'Belegt',0x08:'Kanalende',0x04:'Geräteende',0x02:'Unit Check',0x01:'Unit Exception'};
+const bits=(v,T)=>Object.keys(T).filter(k=>v&k).map(k=>T[k]).join(', ')||'–';
+function refreshChn(){
+  let h='<tr><th>Adresse</th><th>Gerät</th><th>Zustand</th><th>SIO</th><th>CCWs</th><th>letzte CCW</th><th>letzter Status</th></tr>';
+  for(const d of m.devList){ const c=d.lastCCW, s=d.lastStatus;
+    h+='<tr><td>'+HX(d.addr,3)+'</td><td>'+d.type+' '+d.name+'</td><td>'+d.stateText()+'</td><td>'+d.sioCount+'</td><td>'+d.ccwCount+'</td><td>'+
+      (c?HX(c.at,6)+': '+HX(c.cmd,2)+' '+HX(c.da,6)+' '+HX(c.fl,2)+' '+c.cnt:'–')+'</td><td>'+(s?bits(s.us,US)+(s.cs?' / '+bits(s.cs,CS):'')+', Rest '+s.count:'–')+'</td></tr>'; }
+  $('chnTab').innerHTML=h;
+  $('cawcsw').textContent='CAW '+HX(m.rw(0x48),8)+' · CSW '+HX(m.rw(0x40),8)+' '+HX(m.rw(0x44),8);
+}
+
+/* ---------- Trace ---------- */
+const KIND={1:'PROGRAMM',2:'EXTERN',3:'E/A',4:'SVC',5:'IPL'};
+function refreshTrc(){
+  m.trOn=$('trOn').checked; const n=Math.min(+$('trN').value,m.tCnt), L=[], b=new Uint8Array(6);
+  for(let i=n;i>0;i--){ const p=(m.tPos-i+m.TN)&(m.TN-1), k=m.tK[p];
+    if(k===0){ const w=m.tW[p], x=m.tX[p]; b[0]=w>>>24; b[1]=w>>>16; b[2]=w>>>8; b[3]=w; b[4]=x>>8; b[5]=x; const d=disasmB(b,m.tIA[p],null);
+      L.push(HX(m.tIA[p],6)+'  '+d.hex.padEnd(12)+'  '+d.txt); }
+    else if(k===5) L.push('====== IPL von Einheit '+HX(m.tW[p],3)+' ======');
+    else L.push('>>>>>> Unterbrechung '+KIND[k]+' Code '+HX(m.tW[p],4)+(k===1?' ('+(PICODE[m.tW[p]]||'?')+')':'')+' alte Adresse '+HX(m.tX[p],6)+' → neue Adresse '+HX(m.tIA[p],6)); }
+  $('trList').textContent=L.join('\n'); }
+$('trRef').onclick=refreshTrc; $('trClr').onclick=()=>{ m.tCnt=0; refreshTrc(); }; $('trOn').onchange=()=>{ m.trOn=$('trOn').checked; };
+
+/* ---------- Tempo und E/A-Zeiten (emulierte Zeitbasis) ---------- */
+function setTiming(){ const r=+$('rateSel').value; m.emuIPS=r>0?r:600000; m.ioScale=+$('ioSel').value; }
+$('rateSel').onchange=setTiming; $('ioSel').onchange=setTiming; setTiming();
+
+/* ---------- Watchpoints ---------- */
+function refreshWp(){ $('wpList').innerHTML=m.wp.length?m.wp.map((w,i)=>HX(w.a,6)+' – '+HX(w.a+w.n-1,6)+' ('+w.n+' Byte) <button class="b" data-i="'+i+'">löschen</button>').join('<br>'):'–'; }
+$('wpAdd').onclick=()=>{ const a=parseInt($('wpA').value,16), n=parseInt($('wpN').value,10)||1; if(isNaN(a)||a>=m.memSize){ msg('Ungültige Watchpoint-Adresse'); return; }
+  m.wp.push({a,n:Math.max(1,Math.min(n,65536))}); refreshWp(); };
+$('wpClr').onclick=()=>{ m.wp=[]; refreshWp(); };
+$('wpList').onclick=e=>{ const i=e.target.dataset&&e.target.dataset.i; if(i!==undefined){ m.wp.splice(+i,1); refreshWp(); } };
+
+/* ---------- Drucker nach Zustand laden neu aufbauen ---------- */
+prt.onReload=()=>{ prtPages.textContent=''; pageDiv=null;
+  prt.pages.forEach((pg,pi)=>{ newPageDiv(); pg.forEach((line,no)=>{ const d=document.createElement('div'); d.className='pl'+((Math.floor(no/3)&1)?'':' g'); d.textContent=line; pageDiv.appendChild(d); }); }); };
+
+/* ---------- Zustand sichern / laden (gzip, ohne Browserspeicher) ---------- */
+async function gzip(u8,de){ const st=new Blob([u8]).stream().pipeThrough(de?new DecompressionStream('gzip'):new CompressionStream('gzip'));
+  return new Uint8Array(await new Response(st).arrayBuffer()); }
+const MAGIC='S360ZST2';
+$('stSave').onclick=async()=>{
+  const was=m.running; m.running=false;
+  try{
+    const o=m.snapshot(); o.ui={con:conOut.textContent,rate:$('rateSel').value,io:$('ioSel').value};
+    const js=new TextEncoder().encode(JSON.stringify(o)), buf=new Uint8Array(12+js.length+m.memSize);
+    buf.set(new TextEncoder().encode(MAGIC),0); new DataView(buf.buffer).setUint32(8,js.length); buf.set(js,12); buf.set(m.M,12+js.length);
+    const z=await gzip(buf); download('s360-zustand.s360',z); msg('Zustand gesichert ('+Math.round(z.length/1024).toLocaleString('de-DE')+' KB, gzip-komprimiert).');
+  }catch(e){ msg('Sichern fehlgeschlagen: '+e.message); }
+  if(was) m.running=true; };
+$('stLoad').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if(!f) return;
+  try{
+    const buf=await gzip(new Uint8Array(await f.arrayBuffer()),true);
+    if(new TextDecoder().decode(buf.subarray(0,8))!==MAGIC) throw new Error('keine Zustandsdatei der S/360-Werkbank');
+    const n=new DataView(buf.buffer,buf.byteOffset).getUint32(8), o=JSON.parse(new TextDecoder().decode(buf.subarray(12,12+n)));
+    m.restore(o,buf.subarray(12+n));
+    $('memSel').value=String(m.memSize); if(o.ui){ $('rateSel').value=o.ui.rate; $('ioSel').value=o.ui.io; conOut.textContent=o.ui.con||''; } setTiming();
+    $('kTimer').checked=m.timerOn; conState(); refreshWp(); refreshRdr(); refreshAll();
+    msg('Zustand aus '+f.name+' geladen – START setzt die Maschine fort.');
+  }catch(err){ msg('Laden fehlgeschlagen: '+err.message); } };
+
+/* ---------- Aktualisierung & Hauptschleife ---------- */
+function refreshTab(){ if(curTab==='tDbg') refreshDbg(); else if(curTab==='tMem') refreshMem(); else if(curTab==='tChn') refreshChn();
+  else if(curTab==='tRdr'){ refreshRdr(); rdrDirty=false; } else if(curTab==='tTrc') refreshTrc(); }
+function refreshAll(){ refreshPanel(); refreshTab(); }
+let lastUI=0, lastT=0, budget=0, ipsCnt=0, ipsT=0;
+function frame(t){
+  if(m.running){
+    const rate=+$('rateSel').value, ic0=m.icount, dt=Math.min(50,t-(lastT||t)); let r='ok';
+    if(rate>0){ budget+=rate*dt/1000; const n=Math.floor(budget); budget-=n; if(n>0) r=m.run(n); }
+    else { const t0=performance.now(); do{ r=m.run(20000); }while(m.running&&r==='ok'&&performance.now()-t0<12); }
+    if(r==='idle'&&m.running) m.advance(dt);   // Wartezustand: Zeitgeber läuft nach Wanduhr weiter
+    ipsCnt+=m.icount-ic0;
+  } else budget=0;
+  lastT=t;
+  if(t-ipsT>1000){ $('ips').textContent=m.running?(Math.round(ipsCnt*1000/(t-ipsT)).toLocaleString('de-DE')+' Befehle/s'):''; ipsCnt=0; ipsT=t; }
+  if(t-lastUI>120){ refreshPanel(); if(curTab==='tDbg'||curTab==='tChn'||curTab==='tMem') refreshTab(); if(curTab==='tRdr'&&rdrDirty){ refreshRdr(); rdrDirty=false; } lastUI=t; }
+  requestAnimationFrame(frame);
+}
+refreshAll(); refreshRdr();
+con.out('S/360-Werkbank bereit. Konsolschreibmaschine 1052 an Adresse 009.\n','sys');
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
