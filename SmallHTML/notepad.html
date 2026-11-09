@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notepad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0f0f0f;
+    --surface: #181818;
+    --border: #2a2a2a;
+    --border-hover: #3a3a3a;
+    --text: #e8e8e8;
+    --muted: #666;
+    --accent: #b5ff5e;
+    --accent-dim: rgba(181,255,94,0.12);
+    --accent-text: #0f0f0f;
+    --danger: #ff5e5e;
+    --editor-bg: #111;
+    --toolbar-h: 52px;
+    --search-h: 44px;
+    --status-h: 28px;
+  }
+
+  body {
+    font-family: 'Syne', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── Toolbar ── */
+  #toolbar {
+    height: var(--toolbar-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  #toolbar::-webkit-scrollbar { display: none; }
+  #toolbar > * { flex-shrink: 0; }
+
+  #app-title {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-right: 12px;
+    white-space: nowrap;
+  }
+
+  .sep {
+    width: 1px;
+    height: 22px;
+    background: var(--border);
+    margin: 0 6px;
+    flex-shrink: 0;
+  }
+
+  .btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    height: 32px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
+    letter-spacing: 0.03em;
+  }
+  .btn:hover { border-color: var(--border-hover); background: rgba(255,255,255,0.04); }
+  .btn:active { transform: scale(0.97); }
+  .btn svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+  .btn.accent {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: var(--accent-text);
+    font-weight: 600;
+  }
+  .btn.accent:hover { background: #c8ff80; border-color: #c8ff80; }
+
+  .btn.danger:hover { border-color: var(--danger); color: var(--danger); }
+
+  #filename-display {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
+  }
+  #filename-display.modified::after { content: " ●"; color: var(--accent); }
+
+  #search-toggle.active {
+    background: var(--accent-dim);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .spacer { flex: 1; }
+
+  /* ── Search bar ── */
+  #search-bar {
+    height: var(--search-h);
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    display: none;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    flex-shrink: 0;
+  }
+  #search-bar.visible { display: flex; }
+
+  #search-bar input {
+    flex: 1;
+    min-width: 0;
+    height: 30px;
+    background: var(--editor-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    padding: 0 10px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  #search-bar input:focus { border-color: var(--accent); }
+
+  #search-count {
+    font-size: 12px;
+    color: var(--muted);
+    min-width: 60px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+  }
+  #search-count.found { color: var(--accent); }
+  #search-count.notfound { color: var(--danger); }
+
+  .search-nav { padding: 0 8px; }
+
+  /* ── Editor ── */
+  #editor-wrap {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+    position: relative;
+  }
+
+  #line-numbers {
+    width: 52px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    overflow: hidden;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    color: var(--muted);
+    text-align: right;
+    pointer-events: none;
+    /* padding-top matches editor padding-top exactly */
+    padding-top: 16px;
+    padding-right: 10px;
+    padding-left: 6px;
+    padding-bottom: 16px;
+  }
+  #line-numbers div {
+    /* each div is one line — height must match editor line-height exactly */
+    font-size: 13px;
+    line-height: 1.65;
+    white-space: nowrap;
+  }
+
+  #editor {
+    flex: 1;
+    resize: none;
+    border: none;
+    outline: none;
+    background: var(--editor-bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    padding: 16px 20px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    white-space: pre-wrap;
+    word-break: break-all;
+    tab-size: 4;
+    user-select: text;
+    caret-color: var(--accent);
+  }
+  #editor::selection { background: rgba(181,255,94,0.22); }
+  #editor::-webkit-scrollbar { width: 8px; height: 8px; }
+  #editor::-webkit-scrollbar-track { background: transparent; }
+  #editor::-webkit-scrollbar-thumb { background: #2e2e2e; border-radius: 4px; }
+  #editor::-webkit-scrollbar-thumb:hover { background: #3e3e3e; }
+
+  /* ── Status bar ── */
+  #status-bar {
+    height: var(--status-h);
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 14px;
+    flex-shrink: 0;
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+  }
+  #status-bar span { display: flex; align-items: center; gap: 5px; }
+  #status-bar svg { width: 11px; height: 11px; }
+
+  /* ── Hidden file input ── */
+  #file-input { display: none; }
+
+  /* ── Ruler for measuring visual line wraps ── */
+  #line-ruler {
+    position: absolute;
+    visibility: hidden;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-break: break-all;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    padding: 0 20px;
+    border: none;
+    tab-size: 4;
+    overflow-wrap: break-word;
+  }
+
+  /* ── Highlight overlay ── */
+  #highlight-overlay {
+    position: absolute;
+    top: 0; left: 52px; right: 0; bottom: 0;
+    pointer-events: none;
+    overflow: hidden;
+  }
+
+  .search-match {
+    position: absolute;
+    background: rgba(181,255,94,0.25);
+    border-radius: 2px;
+    pointer-events: none;
+  }
+  .search-match.current {
+    background: rgba(181,255,94,0.55);
+    outline: 1px solid var(--accent);
+  }
+
+  #highlight-inner {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    will-change: transform;
+  }
+
+  /* ── Mirror for exact match positions (same box model as #editor) ── */
+  #mirror {
+    position: absolute;
+    top: 0; left: 0;
+    visibility: hidden;
+    pointer-events: none;
+    white-space: pre-wrap;
+    word-break: break-all;
+    overflow-wrap: break-word;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    padding: 16px 20px;
+    border: none;
+    tab-size: 4;
+  }
+
+  /* ── Status bar buttons & link ── */
+  .stat-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    font: inherit;
+    cursor: pointer;
+    padding: 0 2px;
+  }
+  .stat-btn:hover { color: var(--accent); }
+  #status-bar a { color: var(--muted); text-decoration: none; }
+  #status-bar a:hover { color: var(--accent); }
+
+  /* ── Confirm modal ── */
+  #modal-backdrop {
+    display: none;
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  #modal-backdrop.visible { display: flex; }
+  #modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    width: 320px;
+    max-width: 90vw;
+  }
+  #modal h3 { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  #modal p { font-size: 13px; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
+  #modal .modal-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  /* ── Drucken ── */
+  #print-area { display: none; }
+  @media print {
+    @page { margin: 15mm; }
+    html, body { background: #fff !important; height: auto !important; overflow: visible !important; }
+    body > *:not(#print-area) { display: none !important; }
+    #print-area { display: block !important; color: #000; }
+    #print-head {
+      font-family: 'JetBrains Mono', monospace; font-size: 9pt;
+      border-bottom: 1px solid #000; padding-bottom: 4px; margin-bottom: 8px;
+      display: flex; justify-content: space-between;
+    }
+    #print-text {
+      font-family: 'JetBrains Mono', monospace; font-size: 10pt; line-height: 1.35;
+      white-space: pre-wrap; word-wrap: break-word; overflow-wrap: anywhere;
+      tab-size: 4; margin: 0;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <span id="app-title">Notepad</span>
+
+  <button class="btn accent" id="btn-new" title="Neue Datei">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="1" width="8" height="12" rx="1"/><path d="M7 1v4h4"/>
+    </svg>
+    Neu
+  </button>
+
+  <button class="btn" id="btn-open" title="Datei öffnen (Strg+O)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M2 4h4l2 2h6v7H2z"/>
+    </svg>
+    Öffnen
+  </button>
+
+  <button class="btn" id="btn-save" title="Speichern (Strg+S)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 2v4h6V2M5 10h6"/>
+    </svg>
+    Speichern
+  </button>
+
+  <button class="btn" id="btn-saveas" title="Speichern unter (Strg+Shift+S)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2" y="2" width="12" height="12" rx="1"/><path d="M5 2v4h6V2M5 10h6"/><path d="M9 13v-2.5M7.5 12l1.5 1.5 1.5-1.5"/>
+    </svg>
+    Speichern unter
+  </button>
+
+  <button class="btn" id="btn-print" title="Drucken (Strg+P)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M4 6V1h8v5"/><rect x="1.5" y="6" width="13" height="6" rx="1"/><rect x="4" y="9.5" width="8" height="5"/>
+    </svg>
+    Drucken
+  </button>
+
+  <span id="filename-display">unbenannt.txt</span>
+
+  <div class="spacer"></div>
+
+  <button class="btn" id="search-toggle" title="Suche (Strg+F)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="6.5" cy="6.5" r="4"/><path d="M10 10l3 3"/>
+    </svg>
+    Suche
+  </button>
+</div>
+
+<div id="search-bar">
+  <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" style="width:16px;height:16px;color:var(--muted);flex-shrink:0">
+    <circle cx="6.5" cy="6.5" r="4"/><path d="M10 10l3 3"/>
+  </svg>
+  <input type="text" id="search-input" placeholder="Suchen …" autocomplete="off" spellcheck="false">
+  <span id="search-count">–</span>
+  <button class="btn search-nav" id="btn-prev" title="Vorherige (Shift+Enter)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 12L6 8l4-4"/></svg>
+  </button>
+  <button class="btn search-nav" id="btn-next" title="Nächste (Enter)">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4l4 4-4 4"/></svg>
+  </button>
+  <button class="btn danger" id="btn-close-search" title="Schließen (Esc)" style="padding:0 8px;">
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4l8 8M12 4l-8 8"/></svg>
+  </button>
+</div>
+
+<div id="editor-wrap">
+  <div id="line-numbers"></div>
+  <div id="line-ruler" aria-hidden="true"></div>
+  <textarea id="editor" spellcheck="false" autocorrect="off" autocapitalize="off" placeholder="Hier tippen oder Datei öffnen …"></textarea>
+  <div id="mirror" aria-hidden="true"></div>
+  <div id="highlight-overlay"><div id="highlight-inner"></div></div>
+</div>
+
+<div id="status-bar">
+  <span id="stat-lines">
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 3h10M1 6h7M1 9h9"/></svg>
+    <span id="stat-lines-val">1 Zeile</span>
+  </span>
+  <span id="stat-chars">
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 9V3l4 5 4-5v6"/></svg>
+    <span id="stat-chars-val">0 Zeichen</span>
+  </span>
+  <span id="stat-pos">
+    <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 1v10M1 6h10"/></svg>
+    <span id="stat-pos-val">Z 1, S 1</span>
+  </span>
+  <div class="spacer"></div>
+  <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a>
+  <button class="stat-btn" id="stat-eol" title="Zeilenende umschalten (LF / CRLF)">LF</button>
+  <button class="stat-btn" id="stat-enc" title="Kodierung zum Speichern umschalten">UTF-8</button>
+</div>
+
+<!-- Dateiname-Dialog -->
+<div id="saveas-backdrop" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center;">
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:24px;width:360px;max-width:90vw;">
+    <h3 style="font-size:15px;font-weight:600;margin-bottom:14px;">Speichern unter</h3>
+    <label style="font-size:12px;color:var(--muted);display:block;margin-bottom:6px;">Dateiname</label>
+    <input id="saveas-input" type="text" style="width:100%;height:34px;background:var(--editor-bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:13px;padding:0 10px;outline:none;box-sizing:border-box;" spellcheck="false">
+    <p style="font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5;">Der Browser speichert in den konfigurierten Download-Ordner. Den Speicherort kannst du in den Browser-Einstellungen ändern.</p>
+    <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">
+      <button class="btn" id="saveas-cancel">Abbrechen</button>
+      <button class="btn accent" id="saveas-confirm">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="file-input">
+
+<div id="modal-backdrop">
+  <div id="modal">
+    <h3 id="modal-title">Nicht gespeicherte Änderungen</h3>
+    <p id="modal-msg">Die aktuelle Datei hat ungespeicherte Änderungen. Trotzdem fortfahren?</p>
+    <div class="modal-actions">
+      <button class="btn" id="modal-cancel">Abbrechen</button>
+      <button class="btn danger" id="modal-confirm">Verwerfen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const editor = document.getElementById('editor');
+const lineNumbers = document.getElementById('line-numbers');
+const searchBar = document.getElementById('search-bar');
+const searchInput = document.getElementById('search-input');
+const searchCount = document.getElementById('search-count');
+const searchToggle = document.getElementById('search-toggle');
+const fileInput = document.getElementById('file-input');
+const filenameLbl = document.getElementById('filename-display');
+const statLines = document.getElementById('stat-lines-val');
+const statChars = document.getElementById('stat-chars-val');
+const statPos = document.getElementById('stat-pos-val');
+const statEol = document.getElementById('stat-eol');
+const statEnc = document.getElementById('stat-enc');
+const overlay = document.getElementById('highlight-overlay');
+const overlayInner = document.getElementById('highlight-inner');
+const mirror = document.getElementById('mirror');
+const ruler = document.getElementById('line-ruler');
+const modalBackdrop = document.getElementById('modal-backdrop');
+const modalTitle = document.getElementById('modal-title');
+const modalMsg = document.getElementById('modal-msg');
+const modalConfirm = document.getElementById('modal-confirm');
+const modalCancel = document.getElementById('modal-cancel');
+const saveasBackdrop = document.getElementById('saveas-backdrop');
+const saveasInput = document.getElementById('saveas-input');
+
+const DEFAULT_NAME = 'unbenannt.txt';
+const MAX_HIGHLIGHTS = 2000;   // so many match boxes are drawn at most
+
+let currentFilename = DEFAULT_NAME;
+let savedContent = '';
+let modified = false;
+let matches = [];              // [start, end] pairs
+let matchIndex = 0;
+let pendingAction = null;
+
+let fileEncoding = 'utf-8';    // utf-8 | utf-8-bom | windows-1252 | utf-16le | utf-16be
+let fileEol = '\n';            // '\n' or '\r\n'
+let savedEncoding = fileEncoding;
+let savedEol = fileEol;
+
+const ENC_LABELS = {
+  'utf-8': 'UTF-8', 'utf-8-bom': 'UTF-8 BOM', 'windows-1252': 'ANSI (1252)',
+  'utf-16le': 'UTF-16 LE', 'utf-16be': 'UTF-16 BE'
+};
+const ENC_CYCLE = ['utf-8', 'utf-8-bom', 'windows-1252', 'utf-16le', 'utf-16be'];
+
+/* ── Helpers ── */
+function setModified(val) {
+  modified = val;
+  filenameLbl.className = val ? 'modified' : '';
+}
+function updateModified() {
+  setModified(editor.value !== savedContent || fileEncoding !== savedEncoding || fileEol !== savedEol);
+}
+function markSaved() {
+  savedContent = editor.value;
+  savedEncoding = fileEncoding;
+  savedEol = fileEol;
+  setModified(false);
+}
+function updateFormatDisplay() {
+  statEol.textContent = fileEol === '\r\n' ? 'CRLF' : 'LF';
+  statEnc.textContent = ENC_LABELS[fileEncoding];
+}
+function lineHeightPx() {
+  return parseFloat(getComputedStyle(editor).lineHeight);
+}
+
+/* ── Character width (monospace) ── */
+let charW = 7.8;
+function measureChar() {
+  const sp = document.createElement('span');
+  sp.textContent = '0'.repeat(100);
+  ruler.style.width = '100000px';
+  ruler.textContent = '';
+  ruler.appendChild(sp);
+  const w = sp.getBoundingClientRect().width / 100;
+  if (w > 0) charW = w;
+  ruler.textContent = '';
+}
+
+/* ── Line numbers ──
+   Short lines (fit into one visual row, no tabs/wide chars) are counted as 1
+   without measuring; only long lines go through the ruler. All reads happen
+   before all writes to avoid layout thrashing. */
+const NEEDS_MEASURE = /[\tᄀ-￿]/;
+
+function updateLineNumbers() {
+  const lines = editor.value.split('\n');
+  const n = lines.length;
+
+  // Gutter width grows with the number of digits
+  const digits = Math.max(2, String(n).length);
+  const gw = Math.ceil(digits * charW) + 18;
+  if (lineNumbers.style.width !== gw + 'px') {
+    lineNumbers.style.width = gw + 'px';
+    overlay.style.left = gw + 'px';
+  }
+
+  const lineH = lineHeightPx();
+  const cols = Math.max(1, Math.floor((editor.clientWidth - 40) / charW));
+  ruler.style.width = editor.clientWidth + 'px';
+
+  // Read pass
+  const rows = new Array(n);
+  for (let i = 0; i < n; i++) {
+    const l = lines[i];
+    if (l.length < cols && !NEEDS_MEASURE.test(l)) { rows[i] = 1; continue; }
+    ruler.textContent = l || ' ';
+    rows[i] = Math.max(1, Math.round(ruler.scrollHeight / lineH));
+  }
+  ruler.textContent = '';
+
+  // Write pass
+  while (lineNumbers.children.length < n) lineNumbers.appendChild(document.createElement('div'));
+  while (lineNumbers.children.length > n) lineNumbers.removeChild(lineNumbers.lastChild);
+  const children = lineNumbers.children;
+  for (let i = 0; i < n; i++) {
+    const c = children[i];
+    const h = (rows[i] * lineH) + 'px';
+    if (c.textContent !== String(i + 1)) c.textContent = i + 1;
+    if (c.style.height !== h) c.style.height = h;
+    c.style.lineHeight = lineH + 'px';
+  }
+  syncScroll();
+}
+
+let lnScheduled = false;
+function scheduleLineNumbers() {
+  if (lnScheduled) return;
+  lnScheduled = true;
+  requestAnimationFrame(() => { lnScheduled = false; updateLineNumbers(); });
+}
+
+function syncScroll() {
+  lineNumbers.scrollTop = editor.scrollTop;
+  overlayInner.style.transform = 'translateY(' + (-editor.scrollTop) + 'px)';
+}
+
+function updateStats() {
+  const val = editor.value;
+  const lines = (val.match(/\n/g) || []).length + 1;
+  statLines.textContent = lines === 1 ? '1 Zeile' : lines + ' Zeilen';
+  statChars.textContent = val.length + ' Zeichen';
+}
+
+function updateCursorPos() {
+  const s = editor.selectionStart;
+  const before = editor.value.substring(0, s);
+  const line = (before.match(/\n/g) || []).length + 1;
+  const col = s - before.lastIndexOf('\n');
+  statPos.textContent = 'Z ' + line + ', S ' + col;
+}
+
+/* ── Editor events ── */
+editor.addEventListener('input', () => {
+  scheduleLineNumbers();
+  updateStats();
+  updateCursorPos();
+  updateModified();
+  if (searchBar.classList.contains('visible')) runSearch('edit');
+});
+
+editor.addEventListener('scroll', syncScroll);
+editor.addEventListener('keyup', updateCursorPos);
+editor.addEventListener('click', updateCursorPos);
+editor.addEventListener('select', updateCursorPos);
+document.addEventListener('selectionchange', () => {
+  if (document.activeElement === editor) updateCursorPos();
+});
+
+/* Tab key: insert via execCommand so undo (Ctrl+Z) keeps working */
+editor.addEventListener('keydown', e => {
+  if (e.key === 'Tab' && !e.ctrlKey && !e.altKey && !e.metaKey) {
+    e.preventDefault();
+    if (!document.execCommand('insertText', false, '    ')) {
+      editor.setRangeText('    ', editor.selectionStart, editor.selectionEnd, 'end');
+      editor.dispatchEvent(new Event('input'));
+    }
+  }
+});
+
+/* ── Load text into editor ── */
+function loadText(text, filename, enc, eol) {
+  editor.value = text;
+  currentFilename = filename;
+  fileEncoding = enc;
+  fileEol = eol;
+  filenameLbl.textContent = filename;
+  markSaved();
+  updateFormatDisplay();
+  editor.setSelectionRange(0, 0);
+  editor.scrollTop = 0;
+  updateLineNumbers();
+  updateStats();
+  updateCursorPos();
+  if (searchBar.classList.contains('visible')) runSearch('edit'); else clearSearch();
+  editor.focus();
+}
+
+/* ── New file ── */
+document.getElementById('btn-new').addEventListener('click', () => guardUnsaved(doNew));
+function doNew() {
+  loadText('', DEFAULT_NAME, 'utf-8', '\n');
+}
+
+/* ── Open file ── */
+function requestOpen() { guardUnsaved(() => fileInput.click()); }
+document.getElementById('btn-open').addEventListener('click', requestOpen);
+
+fileInput.addEventListener('change', () => {
+  const file = fileInput.files[0];
+  fileInput.value = '';
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const { text, enc } = decodeBuffer(e.target.result);
+    const crlf = (text.match(/\r\n/g) || []).length;
+    const lf = (text.match(/\n/g) || []).length - crlf;
+    const eol = crlf > lf ? '\r\n' : '\n';
+    loadText(text.replace(/\r\n?/g, '\n'), file.name, enc, eol);
+  };
+  reader.onerror = () => showModal('Fehler', 'Die Datei konnte nicht gelesen werden.', 'OK', null);
+  reader.readAsArrayBuffer(file);
+});
+
+/* ── Encoding ── */
+const CP1252 = {
+  0x20AC:0x80, 0x201A:0x82, 0x0192:0x83, 0x201E:0x84, 0x2026:0x85, 0x2020:0x86, 0x2021:0x87,
+  0x02C6:0x88, 0x2030:0x89, 0x0160:0x8A, 0x2039:0x8B, 0x0152:0x8C, 0x017D:0x8E, 0x2018:0x91,
+  0x2019:0x92, 0x201C:0x93, 0x201D:0x94, 0x2022:0x95, 0x2013:0x96, 0x2014:0x97, 0x02DC:0x98,
+  0x2122:0x99, 0x0161:0x9A, 0x203A:0x9B, 0x0153:0x9C, 0x017E:0x9E, 0x0178:0x9F,
+  0x81:0x81, 0x8D:0x8D, 0x8F:0x8F, 0x90:0x90, 0x9D:0x9D
+};
+
+function decodeBuffer(buf) {
+  const b = new Uint8Array(buf);
+  if (b[0] === 0xEF && b[1] === 0xBB && b[2] === 0xBF)
+    return { text: new TextDecoder('utf-8').decode(b.subarray(3)), enc: 'utf-8-bom' };
+  if (b[0] === 0xFF && b[1] === 0xFE)
+    return { text: new TextDecoder('utf-16le').decode(b.subarray(2)), enc: 'utf-16le' };
+  if (b[0] === 0xFE && b[1] === 0xFF)
+    return { text: new TextDecoder('utf-16be').decode(b.subarray(2)), enc: 'utf-16be' };
+  try {
+    return { text: new TextDecoder('utf-8', { fatal: true }).decode(b), enc: 'utf-8' };
+  } catch (_) {
+    return { text: new TextDecoder('windows-1252').decode(b), enc: 'windows-1252' };
+  }
+}
+
+function encodeText(text, enc) {
+  if (enc === 'utf-8') return { bytes: new TextEncoder().encode(text), lost: 0 };
+  if (enc === 'utf-8-bom') {
+    const b = new TextEncoder().encode(text);
+    const out = new Uint8Array(b.length + 3);
+    out.set([0xEF, 0xBB, 0xBF]);
+    out.set(b, 3);
+    return { bytes: out, lost: 0 };
+  }
+  if (enc === 'utf-16le' || enc === 'utf-16be') {
+    const le = enc === 'utf-16le';
+    const out = new Uint8Array(2 + text.length * 2);
+    out[0] = le ? 0xFF : 0xFE;
+    out[1] = le ? 0xFE : 0xFF;
+    for (let i = 0; i < text.length; i++) {
+      const c = text.charCodeAt(i), o = 2 + i * 2;
+      out[o]     = le ? c & 0xFF : c >> 8;
+      out[o + 1] = le ? c >> 8 : c & 0xFF;
+    }
+    return { bytes: out, lost: 0 };
+  }
+  // windows-1252
+  const out = [];
+  let lost = 0;
+  for (const ch of text) {
+    const c = ch.codePointAt(0);
+    if (c < 0x80 || (c >= 0xA0 && c <= 0xFF)) out.push(c);
+    else if (CP1252[c] !== undefined) out.push(CP1252[c]);
+    else { out.push(0x3F); lost++; }
+  }
+  return { bytes: new Uint8Array(out), lost };
+}
+
+statEol.addEventListener('click', () => {
+  fileEol = fileEol === '\n' ? '\r\n' : '\n';
+  updateFormatDisplay();
+  updateModified();
+});
+statEnc.addEventListener('click', () => {
+  fileEncoding = ENC_CYCLE[(ENC_CYCLE.indexOf(fileEncoding) + 1) % ENC_CYCLE.length];
+  updateFormatDisplay();
+  updateModified();
+});
+
+/* ── Save file ── */
+function save() {
+  if (currentFilename === DEFAULT_NAME) openSaveAs();
+  else saveFile(currentFilename);
+}
+document.getElementById('btn-save').addEventListener('click', save);
+document.getElementById('btn-saveas').addEventListener('click', openSaveAs);
+
+function saveFile(filename) {
+  const text = fileEol === '\r\n' ? editor.value.replace(/\n/g, '\r\n') : editor.value;
+  const { bytes, lost } = encodeText(text, fileEncoding);
+  const doSave = () => {
+    const blob = new Blob([bytes], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    currentFilename = filename;
+    filenameLbl.textContent = filename;
+    markSaved();
+  };
+  if (lost > 0) {
+    showModal('Zeichen nicht darstellbar',
+      lost + ' Zeichen gibt es in ' + ENC_LABELS[fileEncoding] +
+      ' nicht. Sie werden als „?“ gespeichert. Trotzdem speichern?', 'Speichern', doSave);
+  } else doSave();
+}
+
+/* ── Save As dialog ── */
+function saveAsOpen() { return saveasBackdrop.style.display === 'flex'; }
+
+function openSaveAs() {
+  saveasInput.value = currentFilename;
+  saveasBackdrop.style.display = 'flex';
+  setTimeout(() => { saveasInput.focus(); saveasInput.select(); }, 50);
+}
+
+function closeSaveAs() {
+  saveasBackdrop.style.display = 'none';
+  editor.focus();
+}
+
+document.getElementById('saveas-cancel').addEventListener('click', closeSaveAs);
+document.getElementById('saveas-confirm').addEventListener('click', () => {
+  let name = saveasInput.value.trim();
+  if (!name) return;
+  if (!name.includes('.')) name += '.txt';
+  closeSaveAs();
+  saveFile(name);
+});
+
+saveasInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') document.getElementById('saveas-confirm').click();
+});
+
+/* ── Search ── */
+searchToggle.addEventListener('click', toggleSearch);
+document.getElementById('btn-close-search').addEventListener('click', closeSearch);
+
+function toggleSearch() {
+  if (searchBar.classList.contains('visible')) closeSearch();
+  else openSearch();
+}
+
+function openSearch() {
+  // Pre-fill with a single-line selection from the editor
+  const sel = editor.value.substring(editor.selectionStart, editor.selectionEnd);
+  if (sel && !sel.includes('\n') && sel.length < 200) searchInput.value = sel;
+  searchBar.classList.add('visible');
+  searchToggle.classList.add('active');
+  searchInput.focus();
+  searchInput.select();
+  runSearch('query');
+}
+
+function closeSearch() {
+  searchBar.classList.remove('visible');
+  searchToggle.classList.remove('active');
+  clearSearch();
+  editor.focus();   // current match stays selected
+}
+
+searchInput.addEventListener('input', () => runSearch('query'));
+
+document.getElementById('btn-next').addEventListener('click', () => { navigate(1); searchInput.focus(); });
+document.getElementById('btn-prev').addEventListener('click', () => { navigate(-1); searchInput.focus(); });
+
+searchInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter') { e.preventDefault(); navigate(e.shiftKey ? -1 : 1); }
+});
+
+function escapeRe(s) { return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+
+/* mode: 'query' = search term changed (jump to first match after cursor)
+         'edit'  = text changed (keep position, do not scroll) */
+function runSearch(mode) {
+  const q = searchInput.value;
+  matches = [];
+  if (!q) {
+    searchCount.textContent = '–';
+    searchCount.className = '';
+    clearHighlights();
+    return;
+  }
+  // Regex with i-flag keeps indices in the original string (toLowerCase can change lengths)
+  const re = new RegExp(escapeRe(q), 'giu');
+  const text = editor.value;
+  let m;
+  while ((m = re.exec(text)) !== null) {
+    matches.push([m.index, m.index + m[0].length]);
+    if (m[0].length === 0) re.lastIndex++;
+  }
+  if (matches.length === 0) {
+    searchCount.textContent = 'Nicht gefunden';
+    searchCount.className = 'notfound';
+    clearHighlights();
+    return;
+  }
+  if (mode === 'query') {
+    const caret = editor.selectionStart;
+    matchIndex = matches.findIndex(([s]) => s >= caret);
+    if (matchIndex < 0) matchIndex = 0;
+  } else if (matchIndex >= matches.length) {
+    matchIndex = matches.length - 1;
+  }
+  searchCount.className = 'found';
+  updateCount();
+  if (mode === 'query') scrollToMatch(matchIndex);
+  else scheduleHighlights();
+}
+
+function updateCount() {
+  searchCount.textContent = (matchIndex + 1) + ' / ' + matches.length;
+}
+
+function navigate(dir) {
+  if (!matches.length) return;
+  matchIndex = (matchIndex + dir + matches.length) % matches.length;
+  updateCount();
+  scrollToMatch(matchIndex);
+}
+
+/* Select the match in the editor WITHOUT moving focus away from the search field,
+   then scroll it into the middle of the view (wrap-aware via the mirror). */
+function scrollToMatch(idx) {
+  const [s, e] = matches[idx];
+  const keepFocus = document.activeElement;
+  editor.setSelectionRange(s, e);
+  const top = renderHighlights();
+  if (top !== null) {
+    const lineH = lineHeightPx();
+    editor.scrollTop = Math.max(0, top - editor.clientHeight / 2 + lineH / 2);
+  }
+  syncScroll();
+  if (keepFocus && keepFocus !== editor && keepFocus !== document.body) keepFocus.focus();
+  updateCursorPos();
+}
+
+/* Draws match boxes; returns the y position of the current match (or null). */
+function renderHighlights() {
+  overlayInner.innerHTML = '';
+  if (!matches.length || !searchBar.classList.contains('visible')) return null;
+
+  const text = editor.value;
+  let from = 0;
+  if (matches.length > MAX_HIGHLIGHTS)
+    from = Math.max(0, Math.min(matchIndex - MAX_HIGHLIGHTS / 2, matches.length - MAX_HIGHLIGHTS));
+  const to = Math.min(matches.length, from + MAX_HIGHLIGHTS);
+
+  mirror.style.width = editor.clientWidth + 'px';
+  mirror.textContent = '';
+  const frag = document.createDocumentFragment();
+  const spans = [];
+  let last = 0;
+  for (let i = from; i < to; i++) {
+    const [s, e] = matches[i];
+    frag.appendChild(document.createTextNode(text.substring(last, s)));
+    const sp = document.createElement('span');
+    sp.textContent = text.substring(s, e);
+    frag.appendChild(sp);
+    spans.push([i, sp]);
+    last = e;
+  }
+  mirror.appendChild(frag);
+
+  const base = mirror.getBoundingClientRect();
+  const boxes = document.createDocumentFragment();
+  let currentTop = null;
+  for (const [i, sp] of spans) {
+    for (const r of sp.getClientRects()) {
+      const d = document.createElement('div');
+      d.className = i === matchIndex ? 'search-match current' : 'search-match';
+      d.style.left = (r.left - base.left) + 'px';
+      d.style.top = (r.top - base.top) + 'px';
+      d.style.width = r.width + 'px';
+      d.style.height = r.height + 'px';
+      boxes.appendChild(d);
+      if (i === matchIndex && currentTop === null) currentTop = r.top - base.top;
+    }
+  }
+  overlayInner.appendChild(boxes);
+  mirror.textContent = '';
+  syncScroll();
+  return currentTop;
+}
+
+let hlScheduled = false;
+function scheduleHighlights() {
+  if (hlScheduled) return;
+  hlScheduled = true;
+  requestAnimationFrame(() => { hlScheduled = false; renderHighlights(); });
+}
+
+function clearSearch() {
+  matches = [];
+  matchIndex = 0;
+  searchCount.textContent = '–';
+  searchCount.className = '';
+  clearHighlights();
+}
+
+function clearHighlights() {
+  overlayInner.innerHTML = '';
+}
+
+/* ── Modal ── */
+function modalOpen() { return modalBackdrop.classList.contains('visible'); }
+
+function showModal(title, msg, confirmLabel, action) {
+  modalTitle.textContent = title;
+  modalMsg.textContent = msg;
+  modalConfirm.textContent = confirmLabel;
+  modalCancel.style.display = action ? '' : 'none';
+  pendingAction = action;
+  modalBackdrop.classList.add('visible');
+  modalConfirm.focus();
+}
+function closeModal() {
+  modalBackdrop.classList.remove('visible');
+  pendingAction = null;
+  editor.focus();
+}
+function guardUnsaved(action) {
+  if (modified) {
+    showModal('Nicht gespeicherte Änderungen',
+      'Die aktuelle Datei hat ungespeicherte Änderungen. Trotzdem fortfahren?', 'Verwerfen', action);
+  } else action();
+}
+modalCancel.addEventListener('click', closeModal);
+modalConfirm.addEventListener('click', () => {
+  const act = pendingAction;
+  closeModal();
+  if (act) act();
+});
+
+/* ── Keyboard shortcuts ── */
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    if (modalOpen()) closeModal();
+    else if (saveAsOpen()) closeSaveAs();
+    else if (searchBar.classList.contains('visible')) closeSearch();
+    return;
+  }
+  const ctrl = e.ctrlKey || e.metaKey;
+  if (!ctrl || e.altKey) return;
+  const k = e.key.toLowerCase();            // works with Caps Lock too
+  if (k !== 's' && k !== 'o' && k !== 'f') return;
+  e.preventDefault();
+  if (modalOpen() || saveAsOpen()) return;  // no shortcuts while a dialog is open
+  if (k === 's') { if (e.shiftKey) openSaveAs(); else save(); }
+  else if (k === 'o') requestOpen();
+  else if (k === 'f') openSearch();
+});
+
+/* ── Warn before leaving with unsaved changes ── */
+window.addEventListener('beforeunload', e => {
+  if (modified) { e.preventDefault(); e.returnValue = ''; }
+});
+
+/* ── Init ── */
+measureChar();
+updateFormatDisplay();
+updateLineNumbers();
+updateStats();
+updateCursorPos();
+editor.focus();
+
+// Re-measure once the web font is loaded
+if (document.fonts && document.fonts.ready) {
+  document.fonts.ready.then(() => {
+    measureChar();
+    updateLineNumbers();
+    if (matches.length) scheduleHighlights();
+  });
+}
+
+// Re-measure when editor width changes (window resize, scrollbar appears)
+new ResizeObserver(() => {
+  scheduleLineNumbers();
+  if (matches.length) scheduleHighlights();
+}).observe(editor);
+
+/* ── Drucken ── */
+const printArea = document.createElement('div');
+printArea.id = 'print-area';
+printArea.innerHTML = '<div id="print-head"><span id="print-name"></span><span id="print-date"></span></div><pre id="print-text"></pre>';
+document.body.appendChild(printArea);
+function preparePrint() {
+  document.getElementById('print-name').textContent = currentFilename || 'unbenannt.txt';
+  document.getElementById('print-date').textContent = new Date().toLocaleString('de-DE');
+  document.getElementById('print-text').textContent = editor.value;
+}
+function doPrint() {
+  if (modalOpen() || saveAsOpen()) return;
+  preparePrint();
+  window.print();
+}
+document.getElementById('btn-print').addEventListener('click', doPrint);
+window.addEventListener('beforeprint', preparePrint);   // auch über das Browsermenü
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === 'p') {
+    e.preventDefault();
+    doPrint();
+  }
+});
+</script>
+</body>
+</html>
