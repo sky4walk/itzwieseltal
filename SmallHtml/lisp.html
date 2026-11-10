@@ -1,0 +1,3175 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lisp-Werkbank</title>
+<style>
+:root{
+  --bg:#d9d6cc; --pane:#f3f1ea; --paper:#fbfaf5; --ink:#141414; --dim:#6b675d; --line:#1d1d1d;
+  --bar:#141414; --barink:#f3f1ea; --accent:#8a1c1c; --ok:#1f5e2e; --err:#a01818; --sel:#d8d1b8;
+  --mem-free:#c9c5b8; --mem-used:#2a2a2a; --mem-mark:#d29a00; --mem-freed:#c0392b; --mem-sweep:#3d7ab8;
+  --pm:#f2c94c; --pmbad:#f5a5a5; --cmt:#7a7568; --str:#1f5e2e;
+  --mono:"IBM Plex Mono","DejaVu Sans Mono",Menlo,Consolas,"Liberation Mono",monospace;
+}
+:root[data-theme="phosphor"]{
+  --bg:#050805; --pane:#0a0f0a; --paper:#060906; --ink:#ffb347; --dim:#9a6a2a; --line:#5a3d12;
+  --bar:#ffb347; --barink:#0a0f0a; --accent:#ffd27a; --ok:#9fe870; --err:#ff6a5a; --sel:#3a2a10;
+  --mem-free:#1c1a12; --mem-used:#ffb347; --mem-mark:#fff27a; --mem-freed:#ff5a4a; --mem-sweep:#6ab0ff;
+  --pm:#6a4a10; --pmbad:#6a1a10; --cmt:#9a6a2a; --str:#9fe870;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--mono);font-size:14px}
+button,select,input,textarea{font-family:var(--mono);font-size:13px;color:var(--ink)}
+button{background:var(--paper);border:1px solid var(--line);padding:4px 9px;cursor:pointer;border-radius:0}
+button:hover{background:var(--sel)}
+button:disabled{opacity:.45;cursor:default}
+button.on{background:var(--bar);color:var(--barink)}
+select,input[type=text],input:not([type]){background:var(--paper);border:1px solid var(--line);padding:4px 6px;border-radius:0}
+a{color:var(--accent)}
+header.top{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;background:var(--bar);color:var(--barink);padding:8px 14px}
+.brand{font-weight:700;letter-spacing:.12em;font-size:15px}
+.brand small{font-weight:400;letter-spacing:.04em;opacity:.75;margin-left:8px}
+.ctl{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ctl label{display:flex;gap:6px;align-items:center}
+header .ctl button,header .ctl select{border-color:var(--barink)}
+.seg{display:inline-flex}
+.seg button+button{border-left:none}
+main.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(300px,48vh) minmax(260px,auto);gap:10px;padding:10px}
+.pane{background:var(--pane);border:2px solid var(--line);display:flex;flex-direction:column;min-width:0;min-height:0}
+.pane-h{background:var(--bar);color:var(--barink);padding:3px 8px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-weight:700;letter-spacing:.06em;font-size:12px;text-transform:uppercase}
+.pane-h select{text-transform:none;font-weight:400;max-width:62%}
+.listener{grid-column:1;grid-row:1}
+.editor{grid-column:1;grid-row:2}
+.views{grid-column:2;grid-row:1 / span 2}
+.tty{flex:1;overflow:auto;background:var(--paper);padding:8px 10px;white-space:pre-wrap;word-break:break-word;line-height:1.38;min-height:120px}
+.tty .echo{color:var(--ink);font-weight:700}
+.tty .res{color:var(--ok)}
+.tty .err{color:var(--err)}
+.tty .info{color:var(--dim)}
+.tty .trans{color:var(--dim);font-style:italic}
+.inrow{display:flex;gap:6px;align-items:flex-start;border-top:1px solid var(--line);padding:6px;background:var(--paper)}
+.prompt{padding-top:5px;font-weight:700;white-space:nowrap}
+#inp{flex:1;resize:vertical;min-height:2.4em;background:var(--paper);border:1px dashed var(--line);padding:4px 6px;line-height:1.35}
+.runbar,.edbar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px;border-top:1px solid var(--line)}
+.runbar label,.edbar label{display:flex;align-items:center;gap:4px;font-size:12px}
+.edwrap{position:relative;flex:1;min-height:220px;background:var(--paper);overflow:hidden}
+#ed,#edHl{position:absolute;inset:0;margin:0;padding:8px 10px;font-family:var(--mono);font-size:13.5px;line-height:1.42;white-space:pre;overflow:auto;tab-size:2;border:0;letter-spacing:0}
+#edHl{pointer-events:none;color:var(--ink)}
+#ed{background:transparent;color:transparent;caret-color:var(--ink);resize:none;outline:none}
+#ed::selection{background:var(--sel);color:transparent}
+#edHl .pm{background:var(--pm);outline:1px solid var(--line)}
+#edHl .bad{background:var(--pmbad)}
+#edHl .c{color:var(--cmt)}
+#edHl .s{color:var(--str)}
+#edPos{margin-left:auto;font-size:12px;color:var(--dim)}
+nav.tabs{display:flex;flex-wrap:wrap;border-bottom:2px solid var(--line);background:var(--paper)}
+nav.tabs button{border:none;border-right:1px solid var(--line);padding:6px 12px}
+.tab{flex:1;overflow:auto;padding:10px;min-height:0}
+.row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px}
+.row input:not([type=checkbox]){flex:1;min-width:180px}
+.note{color:var(--dim);font-size:12px;line-height:1.45}
+.svgwrap{overflow:auto;background:var(--paper);border:1px solid var(--line);min-height:160px}
+.svgwrap svg{display:block}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:6px;margin-bottom:8px}
+.stat{border:1px solid var(--line);background:var(--paper);padding:5px 7px}
+.stat b{display:block;font-size:16px}
+.stat span{font-size:11px;color:var(--dim)}
+.memwrap{overflow:auto;max-height:46vh;border:1px solid var(--line);background:var(--paper)}
+#memCv{display:block;image-rendering:pixelated;cursor:crosshair}
+.legend{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;margin:6px 0}
+.legend i{display:inline-block;width:11px;height:11px;margin-right:4px;vertical-align:-1px;border:1px solid var(--line)}
+#memInfo,#freeList{font-size:12px;white-space:pre-wrap;word-break:break-all;margin:6px 0}
+table.env{border-collapse:collapse;width:100%;margin-bottom:10px;font-size:12.5px}
+table.env th,table.env td{border:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}
+table.env th{background:var(--bar);color:var(--barink);font-weight:600}
+table.env td.n{white-space:nowrap;font-weight:700;cursor:pointer;text-decoration:underline dotted}
+table.env td.v{word-break:break-all}
+.state{border:2px solid var(--line);background:var(--paper);padding:8px;margin-bottom:8px}
+.state .art{display:inline-block;background:var(--bar);color:var(--barink);padding:1px 7px;margin-right:6px;font-weight:700}
+.state pre{white-space:pre-wrap;word-break:break-word;margin:6px 0 0}
+ol.stack{margin:0 0 10px;padding-left:2.4em;font-size:12px}
+ol.stack li{margin:1px 0;word-break:break-word}
+#traceLog{background:var(--paper);border:1px solid var(--line);padding:6px 8px;font-size:12px;white-space:pre;overflow:auto;max-height:40vh;line-height:1.35}
+.help h3{margin:14px 0 6px;font-size:14px;background:var(--bar);color:var(--barink);padding:3px 8px}
+.help h4{margin:10px 0 4px;font-size:13px}
+.help table{border-collapse:collapse;width:100%;font-size:12.5px;margin-bottom:8px}
+.help td,.help th{border:1px solid var(--line);padding:3px 6px;vertical-align:top;text-align:left}
+.help th{background:var(--sel)}
+.help code{font-weight:600;color:var(--accent)}
+.help p code{font-weight:400;color:var(--ink)}
+.help ul{margin:4px 0 8px;padding-left:1.4em}
+.help li{margin:2px 0;line-height:1.4}
+footer.doc{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;align-items:center;background:var(--bar);color:var(--barink);padding:6px 14px;font-size:12px}
+footer.doc a{color:var(--barink)}
+#status{white-space:pre-wrap}
+@media (max-width:900px){
+  main.grid{grid-template-columns:minmax(0,1fr);grid-template-rows:auto}
+  .listener,.editor,.views{grid-column:1;grid-row:auto}
+  .tty{min-height:220px;max-height:55vh}
+  .edwrap{min-height:300px}
+  .views .tab{max-height:none}
+  #ed,#edHl,#inp{font-size:16px}
+  main.grid{padding:8px 6px;gap:8px}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand">λ LISP-WERKBANK<small>LISP 1.5 · Scheme · Cons-Zellen · Mark &amp; Sweep</small></div>
+  <div class="ctl">
+    <div class="seg" role="group" aria-label="Modus">
+      <button id="mLisp" class="on">LISP 1.5</button><button id="mScheme">Scheme</button>
+    </div>
+    <label>Speicher
+      <select id="memSize">
+        <option value="4096">4 096 Zellen</option>
+        <option value="8192">8 192 Zellen</option>
+        <option value="16384">16 384 Zellen</option>
+        <option value="32768" selected>32 768 Zellen</option>
+        <option value="65536">65 536 Zellen</option>
+        <option value="131072">131 072 Zellen</option>
+      </select>
+    </label>
+    <button id="btnReset" title="Interpreter neu starten (alle Definitionen weg)">Neustart</button>
+    <button id="btnTheme" title="Papier oder Phosphor">Phosphor</button>
+  </div>
+</header>
+
+<main class="grid">
+  <section class="pane listener">
+    <div class="pane-h"><span>Lisp Listener</span><span id="modeTag"></span></div>
+    <div id="out" class="tty" aria-live="polite"></div>
+    <div class="inrow">
+      <span class="prompt" id="prompt">*</span>
+      <textarea id="inp" rows="2" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Eingabe"></textarea>
+      <button id="btnEval" title="Auswerten (Enter)">⏎</button>
+    </div>
+    <div class="runbar">
+      <button id="btnStop" disabled>Halt</button>
+      <label><input type="checkbox" id="chkStep"> Einzelschritt</label>
+      <button id="btnStep" disabled>Schritt</button>
+      <button id="btnCont" disabled>Weiter</button>
+      <label><input type="checkbox" id="chkTrace"> eval/apply-Spur</label>
+      <label id="mWrap"><input type="checkbox" id="chkM"> M-Ausdrücke</label>
+      <button id="btnClear">Leeren</button>
+    </div>
+  </section>
+
+  <section class="pane editor">
+    <div class="pane-h"><span>Editor</span><select id="exSel" aria-label="Beispielprogramme"></select></div>
+    <div class="edwrap"><pre id="edHl" aria-hidden="true"></pre><textarea id="ed" spellcheck="false" wrap="off" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Programmtext"></textarea></div>
+    <div class="edbar">
+      <button id="btnRun" title="Strg+Enter">Programm ausführen</button>
+      <button id="btnIndent">Einrücken</button>
+      <button id="btnLoad">Laden…</button>
+      <button id="btnSave">Speichern</button>
+      <input type="file" id="file" accept=".lisp,.lsp,.scm,.ss,.txt" hidden>
+      <span id="edPos"></span>
+    </div>
+  </section>
+
+  <section class="pane views">
+    <nav class="tabs">
+      <button data-tab="box" class="on">Kästchen</button>
+      <button data-tab="mem">Speicher</button>
+      <button data-tab="env">Umgebung</button>
+      <button data-tab="trace">Spur</button>
+      <button data-tab="help">Hilfe</button>
+    </nav>
+    <div class="tab" id="tab-box">
+      <div class="row">
+        <input id="boxExpr" placeholder="Ausdruck oder Variable, z. B. (list 'a (list 'b 'c))" spellcheck="false" autocapitalize="off">
+        <button id="btnBox">Zeigen</button>
+        <label class="note"><input type="checkbox" id="chkBoxLast" checked> immer den letzten Wert</label>
+      </div>
+      <div id="boxInfo" class="note"></div>
+      <div class="svgwrap" id="boxSvg"></div>
+      <p class="note">Jede Cons-Zelle ist ein Kästchen aus zwei Hälften: links CAR, rechts CDR. Ein Schrägstrich bedeutet NIL bzw. (). Die kleine Zahl über einem Kästchen ist die Zellennummer im Speicher. Gestrichelte Pfeile zeigen auf Zellen, die schon an anderer Stelle gezeichnet sind – gemeinsam genutzte Teilstrukturen oder Zyklen.</p>
+    </div>
+    <div class="tab" id="tab-mem" hidden>
+      <div class="stats" id="memStats"></div>
+      <div class="row">
+        <button id="btnGC">Garbage Collection (animiert)</button>
+        <span class="note" id="gcPhase"></span>
+      </div>
+      <div class="legend">
+        <span><i style="background:var(--mem-used)"></i>belegt</span>
+        <span><i style="background:var(--mem-free)"></i>frei</span>
+        <span><i style="background:var(--mem-mark)"></i>markiert (Mark-Phase)</span>
+        <span><i style="background:var(--mem-freed)"></i>zuletzt eingesammelt</span>
+        <span><i style="background:var(--mem-sweep)"></i>Sweep-Zeiger</span>
+      </div>
+      <div class="memwrap"><canvas id="memCv" aria-label="Speicherkarte"></canvas></div>
+      <div id="memInfo" class="note">Mit der Maus (oder dem Finger) über eine Zelle fahren zeigt CAR und CDR; Antippen zeigt sie im Reiter „Kästchen“.</div>
+      <div id="freeList" class="note"></div>
+    </div>
+    <div class="tab" id="tab-env" hidden>
+      <div id="envBox"></div>
+    </div>
+    <div class="tab" id="tab-trace" hidden>
+      <div class="state" id="stateBox"><span class="art">BEREIT</span> Kein Programm läuft.</div>
+      <div id="stackBox"></div>
+      <div class="row"><b style="font-size:12px">Aufrufspur</b><button id="btnTraceClear">Spur leeren</button><span class="note">„eval/apply-Spur“ im Listener einschalten, TRACE für einzelne Funktionen.</span></div>
+      <div id="traceLog"></div>
+    </div>
+    <div class="tab help" id="tab-help" hidden></div>
+  </section>
+</main>
+
+<footer class="doc">
+  <span id="status">bereit</span>
+  <span>Lisp-Werkbank · Artikel und weitere Simulatoren: <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a></span>
+</footer>
+
+<script>
+/* ==================================================================
+   Lisp-Werkbank – Kern
+   Registermaschine für eval/apply (EVAL / WERT / APPLY), eigener
+   Speicher aus Cons-Zellen fester Größe, Freispeicherliste,
+   Mark-and-Sweep-Garbage-Collection. Zwei Modi: LISP 1.5 und Scheme.
+   ================================================================== */
+const LispCore = (function () {
+'use strict';
+
+class Special { constructor(n) { this.n = n; } }
+const EMPTY = new Special('()');
+const TRUE = new Special('#t');
+const FALSE = new Special('#f');
+const UNBOUND = new Special('#<ungebunden>');
+const UNSPEC = new Special('');
+const UNASSIGNED = new Special('#<nicht zugewiesen>');
+const EOF = { eof: true };
+
+class Cell { constructor(i) { this.i = i; } }
+class Sym { constructor(name, interned) { this.name = name; this.plist = EMPTY; this.gval = UNBOUND; this.interned = interned !== false; } }
+class Char { constructor(c) { this.c = c; } }
+class Prim { constructor(name, fn, min, max) { this.name = name; this.fn = fn; this.min = min; this.max = max; } }
+class Clo { constructor(params, rest, body, env, name) { this.params = params; this.rest = rest; this.body = body; this.env = env; this.name = name || null; } }
+class Macro { constructor(kind, a, b, name) { this.kind = kind; this.a = a; this.b = b; this.name = name; } }
+class Cont { constructor(k) { this.k = k; } }
+class Prom { constructor(thunk) { this.thunk = thunk; this.done = false; this.value = UNSPEC; } }
+class TailApply { constructor(fn, args, frame, env) { this.fn = fn; this.args = args; this.frame = frame; this.env = env; } }
+class TailEval { constructor(x, env) { this.x = x; this.env = env; } }
+class LispError extends Error { constructor(msg) { super(msg); this.name = 'LispError'; } }
+const NEEDGC = { needgc: true };
+const DONE = 0, EV = 1, RT = 2, AP = 3;
+
+/* ---------- Zahlen: ganze Zahlen beliebiger Größe (BigInt), sonst Gleitkomma ---------- */
+const isNum = v => typeof v === 'number' || typeof v === 'bigint';
+const isInt = v => typeof v === 'bigint' || (typeof v === 'number' && Number.isInteger(v));
+const normBig = b => (b >= -9007199254740991n && b <= 9007199254740991n) ? Number(b) : b;
+const toBig = v => typeof v === 'bigint' ? v : BigInt(v);
+function arith(op, a, b) {
+  if (isInt(a) && isInt(b)) {
+    if (typeof a === 'number' && typeof b === 'number') {
+      const r = op === 0 ? a + b : op === 1 ? a - b : a * b;
+      if (Number.isSafeInteger(r)) return r;
+    }
+    const A = toBig(a), B = toBig(b);
+    return normBig(op === 0 ? A + B : op === 1 ? A - B : A * B);
+  }
+  const A = Number(a), B = Number(b);
+  return op === 0 ? A + B : op === 1 ? A - B : A * B;
+}
+const isZero = v => v == 0;
+function fmtNum(v) {
+  if (typeof v === 'bigint') return v.toString();
+  if (Number.isNaN(v)) return '+nan.0';
+  if (v === Infinity) return '+inf.0';
+  if (v === -Infinity) return '-inf.0';
+  return String(v);
+}
+function copyK(K) { return K.map(f => f.vals ? Object.assign({}, f, { vals: f.vals.slice() }) : Object.assign({}, f)); }
+
+/* ================================================================== */
+class Interp {
+  constructor(mode, size, io) {
+    this.mode = mode; this.lisp = mode === 'lisp';
+    this.io = io || {};
+    this.N = size;
+    this.CAR = new Array(size); this.CDR = new Array(size);
+    this.cells = new Array(size);
+    this.used = new Uint8Array(size); this.mark = new Uint8Array(size); this.freedFlag = new Uint8Array(size);
+    for (let i = 0; i < size; i++) { this.cells[i] = new Cell(i); this.CDR[i] = i + 1 < size ? i + 1 : -1; }
+    this.freeHead = 0; this.freeCount = size;
+    this.stats = { gcs: 0, lastFreed: 0, totalFreed: 0, conses: 0, lastMarked: 0 };
+    this.symtab = new Map(); this.chars = new Map();
+    this.SP = new Map();
+    this.K = []; this.st = DONE;
+    this.x = EMPTY; this.env = EMPTY; this.val = EMPTY; this.fn = null; this.args = null; this.fname = null;
+    this.lastValue = EMPTY; this.viewRoots = [];
+    this.traced = new Set(); this.traceAll = false; this.traceDepth = 0; this.traceLines = 0;
+    this.stackLimit = 100000; this.gensymCount = 0; this.steps = 0;
+    this.initSymbols(); this.initSpecials(); this.initPrims(); this.loadPrelude();
+    this.base = new Map();
+    for (const s of this.symtab.values()) this.base.set(s, { plist: s.plist, gval: s.gval });
+    this.stats.conses = 0;
+  }
+
+  /* ---------- Symbole, Zeichen ---------- */
+  sym(name) { let s = this.symtab.get(name); if (!s) { s = new Sym(name); this.symtab.set(name, s); } return s; }
+  char(c) { let ch = this.chars.get(c); if (!ch) { ch = new Char(c); this.chars.set(c, ch); } return ch; }
+  err(msg) { return new LispError(msg); }
+
+  /* ---------- Speicher ---------- */
+  cons(a, d) {
+    const i = this.freeHead;
+    if (i < 0) throw NEEDGC;
+    this.freeHead = this.CDR[i];
+    this.CAR[i] = a; this.CDR[i] = d; this.used[i] = 1; this.freeCount--; this.stats.conses++;
+    return this.cells[i];
+  }
+  list(...a) { return this.arrToList(a); }
+  arrToList(a, tail) { let t = tail === undefined ? EMPTY : tail; for (let i = a.length - 1; i >= 0; i--) t = this.cons(a[i], t); return t; }
+  listToArr(l, what) {
+    const a = []; let n = 0;
+    while (l instanceof Cell) { a.push(this.CAR[l.i]); l = this.CDR[l.i]; if (++n > 2000000) throw this.err('Liste zu lang oder zyklisch'); }
+    if (l !== EMPTY) throw this.err(`${what || 'Liste'}: keine echte Liste (endet auf ${this.short(l)})`);
+    return a;
+  }
+  carErr(who, v) {
+    return this.err(v === EMPTY
+      ? `${who} von ${this.lisp ? 'NIL' : 'der leeren Liste ()'} ist nicht definiert`
+      : `${who} von einem Atom: ${this.short(v)}`);
+  }
+  car(v, who) { if (v instanceof Cell) return this.CAR[v.i]; throw this.carErr(who || (this.lisp ? 'CAR' : 'car'), v); }
+  cdr(v, who) { if (v instanceof Cell) return this.CDR[v.i]; throw this.carErr(who || (this.lisp ? 'CDR' : 'cdr'), v); }
+  cadr(v) { return this.car(this.cdr(v)); }
+  cddr(v) { return this.cdr(this.cdr(v)); }
+  caddr(v) { return this.car(this.cddr(v)); }
+  ensure(n) {
+    if (this.freeCount < n) this.gcAuto();
+    if (this.freeCount < n) throw this.err(`Speicher erschöpft: ${n} Zellen benötigt, nur ${this.freeCount} von ${this.N} frei`);
+  }
+  bool(b) { return b ? (this.lisp ? this.Q.T : TRUE) : (this.lisp ? EMPTY : FALSE); }
+  truthy(v) { return this.lisp ? v !== EMPTY : v !== FALSE; }
+
+  /* ---------- Garbage Collection: Mark and Sweep ---------- */
+  gc() { const g = this.gcGen(false); while (!g.next().done); }
+  gcAuto() { this.gc(); if (this.io.gc) this.io.gc(this.stats); }
+  *gcGen(anim) {
+    const N = this.N, CAR = this.CAR, CDR = this.CDR, used = this.used, mark = this.mark;
+    mark.fill(0); this.freedFlag.fill(0);
+    this.gcPhase = 'mark'; this.sweepPos = N;
+    const st = [], seen = new Set();
+    const push = v => { if (v !== null && typeof v === 'object') st.push(v); };
+    for (const s of this.symtab.values()) { push(s.plist); push(s.gval); }
+    push(this.x); push(this.val); push(this.env); push(this.fn); push(this.args);
+    push(this.K); push(this.lastValue); push(this.viewRoots);
+    let marked = 0; const chunk = anim ? Math.max(8, N >> 8) : Infinity;
+    while (st.length) {
+      const v = st.pop();
+      if (v instanceof Cell) {
+        const i = v.i; if (mark[i]) continue;
+        mark[i] = 1; marked++; push(CAR[i]); push(CDR[i]);
+        if (anim && marked % chunk === 0) yield { phase: 'mark', marked };
+        continue;
+      }
+      if (seen.has(v)) continue; seen.add(v);
+      if (v instanceof Sym) { push(v.plist); push(v.gval); }
+      else if (v instanceof Clo) { push(v.body); push(v.env); }
+      else if (v instanceof Macro) { push(v.a); push(v.b); }
+      else if (v instanceof Cont) push(v.k);
+      else if (v instanceof Prom) { push(v.thunk); push(v.value); }
+      else if (Array.isArray(v)) { for (const e of v) push(e); }
+      else if (v.constructor === Object) { for (const k in v) push(v[k]); }
+    }
+    this.gcPhase = 'sweep';
+    let freed = 0;
+    for (let i = N - 1; i >= 0; i--) {
+      if (used[i] && !mark[i]) {
+        used[i] = 0; CAR[i] = undefined; CDR[i] = this.freeHead; this.freeHead = i; freed++; this.freedFlag[i] = 1;
+      }
+      if (anim && i % (chunk * 4) === 0) { this.sweepPos = i; yield { phase: 'sweep', i }; }
+    }
+    this.sweepPos = -1; this.gcPhase = null;
+    this.freeCount += freed;
+    this.stats.gcs++; this.stats.lastFreed = freed; this.stats.totalFreed += freed; this.stats.lastMarked = marked;
+    return freed;
+  }
+
+  /* ---------- Eigenschaftslisten (LISP 1.5) ---------- */
+  getprop(s, ind) {
+    const CAR = this.CAR, CDR = this.CDR;
+    for (let p = s.plist; p instanceof Cell; ) {
+      const q = CDR[p.i]; if (!(q instanceof Cell)) break;
+      if (CAR[p.i] === ind) return CAR[q.i];
+      p = CDR[q.i];
+    }
+    return undefined;
+  }
+  putprop(s, ind, val) {
+    const CAR = this.CAR, CDR = this.CDR;
+    for (let p = s.plist; p instanceof Cell; ) {
+      const q = CDR[p.i]; if (!(q instanceof Cell)) break;
+      if (CAR[p.i] === ind) { CAR[q.i] = val; return; }
+      p = CDR[q.i];
+    }
+    s.plist = this.cons(ind, this.cons(val, s.plist));
+  }
+  remprop(s, ind) {
+    const CAR = this.CAR, CDR = this.CDR;
+    let prev = null;
+    for (let p = s.plist; p instanceof Cell; ) {
+      const q = CDR[p.i]; if (!(q instanceof Cell)) break;
+      if (CAR[p.i] === ind) { if (prev) CDR[prev.i] = CDR[q.i]; else s.plist = CDR[q.i]; return true; }
+      prev = q; p = CDR[q.i];
+    }
+    return false;
+  }
+  symArg(v, who) { if (v instanceof Sym) return v; throw this.err(`${who}: Atom (Symbol) erwartet, erhalten: ${this.short(v)}`); }
+
+  /* ---------- Variablen ---------- */
+  lookup(s, env) {
+    const CAR = this.CAR, CDR = this.CDR;
+    if (this.lisp) {
+      for (let e = env; e instanceof Cell; e = CDR[e.i]) {
+        const p = CAR[e.i];
+        if (p instanceof Cell && CAR[p.i] === s) return CDR[p.i];
+      }
+      const v = this.getprop(s, this.Q.apval);
+      if (v !== undefined) return v;
+      throw this.err(`Ungebundene Variable: ${s.name}`);
+    }
+    for (let f = env; f instanceof Cell; f = CDR[f.i]) {
+      for (let b = CAR[f.i]; b instanceof Cell; b = CDR[b.i]) {
+        const p = CAR[b.i];
+        if (CAR[p.i] === s) { const v = CDR[p.i]; if (v === UNASSIGNED) throw this.err(`Variable ${s.name} wird benutzt, bevor sie einen Wert hat (letrec)`); return v; }
+      }
+    }
+    const g = s.gval;
+    if (g === UNBOUND) throw this.err(`Ungebundene Variable: ${s.name}`);
+    return g;
+  }
+  findBinding(s, env) {
+    const CAR = this.CAR, CDR = this.CDR;
+    if (this.lisp) {
+      for (let e = env; e instanceof Cell; e = CDR[e.i]) { const p = CAR[e.i]; if (p instanceof Cell && CAR[p.i] === s) return p; }
+      return null;
+    }
+    for (let f = env; f instanceof Cell; f = CDR[f.i])
+      for (let b = CAR[f.i]; b instanceof Cell; b = CDR[b.i]) { const p = CAR[b.i]; if (CAR[p.i] === s) return p; }
+    return null;
+  }
+  lexBound(s, env) { return this.findBinding(s, env) !== null; }
+  defineVar(s, v, env) {
+    if (v instanceof Clo && !v.name) v.name = s;
+    if (v instanceof Macro && !v.name) v.name = s;
+    if (env === EMPTY) { s.gval = v; return; }
+    const CAR = this.CAR, CDR = this.CDR;
+    for (let b = CAR[env.i]; b instanceof Cell; b = CDR[b.i]) { const p = CAR[b.i]; if (CAR[p.i] === s) { CDR[p.i] = v; return; } }
+    const nb = this.cons(this.cons(s, v), CAR[env.i]);
+    CAR[env.i] = nb;
+  }
+  setScheme(s, v, env) {
+    const b = this.findBinding(s, env);
+    if (b) { this.CDR[b.i] = v; return; }
+    if (s.gval === UNBOUND) throw this.err(`set!: Variable ${s.name} ist nicht definiert`);
+    s.gval = v;
+  }
+  setLisp(s, v, env) {
+    const b = this.findBinding(s, env);
+    if (b) { this.CDR[b.i] = v; return; }
+    this.putprop(s, this.Q.apval, v);
+  }
+  fnLookup(s, env) {
+    const CAR = this.CAR, CDR = this.CDR, Q = this.Q;
+    for (let p = s.plist; p instanceof Cell; ) {
+      const q = CDR[p.i]; if (!(q instanceof Cell)) break;
+      const ind = CAR[p.i];
+      if (ind === Q.expr || ind === Q.subr) return { fn: CAR[q.i], fexpr: false };
+      if (ind === Q.fexpr || ind === Q.fsubr) return { fn: CAR[q.i], fexpr: true };
+      p = CDR[q.i];
+    }
+    const b = this.findBinding(s, env);
+    if (b) return { fn: CDR[b.i], fexpr: false };
+    const ap = this.getprop(s, Q.apval);
+    if (ap !== undefined) return { fn: ap, fexpr: false };
+    throw this.err(`Funktion nicht definiert: ${s.name}`);
+  }
+
+  /* ---------- Maschine ---------- */
+  push(f) {
+    if (this.K.length >= this.stackLimit) throw this.err(`Stapelüberlauf: mehr als ${this.stackLimit} offene Rahmen${this.lisp ? ' (PDL OVERFLOW)' : ''}`);
+    this.K.push(f);
+  }
+  run(n) {
+    let retried = false;
+    for (let i = 0; i < n; i++) {
+      if (this.st === DONE) return true;
+      try {
+        if (this.freeCount < 8) this.gcAuto();
+        const st = this.st;
+        if (st === EV) this.stepEval(); else if (st === RT) this.stepRet(); else this.stepApply();
+        this.steps++; retried = false;
+      } catch (e0) {
+        let e = e0;
+        if (e === NEEDGC) {
+          if (!retried) { retried = true; this.gcAuto(); i--; continue; }
+          e = this.err(`Speicher erschöpft: alle ${this.N} Cons-Zellen sind belegt, auch nach der Garbage Collection. Größeren Speicher wählen oder weniger tief rekursiv rechnen.`);
+        }
+        if (e instanceof RangeError) e = this.err('Interne Rekursion zu tief (Struktur zu tief verschachtelt oder zyklisch?)');
+        if (e instanceof LispError) { e.where = this.whereText(); e.trace = this.backtrace(); }
+        this.fail();
+        throw e;
+      }
+    }
+    return this.st === DONE;
+  }
+  fail() { this.K = []; this.st = DONE; this.traceDepth = 0; this.x = EMPTY; this.env = EMPTY; this.fn = null; this.args = null; }
+  abort() { this.fail(); }
+  whereText() {
+    try {
+      if (this.st === EV) return 'beim Auswerten von ' + this.short(this.x, 90);
+      if (this.st === AP) return 'beim Anwenden von ' + this.fnDesc(this.fn, this.fname);
+    } catch (e) { /* egal */ }
+    return '';
+  }
+  backtrace() {
+    const names = [];
+    for (let k = this.K.length - 1; k >= 0 && names.length < 10; k--) {
+      const f = this.K[k];
+      if ((f.t === 'ret' || f.t === 'args') && f.name) names.push(f.name.name);
+    }
+    return names;
+  }
+  fnDesc(fn, name) {
+    if (name) return name.name;
+    if (fn instanceof Prim) return fn.name;
+    if (fn instanceof Clo) return fn.name ? fn.name.name : (this.lisp ? 'LAMBDA' : 'lambda');
+    return this.short(fn, 50);
+  }
+
+  stepEval() {
+    const x = this.x, env = this.env;
+    if (x instanceof Sym) { this.val = this.lookup(x, env); this.st = RT; return; }
+    if (!(x instanceof Cell)) { this.val = x; this.st = RT; return; }
+    if (this.traceAll) this.tline('EVAL  ' + this.short(x, 80));
+    const op = this.CAR[x.i];
+    if (op instanceof Sym) {
+      const h = this.SP.get(op);
+      if (h) { h.call(this, x, env); return; }
+      if (this.lisp) {
+        const f = this.fnLookup(op, env);
+        if (f.fexpr) return this.callFexpr(f.fn, op, x, env);
+        return this.startArgs(f.fn, op, this.CDR[x.i], env);
+      }
+      const m = op.gval;
+      if (m instanceof Macro && !this.lexBound(op, env)) return this.expandMacro(m, x, env);
+      return this.startArgs(this.lookup(op, env), op, this.CDR[x.i], env);
+    }
+    if (this.lisp && op instanceof Cell) {
+      const h = this.CAR[op.i];
+      if (h === this.Q.lambda || h === this.Q.label || h === this.Q.funarg) return this.startArgs(op, null, this.CDR[x.i], env);
+    }
+    this.push({ t: 'evop', x, env });
+    this.x = op;
+  }
+  callFexpr(fn, name, x, env) {
+    let args;
+    const argl = this.CDR[x.i];
+    if (fn instanceof Prim) args = [argl, env];
+    else if (fn instanceof Cell && this.CAR[fn.i] === this.Q.lambda && this.listToArr(this.cadr(fn)).length < 2) args = [argl];
+    else args = [argl, env];
+    this.fn = fn; this.fname = name; this.args = args; this.env = env; this.st = AP;
+  }
+  startArgs(fn, name, argl, env) { return this.startArgsArr(fn, name, this.listToArr(argl, 'Argumentliste'), env); }
+  startArgsArr(fn, name, exprs, env) {
+    const f = { t: 'args', fn, name, ex: exprs, i: 0, vals: [], env };
+    this.push(f);
+    this.argsContinue(f);
+  }
+  argsContinue(f) {
+    const ex = f.ex;
+    while (f.i < ex.length) {
+      const e = ex[f.i];
+      if (e instanceof Cell) { f.i++; this.x = e; this.env = f.env; this.st = EV; return; }
+      f.vals.push(e instanceof Sym ? this.lookup(e, f.env) : e); f.i++;
+    }
+    this.K.pop();
+    this.fn = f.fn; this.args = f.vals; this.env = f.env; this.fname = f.name; this.st = AP;
+  }
+  evalSeq(body, env) {
+    if (!(body instanceof Cell)) { this.val = this.lisp ? EMPTY : UNSPEC; this.st = RT; return; }
+    const rest = this.CDR[body.i];
+    if (rest instanceof Cell) this.push({ t: 'seq', rest, env });
+    this.x = this.CAR[body.i]; this.env = env; this.st = EV;
+  }
+  evalCond(cl, env) {
+    if (!(cl instanceof Cell)) { this.val = this.lisp ? EMPTY : UNSPEC; this.st = RT; return; }
+    const c = this.CAR[cl.i];
+    if (!(c instanceof Cell)) throw this.err(`${this.lisp ? 'COND' : 'cond'}: Klausel muss eine Liste sein: ${this.short(c)}`);
+    const test = this.CAR[c.i];
+    if (!this.lisp && test === this.Q.else) return this.evalSeq(this.CDR[c.i], env);
+    this.push({ t: 'cond', cl, env });
+    this.x = test; this.env = env; this.st = EV;
+  }
+
+  stepRet() {
+    const K = this.K, f = K[K.length - 1], CAR = this.CAR, CDR = this.CDR;
+    switch (f.t) {
+      case 'halt': K.pop(); this.st = DONE; this.lastValue = this.val; this.x = EMPTY; this.env = EMPTY; this.fn = null; this.args = null; return;
+      case 'args': f.vals.push(this.val); return this.argsContinue(f);
+      case 'evop': K.pop(); return this.startArgs(this.val, null, CDR[f.x.i], f.env);
+      case 'seq': {
+        const r = f.rest;
+        if (!(CDR[r.i] instanceof Cell)) K.pop(); else f.rest = CDR[r.i];
+        this.x = CAR[r.i]; this.env = f.env; this.st = EV; return;
+      }
+      case 'if': {
+        K.pop();
+        const rest = CDR[CDR[f.x.i].i];
+        if (this.truthy(this.val)) { this.x = CAR[rest.i]; }
+        else { const alt = CDR[rest.i]; if (alt instanceof Cell) this.x = CAR[alt.i]; else { this.val = UNSPEC; return; } }
+        this.env = f.env; this.st = EV; return;
+      }
+      case 'cond': {
+        if (this.truthy(this.val)) {
+          const body = CDR[CAR[f.cl.i].i];
+          K.pop();
+          if (!(body instanceof Cell)) return;            /* Wert der Bedingung */
+          if (!this.lisp && CAR[body.i] === this.Q.arrow) {
+            this.push({ t: 'condarrow', v: this.val });
+            this.x = this.cadr(body); this.env = f.env; this.st = EV; return;
+          }
+          return this.evalSeq(body, f.env);
+        }
+        K.pop(); return this.evalCond(CDR[f.cl.i], f.env);
+      }
+      case 'condarrow': K.pop(); this.fn = this.val; this.args = [f.v]; this.fname = null; this.st = AP; return;
+      case 'and': case 'or': {
+        const isAnd = f.t === 'and';
+        if (this.truthy(this.val) !== isAnd) { K.pop(); return; }
+        const r = f.rest;
+        if (!(CDR[r.i] instanceof Cell)) K.pop(); else f.rest = CDR[r.i];
+        this.x = CAR[r.i]; this.env = f.env; this.st = EV; return;
+      }
+      case 'when': {
+        K.pop();
+        if (this.truthy(this.val) !== f.neg) return this.evalSeq(f.body, f.env);
+        this.val = UNSPEC; return;
+      }
+      case 'case': {
+        K.pop();
+        const key = this.val;
+        for (let c = f.cl; c instanceof Cell; c = CDR[c.i]) {
+          const cl = CAR[c.i], data = this.car(cl);
+          if (data === this.Q.else) return this.evalSeq(CDR[cl.i], f.env);
+          for (let d = data; d instanceof Cell; d = CDR[d.i]) if (this.eqv(CAR[d.i], key)) return this.evalSeq(CDR[cl.i], f.env);
+        }
+        this.val = UNSPEC; return;
+      }
+      case 'define': this.defineVar(f.s, this.val, f.env); K.pop(); this.val = f.s; return;
+      case 'set': this.setScheme(f.s, this.val, f.env); K.pop(); this.val = UNSPEC; return;
+      case 'setq': {
+        this.setLisp(f.s, this.val, f.env);
+        const r = f.rest;
+        if (r instanceof Cell) {
+          const nx = CDR[r.i]; if (!(nx instanceof Cell)) throw this.err('SETQ: Wert fehlt für ' + this.short(CAR[r.i]));
+          f.s = this.symArg(CAR[r.i], 'SETQ'); f.rest = CDR[nx.i];
+          this.x = CAR[nx.i]; this.env = f.env; this.st = EV; return;
+        }
+        K.pop(); return;
+      }
+      case 'cset': this.putprop(f.s, this.Q.apval, this.val); K.pop(); return;
+      case 'prog': return this.progNext(f);
+      case 'return': {
+        const k = this.findProg('RETURN');
+        this.K.length = k; return;
+      }
+      case 'ret': {
+        K.pop();
+        if (f.tr) this.traceExit(f.name, this.val);
+        return;
+      }
+      case 'applyval': K.pop(); this.fn = this.val; this.args = f.args; this.env = f.env; this.fname = null; this.st = AP; return;
+      case 'mexp':
+        K.pop();
+        if (this.traceAll) this.tline('MAKRO ⇒ ' + this.short(this.val, 80));
+        this.x = this.val; this.env = f.env; this.st = EV; return;
+      case 'force': {
+        K.pop();
+        const p = f.p;
+        if (!p.done) { p.done = true; p.value = this.val; p.thunk = null; }
+        this.val = p.value; return;
+      }
+      case 'consstream': {
+        const thunk = new Clo([], null, this.cons(f.b, EMPTY), f.env, null);
+        const v = this.cons(this.val, new Prom(thunk));
+        K.pop(); this.val = v; return;
+      }
+      default: throw this.err('interner Fehler: unbekannter Rahmen ' + f.t);
+    }
+  }
+  progNext(f) {
+    let pc = f.pc;
+    while (pc instanceof Cell) {
+      const s = this.CAR[pc.i]; pc = this.CDR[pc.i];
+      if (s instanceof Cell) { f.pc = pc; this.x = s; this.env = f.env; this.st = EV; return; }
+    }
+    this.K.pop(); this.val = EMPTY; this.st = RT;
+  }
+  findProg(what) {
+    for (let k = this.K.length - 1; k >= 0; k--) {
+      const f = this.K[k];
+      if (f.t === 'prog') return k;
+      if (f.t === 'ret' || f.t === 'halt') break;
+    }
+    throw this.err(`${what} außerhalb von PROG`);
+  }
+
+  stepApply() {
+    const fn = this.fn, args = this.args;
+    if (this.traceAll) this.tline('APPLY ' + this.fnDesc(fn, this.fname) + ' auf (' + args.map(a => this.short(a, 30)).join(' ') + ')');
+    if (fn instanceof Prim) {
+      if (args.length < fn.min || (fn.max >= 0 && args.length > fn.max)) throw this.arityErr(fn.name, fn.min === fn.max ? fn.min : (fn.max < 0 ? `mindestens ${fn.min}` : `${fn.min} bis ${fn.max}`), args.length);
+      const r = fn.fn(args);
+      if (r instanceof TailApply) {
+        if (r.frame) this.push(r.frame);
+        if (r.env !== undefined) this.env = r.env;
+        this.fn = r.fn; this.args = r.args; this.fname = null; return;
+      }
+      if (r instanceof TailEval) { this.x = r.x; this.env = r.env; this.st = EV; return; }
+      this.val = r; this.st = RT; return;
+    }
+    if (fn instanceof Cont) {
+      if (args.length !== 1) throw this.arityErr('Fortsetzung', 1, args.length);
+      this.K = copyK(fn.k); this.val = args[0]; this.st = RT; return;
+    }
+    if (this.lisp) return this.applyLisp(fn, args);
+    if (fn instanceof Clo) {
+      const np = fn.params.length;
+      if (args.length < np || (!fn.rest && args.length > np)) throw this.arityErr(fn.name ? fn.name.name : 'lambda', fn.rest ? `mindestens ${np}` : np, args.length);
+      let frame = EMPTY;
+      if (fn.rest) frame = this.cons(this.cons(fn.rest, this.arrToList(args.slice(np))), frame);
+      for (let i = np - 1; i >= 0; i--) frame = this.cons(this.cons(fn.params[i], args[i]), frame);
+      const env = this.cons(frame, fn.env);
+      if (fn.name && this.traced.has(fn.name)) { this.push({ t: 'ret', name: fn.name, tr: true }); this.traceEnter(fn.name, args); }
+      return this.evalSeq(fn.body, env);
+    }
+    throw this.err(`Ist keine Prozedur: ${this.short(fn)}`);
+  }
+  applyLisp(fn, args) {
+    const CAR = this.CAR, Q = this.Q;
+    if (fn instanceof Sym) {
+      const f = this.fnLookup(fn, this.env);
+      if (f.fexpr) throw this.err(`${fn.name} ist ein FEXPR und kann nicht mit APPLY/FUNCALL aufgerufen werden`);
+      this.fn = f.fn; this.fname = fn; return;
+    }
+    if (fn instanceof Cell) {
+      const h = CAR[fn.i];
+      if (h === Q.lambda) {
+        const ps = this.listToArr(this.cadr(fn), 'Parameterliste');
+        if (ps.length !== args.length) throw this.arityErr(this.fname ? this.fname.name : 'LAMBDA', ps.length, args.length);
+        let a = this.env;
+        for (let i = ps.length - 1; i >= 0; i--) a = this.cons(this.cons(this.symArg(ps[i], 'LAMBDA-Parameter'), args[i]), a);
+        const tr = !!(this.fname && this.traced.has(this.fname));
+        this.push({ t: 'ret', name: this.fname, tr });
+        if (tr) this.traceEnter(this.fname, args);
+        return this.evalSeq(this.cddr(fn), a);
+      }
+      if (h === Q.label) {
+        const name = this.cadr(fn), lam = this.caddr(fn);
+        const a = this.cons(this.cons(name, lam), this.env);
+        this.fn = lam; this.env = a; this.fname = name; return;
+      }
+      if (h === Q.funarg) { const f2 = this.cadr(fn), e2 = this.caddr(fn); this.fn = f2; this.env = e2; return; }
+      this.push({ t: 'applyval', args, env: this.env });
+      this.x = fn; this.st = EV; return;
+    }
+    throw this.err(`Ist keine Funktion: ${this.short(fn)}`);
+  }
+  arityErr(name, exp, got) {
+    const n = typeof name === 'string' ? name : (name ? name.name : '?');
+    return this.err(`Falsche Argumentzahl für ${n}: erwartet ${exp}, erhalten ${got}`);
+  }
+  traceEnter(name, args) {
+    const ind = '  '.repeat(Math.min(this.traceDepth, 30));
+    if (this.lisp) this.out(`${ind}ARGUMENTE VON ${name.name}: ${args.map(a => this.print(a)).join(' ')}\n`);
+    else this.out(`${ind}[Aufruf (${name.name}${args.map(a => ' ' + this.print(a)).join('')})]\n`);
+    this.traceDepth++;
+  }
+  traceExit(name, v) {
+    this.traceDepth = Math.max(0, this.traceDepth - 1);
+    const ind = '  '.repeat(Math.min(this.traceDepth, 30));
+    if (this.lisp) this.out(`${ind}WERT VON ${name.name}: ${this.print(v)}\n`);
+    else this.out(`${ind}[Wert von ${name.name}: ${this.print(v)}]\n`);
+  }
+  tline(s) {
+    this.traceLines++;
+    if (this.traceLines < 5000) { if (this.io.trace) this.io.trace(s, Math.min(this.K.length, 40)); }
+    else if (this.traceLines === 5000 && this.io.trace) this.io.trace('… Spur nach 5000 Zeilen gekürzt …', 0);
+  }
+  out(s) { if (this.io.out) this.io.out(s); }
+
+  /* ---------- Sonderformen ---------- */
+  initSymbols() {
+    const s = n => this.sym(this.lisp ? n.toUpperCase() : n);
+    this.Q = {
+      quote: s('quote'), quasiquote: s('quasiquote'), unquote: s('unquote'), splice: s('unquote-splicing'),
+      lambda: s('lambda'), label: s('label'), funarg: s('funarg'), else: s('else'), arrow: s('=>'),
+      ell: s('...'), under: s('_'), let: s('let'), letstar: s('let*'), set: s('set!'), begin: s('begin'), if: s('if'),
+      T: s('t'), F: s('f'), expr: s('expr'), fexpr: s('fexpr'), subr: s('subr'), fsubr: s('fsubr'), apval: s('apval'),
+      define: s('define'), syntaxRules: s('syntax-rules')
+    };
+    if (this.lisp) { this.putprop(this.Q.T, this.Q.apval, this.Q.T); this.putprop(this.Q.F, this.Q.apval, EMPTY); }
+  }
+  initSpecials() {
+    const sp = (name, fn) => this.SP.set(this.sym(this.lisp ? name.toUpperCase() : name), fn);
+    const self = function (x) { this.val = x; this.st = RT; };
+    sp('quote', function (x) { this.val = this.cadr(x); this.st = RT; });
+    sp('cond', function (x, env) { this.evalCond(this.CDR[x.i], env); });
+    const andor = t => function (x, env) {
+      const r = this.CDR[x.i];
+      if (!(r instanceof Cell)) { this.val = this.bool(t === 'and'); this.st = RT; return; }
+      if (this.CDR[r.i] instanceof Cell) this.push({ t, rest: this.CDR[r.i], env });
+      this.x = this.CAR[r.i]; this.env = env;
+    };
+    sp('and', andor('and')); sp('or', andor('or'));
+    if (this.lisp) {
+      sp('setq', function (x, env) {
+        const r = this.CDR[x.i];
+        const s = this.symArg(this.car(r), 'SETQ');
+        const nx = this.cdr(r); if (!(nx instanceof Cell)) throw this.err('SETQ: Wert fehlt');
+        this.push({ t: 'setq', s, rest: this.CDR[nx.i], env });
+        this.x = this.CAR[nx.i];
+      });
+      sp('csetq', function (x, env) {
+        const s = this.symArg(this.cadr(x), 'CSETQ');
+        this.push({ t: 'cset', s }); this.x = this.caddr(x); this.env = env;
+      });
+      sp('prog', function (x, env) {
+        const vars = this.listToArr(this.cadr(x), 'PROG-Variablenliste');
+        let a = env;
+        for (let i = vars.length - 1; i >= 0; i--) a = this.cons(this.cons(this.symArg(vars[i], 'PROG'), EMPTY), a);
+        const body = this.cddr(x);
+        const f = { t: 'prog', body, pc: body, env: a };
+        this.push(f); this.progNext(f);
+      });
+      sp('go', function (x) {
+        const lab = this.cadr(x);
+        const k = this.findProg('GO'), f = this.K[k];
+        for (let p = f.body; p instanceof Cell; p = this.CDR[p.i])
+          if (this.CAR[p.i] === lab) { this.K.length = k + 1; f.pc = this.CDR[p.i]; this.progNext(f); return; }
+        throw this.err(`GO: Marke nicht gefunden: ${this.short(lab)}`);
+      });
+      sp('return', function (x, env) {
+        const r = this.CDR[x.i];
+        if (!(r instanceof Cell)) { const k = this.findProg('RETURN'); this.K.length = k; this.val = EMPTY; this.st = RT; return; }
+        this.findProg('RETURN');
+        this.push({ t: 'return' }); this.x = this.CAR[r.i]; this.env = env;
+      });
+      sp('function', function (x, env) {
+        const f = this.cadr(x);
+        this.val = f instanceof Cell ? this.list(this.Q.funarg, f, env) : f; this.st = RT;
+      });
+      sp('lambda', self); sp('label', self); sp('funarg', self);
+      sp('defun', function (x) {
+        const name = this.symArg(this.cadr(x), 'DEFUN');
+        let r = this.cddr(x), ind = this.Q.expr;
+        const k = this.car(r);
+        if (k === this.Q.fexpr || k === this.Q.expr) { ind = k; r = this.cdr(r); }
+        const lam = this.cons(this.Q.lambda, r);
+        this.putprop(name, ind, lam);
+        this.val = name; this.st = RT;
+      });
+      return;
+    }
+    /* ---- Scheme ---- */
+    sp('quasiquote', function (x) { this.x = this.qq(this.cadr(x), 1); });
+    sp('if', function (x, env) {
+      const r = this.cdr(x); if (!(this.cdr(r) instanceof Cell)) throw this.err('if: Folgeausdruck fehlt');
+      this.push({ t: 'if', x, env }); this.x = this.CAR[r.i];
+    });
+    sp('define', function (x, env) {
+      const t = this.cadr(x);
+      if (t instanceof Cell) {
+        const name = this.symArg(this.CAR[t.i], 'define');
+        const clo = this.makeClo(this.CDR[t.i], this.cddr(x), env, name);
+        this.defineVar(name, clo, env); this.val = name; this.st = RT; return;
+      }
+      const s = this.symArg(t, 'define');
+      const r = this.cddr(x);
+      if (!(r instanceof Cell)) { this.defineVar(s, UNSPEC, env); this.val = s; this.st = RT; return; }
+      this.push({ t: 'define', s, env }); this.x = this.CAR[r.i];
+    });
+    sp('set!', function (x, env) {
+      const s = this.symArg(this.cadr(x), 'set!');
+      this.push({ t: 'set', s, env }); this.x = this.caddr(x);
+    });
+    sp('lambda', function (x, env) { this.val = this.makeClo(this.cadr(x), this.cddr(x), env, null); this.st = RT; });
+    sp('named-lambda', function (x, env) { const h = this.cadr(x); this.val = this.makeClo(this.cdr(h), this.cddr(x), env, this.car(h)); this.st = RT; });
+    sp('begin', function (x, env) { this.evalSeq(this.CDR[x.i], env); });
+    sp('let', function (x, env) {
+      let b = this.cadr(x), body = this.cddr(x), name = null;
+      if (b instanceof Sym) { name = b; b = this.car(body); body = this.cdr(body); }
+      if (!(body instanceof Cell)) throw this.err('let: Rumpf fehlt');
+      const vars = [], exprs = [];
+      for (const bd of this.listToArr(b, 'let-Bindungen')) {
+        if (bd instanceof Sym) { vars.push(bd); exprs.push(UNSPEC); continue; }
+        vars.push(this.symArg(this.car(bd), 'let'));
+        const r = this.cdr(bd); exprs.push(r instanceof Cell ? this.CAR[r.i] : UNSPEC);
+      }
+      const clo = new Clo(vars, null, body, env, name);
+      if (name) { const e2 = this.cons(this.cons(this.cons(name, clo), EMPTY), env); clo.env = e2; }
+      this.startArgsArr(clo, name, exprs, env);
+    });
+    sp('let*', function (x) {
+      const b = this.cadr(x), body = this.cddr(x);
+      if (!(b instanceof Cell) || !(this.CDR[b.i] instanceof Cell)) { this.x = this.cons(this.Q.let, this.CDR[x.i]); return; }
+      const inner = this.cons(this.Q.letstar, this.cons(this.CDR[b.i], body));
+      this.x = this.list(this.Q.let, this.cons(this.CAR[b.i], EMPTY), inner);
+    });
+    const letrec = function (x) {
+      const bs = this.listToArr(this.cadr(x), 'letrec-Bindungen'), body = this.cddr(x);
+      const inits = [], sets = [];
+      for (const b of bs) { const v = this.car(b); inits.push(this.list(v, UNASSIGNED)); sets.push(this.list(this.Q.set, v, this.cadr(b))); }
+      const inner = this.cons(this.Q.let, this.cons(EMPTY, body));
+      sets.push(inner);
+      this.x = this.cons(this.Q.let, this.cons(this.arrToList(inits), this.arrToList(sets)));
+    };
+    sp('letrec', letrec); sp('letrec*', letrec);
+    sp('case', function (x, env) { this.push({ t: 'case', cl: this.cddr(x), env }); this.x = this.cadr(x); });
+    const when = neg => function (x, env) { this.push({ t: 'when', neg, body: this.cddr(x), env }); this.x = this.cadr(x); };
+    sp('when', when(false)); sp('unless', when(true));
+    sp('do', function (x) {
+      const specs = this.listToArr(this.cadr(x), 'do-Variablen');
+      const end = this.caddr(x), body = this.CDR[this.cddr(x).i];
+      const loop = new Sym('do-schleife', false);
+      const binds = [], steps = [];
+      for (const s of specs) { const v = this.car(s); const r = this.cdr(s); binds.push(this.list(v, this.car(r))); const st = this.cdr(r); steps.push(st instanceof Cell ? this.CAR[st.i] : v); }
+      const call = this.cons(loop, this.arrToList(steps));
+      const again = this.cons(this.Q.begin, this.arrToList(this.listToArr(body).concat([call])));
+      const fin = this.cons(this.Q.begin, this.cdr(end));
+      const iff = this.list(this.Q.if, this.car(end), fin, again);
+      this.x = this.list(this.Q.let, loop, this.arrToList(binds), iff);
+    });
+    sp('delay', function (x, env) { this.val = new Prom(new Clo([], null, this.cons(this.cadr(x), EMPTY), env, null)); this.st = RT; });
+    sp('cons-stream', function (x, env) { this.push({ t: 'consstream', b: this.caddr(x), env }); this.x = this.cadr(x); });
+    sp('define-syntax', function (x) {
+      const name = this.symArg(this.cadr(x), 'define-syntax');
+      const spec = this.caddr(x);
+      if (!(spec instanceof Cell) || this.CAR[spec.i] !== this.Q.syntaxRules) throw this.err('define-syntax: nur (syntax-rules …) wird unterstützt');
+      const lits = this.listToArr(this.cadr(spec), 'syntax-rules-Literale');
+      name.gval = new Macro('rules', lits, this.cddr(spec), name);
+      this.val = name; this.st = RT;
+    });
+    sp('define-macro', function (x, env) {
+      const h = this.cadr(x);
+      let name, clo;
+      if (h instanceof Cell) { name = this.symArg(this.CAR[h.i], 'define-macro'); clo = this.makeClo(this.CDR[h.i], this.cddr(x), env, name); }
+      else throw this.err('define-macro: Form (define-macro (name . parameter) rumpf …) erwartet');
+      name.gval = new Macro('proc', clo, null, name);
+      this.val = name; this.st = RT;
+    });
+  }
+  makeClo(params, body, env, name) {
+    const ps = []; let p = params, rest = null;
+    while (p instanceof Cell) { ps.push(this.symArg(this.CAR[p.i], 'lambda-Parameter')); p = this.CDR[p.i]; }
+    if (p instanceof Sym) rest = p; else if (p !== EMPTY) throw this.err('lambda: ungültige Parameterliste');
+    if (!(body instanceof Cell)) throw this.err('lambda: Rumpf fehlt');
+    return new Clo(ps, rest, body, env, name);
+  }
+  qq(t, d) {
+    const Q = this.Q, P = this.P;
+    if (!(t instanceof Cell)) return (t instanceof Sym || t === EMPTY) ? this.list(Q.quote, t) : t;
+    const h = this.CAR[t.i];
+    if (h === Q.unquote) {
+      if (d === 1) return this.cadr(t);
+      return this.list(P.list, this.list(Q.quote, Q.unquote), this.qq(this.cadr(t), d - 1));
+    }
+    if (h === Q.quasiquote) return this.list(P.list, this.list(Q.quote, Q.quasiquote), this.qq(this.cadr(t), d + 1));
+    if (h instanceof Cell && this.CAR[h.i] === Q.splice && d === 1) return this.list(P.append, this.cadr(h), this.qq(this.CDR[t.i], d));
+    return this.list(P.cons, this.qq(h, d), this.qq(this.CDR[t.i], d));
+  }
+  expandMacro(m, x, env) {
+    if (m.kind === 'proc') {
+      this.push({ t: 'mexp', env });
+      this.fn = m.a; this.args = this.listToArr(this.CDR[x.i], 'Makroaufruf'); this.fname = null; this.st = AP; return;
+    }
+    for (let r = m.b; r instanceof Cell; r = this.CDR[r.i]) {
+      const rule = this.CAR[r.i];
+      const pat = this.car(rule), tmpl = this.cadr(rule);
+      const b = new Map();
+      if (this.srMatch(this.cdr(pat), this.CDR[x.i], b, m.a)) {
+        const e = this.srExpand(tmpl, b);
+        if (this.traceAll) this.tline('MAKRO ⇒ ' + this.short(e, 80));
+        this.x = e; return;
+      }
+    }
+    throw this.err(`Makro ${m.name.name}: kein Muster passt zu ${this.short(x, 80)}`);
+  }
+  srVars(p, lits, out) {
+    out = out || [];
+    if (p instanceof Sym) { if (p !== this.Q.ell && p !== this.Q.under && !lits.includes(p)) out.push(p); }
+    else if (p instanceof Cell) { this.srVars(this.CAR[p.i], lits, out); this.srVars(this.CDR[p.i], lits, out); }
+    return out;
+  }
+  srMatch(pat, form, b, lits) {
+    const CAR = this.CAR, CDR = this.CDR, ell = this.Q.ell;
+    if (pat instanceof Sym) {
+      if (pat === this.Q.under) return true;
+      if (lits.includes(pat)) return form === pat;
+      b.set(pat, { v: form }); return true;
+    }
+    if (pat instanceof Cell) {
+      let p = pat, f = form;
+      while (p instanceof Cell) {
+        const sub = CAR[p.i], nx = CDR[p.i];
+        if (nx instanceof Cell && CAR[nx.i] === ell) {
+          const after = CDR[nx.i];
+          let minAfter = 0; for (let q = after; q instanceof Cell; q = CDR[q.i]) minAfter++;
+          let avail = 0; for (let g = f; g instanceof Cell; g = CDR[g.i]) avail++;
+          const take = avail - minAfter; if (take < 0) return false;
+          const seqs = [];
+          for (let k = 0; k < take; k++) { const m = new Map(); if (!this.srMatch(sub, CAR[f.i], m, lits)) return false; seqs.push(m); f = CDR[f.i]; }
+          for (const v of this.srVars(sub, lits)) b.set(v, { seq: seqs });
+          p = after; continue;
+        }
+        if (!(f instanceof Cell)) return false;
+        if (!this.srMatch(sub, CAR[f.i], b, lits)) return false;
+        p = nx; f = CDR[f.i];
+      }
+      if (p === EMPTY) return f === EMPTY;
+      return this.srMatch(p, f, b, lits);
+    }
+    if (pat === EMPTY) return form === EMPTY;
+    return this.equal(pat, form);
+  }
+  srExpand(t, b) {
+    const CAR = this.CAR, CDR = this.CDR, ell = this.Q.ell;
+    if (t instanceof Sym) {
+      const e = b.get(t);
+      if (e) { if (e.seq) throw this.err(`Makro: Mustervariable ${t.name} braucht "..." in der Schablone`); return e.v; }
+      return t;
+    }
+    if (!(t instanceof Cell)) return t;
+    const out = []; let p = t;
+    while (p instanceof Cell) {
+      const sub = CAR[p.i], nx = CDR[p.i];
+      if (nx instanceof Cell && CAR[nx.i] === ell) {
+        const vars = this.srVars(sub, []).filter(v => b.get(v) && b.get(v).seq);
+        if (!vars.length) throw this.err('Makro: "..." ohne passende Mustervariable');
+        let n = Infinity; for (const v of vars) n = Math.min(n, b.get(v).seq.length);
+        for (let i = 0; i < n; i++) {
+          const nb = new Map(b);
+          for (const v of vars) for (const [k, val] of b.get(v).seq[i]) nb.set(k, val);
+          out.push(this.srExpand(sub, nb));
+        }
+        p = CDR[nx.i]; continue;
+      }
+      out.push(this.srExpand(sub, b)); p = nx;
+    }
+    return this.arrToList(out, p === EMPTY ? EMPTY : this.srExpand(p, b));
+  }
+
+  /* ---------- Gleichheit ---------- */
+  eqv(a, b) {
+    if (a === b) return true;
+    if (isNum(a) && isNum(b)) return a == b && isInt(a) === isInt(b);
+    if (a instanceof Char && b instanceof Char) return a.c === b.c;
+    return false;
+  }
+  equal(a, b) {
+    const st = [a, b]; let n = 0;
+    while (st.length) {
+      const y = st.pop(), x = st.pop();
+      if (++n > 3000000) throw this.err('equal: Struktur zu groß oder zyklisch');
+      if (x === y) continue;
+      if (x instanceof Cell && y instanceof Cell) { st.push(this.CAR[x.i], this.CAR[y.i], this.CDR[x.i], this.CDR[y.i]); continue; }
+      if (isNum(x) && isNum(y)) { if (x == y) continue; return false; }
+      if (typeof x === 'string' && typeof y === 'string') { if (x === y) continue; return false; }
+      if (x instanceof Char && y instanceof Char && x.c === y.c) continue;
+      return false;
+    }
+    return true;
+  }
+
+  /* ---------- Grundfunktionen ---------- */
+  initPrims() {
+    const I = this, L = this.lisp, CAR = this.CAR, CDR = this.CDR;
+    const def = (ln, sn, min, max, fn) => {
+      const names = L ? ln : sn; if (!names) return;
+      for (const n of names.split(' ')) {
+        const p = new Prim(n, fn, min, max), s = I.sym(n);
+        if (L) I.putprop(s, I.Q.subr, p); else s.gval = p;
+      }
+    };
+    const B = b => I.bool(b);
+    const N = (v, f) => { if (isNum(v)) return v; throw I.err(`${f}: keine Zahl: ${I.short(v)}`); };
+    const INT = (v, f) => { if (isInt(v)) return v; throw I.err(`${f}: ganze Zahl erwartet: ${I.short(v)}`); };
+    const STR = (v, f) => { if (typeof v === 'string') return v; throw I.err(`${f}: Zeichenkette erwartet: ${I.short(v)}`); };
+    const CH = (v, f) => { if (v instanceof Char) return v.c; throw I.err(`${f}: Zeichen erwartet: ${I.short(v)}`); };
+    const idx = (v, f) => Number(INT(v, f));
+    const nm = (l, s) => L ? l : s;
+
+    /* Arithmetik */
+    def('PLUS +', '+', 0, -1, a => { let r = 0; for (const v of a) r = arith(0, r, N(v, nm('PLUS', '+'))); return r; });
+    def('DIFFERENCE -', '-', 1, -1, a => {
+      const f = nm('DIFFERENCE', '-');
+      if (a.length === 1) return arith(1, 0, N(a[0], f));
+      let r = N(a[0], f); for (let i = 1; i < a.length; i++) r = arith(1, r, N(a[i], f)); return r;
+    });
+    def('TIMES *', '*', 0, -1, a => { let r = 1; for (const v of a) r = arith(2, r, N(v, nm('TIMES', '*'))); return r; });
+    const div2 = (x, y, f) => {
+      N(x, f); N(y, f); if (isZero(y)) throw I.err(`${f}: Division durch Null`);
+      if (isInt(x) && isInt(y)) { const X = toBig(x), Y = toBig(y); if (X % Y === 0n) return normBig(X / Y); }
+      return Number(x) / Number(y);
+    };
+    def('/', '/', 1, -1, a => { if (a.length === 1) return div2(1, a[0], '/'); let r = a[0]; for (let i = 1; i < a.length; i++) r = div2(r, a[i], '/'); return r; });
+    const quot = (x, y, f) => {
+      N(x, f); N(y, f); if (isZero(y)) throw I.err(`${f}: Division durch Null`);
+      if (isInt(x) && isInt(y)) return normBig(toBig(x) / toBig(y));
+      return L ? Number(x) / Number(y) : Math.trunc(Number(x) / Number(y));
+    };
+    def('QUOTIENT', 'quotient', 2, 2, a => quot(a[0], a[1], nm('QUOTIENT', 'quotient')));
+    const rem = (x, y, f, mod) => {
+      N(x, f); N(y, f); if (isZero(y)) throw I.err(`${f}: Division durch Null`);
+      if (isInt(x) && isInt(y)) { const X = toBig(x), Y = toBig(y); let r = X % Y; if (mod && r !== 0n && ((r < 0n) !== (Y < 0n))) r += Y; return normBig(r); }
+      let r = Number(x) % Number(y); if (mod && r !== 0 && ((r < 0) !== (Number(y) < 0))) r += Number(y); return r;
+    };
+    def('REMAINDER', 'remainder', 2, 2, a => rem(a[0], a[1], nm('REMAINDER', 'remainder'), false));
+    def(null, 'modulo', 2, 2, a => rem(a[0], a[1], 'modulo', true));
+    def('ADD1', '1+', 1, 1, a => arith(0, N(a[0], nm('ADD1', '1+')), 1));
+    def('SUB1', '-1+ 1-', 1, 1, a => arith(1, N(a[0], nm('SUB1', '-1+')), 1));
+    def('MINUS', null, 1, 1, a => arith(1, 0, N(a[0], 'MINUS')));
+    def('ABS', 'abs', 1, 1, a => { const v = N(a[0], 'abs'); return v < 0 ? arith(1, 0, v) : v; });
+    def('MAX', 'max', 1, -1, a => { let r = N(a[0], 'max'); for (const v of a) if (N(v, 'max') > r) r = v; return a.some(v => !isInt(v)) ? Number(r) : r; });
+    def('MIN', 'min', 1, -1, a => { let r = N(a[0], 'min'); for (const v of a) if (N(v, 'min') < r) r = v; return a.some(v => !isInt(v)) ? Number(r) : r; });
+    def('EXPT', 'expt', 2, 2, a => {
+      const x = N(a[0], 'expt'), y = N(a[1], 'expt');
+      if (isInt(x) && isInt(y) && y >= 0) { if (y > 100000) throw I.err('EXPT: Exponent zu groß'); return normBig(toBig(x) ** toBig(y)); }
+      return Math.pow(Number(x), Number(y));
+    });
+    def('SQRT', 'sqrt', 1, 1, a => {
+      const x = N(a[0], 'sqrt');
+      if (isInt(x) && x >= 0) {
+        if (typeof x === 'number') { const r = Math.round(Math.sqrt(x)); if (r * r === x) return r; }
+        else { let r = BigInt(Math.floor(Math.sqrt(Number(x)))); for (let k = 0; k < 60; k++) { const n2 = (r + x / r) >> 1n; if (n2 === r) break; r = n2; } if (r * r === x) return normBig(r); }
+      }
+      return Math.sqrt(Number(x));
+    });
+    const cmp = (name, f) => a => { for (let i = 0; i < a.length; i++) N(a[i], name); for (let i = 0; i + 1 < a.length; i++) if (!f(a[i], a[i + 1])) return B(false); return B(true); };
+    def('GREATERP >', '>', 1, -1, cmp('>', (x, y) => x > y));
+    def('LESSP <', '<', 1, -1, cmp('<', (x, y) => x < y));
+    def('= EQP', '=', 1, -1, cmp('=', (x, y) => x == y));
+    def('>=', '>=', 1, -1, cmp('>=', (x, y) => x >= y));
+    def('<=', '<=', 1, -1, cmp('<=', (x, y) => x <= y));
+    def('ZEROP', 'zero?', 1, 1, a => B(N(a[0], nm('ZEROP', 'zero?')) == 0));
+    def('MINUSP', 'negative?', 1, 1, a => B(N(a[0], nm('MINUSP', 'negative?')) < 0));
+    def(null, 'positive?', 1, 1, a => B(N(a[0], 'positive?') > 0));
+    def('ONEP', null, 1, 1, a => B(N(a[0], 'ONEP') == 1));
+    def('ODDP', 'odd?', 1, 1, a => B(toBig(INT(a[0], nm('ODDP', 'odd?'))) % 2n !== 0n));
+    def('EVENP', 'even?', 1, 1, a => B(toBig(INT(a[0], nm('EVENP', 'even?'))) % 2n === 0n));
+    def('NUMBERP', 'number? real? complex?', 1, 1, a => B(isNum(a[0])));
+    def('FIXP', 'integer? rational?', 1, 1, a => B(isInt(a[0])));
+    def('FLOATP', null, 1, 1, a => B(isNum(a[0]) && !isInt(a[0])));
+    def(null, 'exact?', 1, 1, a => B(isInt(N(a[0], 'exact?'))));
+    def(null, 'inexact?', 1, 1, a => B(!isInt(N(a[0], 'inexact?'))));
+    const gcd2 = (x, y) => { let X = toBig(x) < 0n ? -toBig(x) : toBig(x), Y = toBig(y) < 0n ? -toBig(y) : toBig(y); while (Y) { [X, Y] = [Y, X % Y]; } return X; };
+    def(null, 'gcd', 0, -1, a => { let r = 0n; for (const v of a) r = gcd2(r, INT(v, 'gcd')); return normBig(r); });
+    def(null, 'lcm', 0, -1, a => { let r = 1n; for (const v of a) { const x = toBig(INT(v, 'lcm')); if (x === 0n) return 0; const g = gcd2(r, x); r = (r * (x < 0n ? -x : x)) / g; } return normBig(r); });
+    const rnd = f => a => { const x = N(a[0], 'round'); return isInt(x) ? x : f(x); };
+    def(null, 'floor', 1, 1, rnd(Math.floor)); def(null, 'ceiling', 1, 1, rnd(Math.ceil)); def(null, 'truncate', 1, 1, rnd(Math.trunc));
+    def(null, 'round', 1, 1, rnd(x => { const r = Math.round(x); return (Math.abs(x % 1) === 0.5 && r % 2 !== 0) ? r - 1 : r; }));
+    def(null, 'exact->inexact inexact', 1, 1, a => Number(N(a[0], 'exact->inexact')));
+    def(null, 'inexact->exact exact', 1, 1, a => { const x = N(a[0], 'inexact->exact'); if (isInt(x)) return x; if (Number.isInteger(x)) return x; throw I.err('inexact->exact: Brüche werden nicht unterstützt: ' + fmtNum(x)); });
+    for (const [n, f] of [['exp', Math.exp], ['log', Math.log], ['sin', Math.sin], ['cos', Math.cos], ['tan', Math.tan], ['asin', Math.asin], ['acos', Math.acos]])
+      def(n.toUpperCase(), n, 1, 1, a => f(Number(N(a[0], n))));
+    def('ATAN', 'atan', 1, 2, a => a.length === 2 ? Math.atan2(Number(N(a[0], 'atan')), Number(N(a[1], 'atan'))) : Math.atan(Number(N(a[0], 'atan'))));
+    def('RANDOM', 'random', 1, 1, a => { const n = N(a[0], 'random'); return isInt(n) ? Math.floor(Math.random() * Number(n)) : Math.random() * n; });
+    def(null, 'number->string', 1, 2, a => { const x = N(a[0], 'number->string'); return a[1] !== undefined ? x.toString(Number(a[1])) : fmtNum(x); });
+    def(null, 'string->number', 1, 2, a => { const s = STR(a[0], 'string->number').trim(), r = a[1] !== undefined ? Number(a[1]) : 10;
+      if (r === 10) { const v = parseNumber(s); return v === null ? FALSE : v; }
+      if (!/^[+-]?[0-9a-z]+$/i.test(s)) return FALSE; const v = parseInt(s, r); return Number.isNaN(v) ? FALSE : v; });
+
+    /* Listen */
+    def('CAR', 'car', 1, 1, a => I.car(a[0], nm('CAR', 'car')));
+    def('CDR', 'cdr', 1, 1, a => I.cdr(a[0], nm('CDR', 'cdr')));
+    for (const len of [2, 3, 4]) {
+      const combos = [];
+      const gen = (s) => { if (s.length === len) { combos.push(s); return; } gen(s + 'a'); gen(s + 'd'); };
+      gen('');
+      for (const c of combos) {
+        const name = 'c' + c + 'r', who = L ? name.toUpperCase() : name;
+        def(name.toUpperCase(), name, 1, 1, a => { let v = a[0]; for (let k = c.length - 1; k >= 0; k--) v = c[k] === 'a' ? I.car(v, who) : I.cdr(v, who); return v; });
+      }
+    }
+    def('CONS', 'cons', 2, 2, a => I.cons(a[0], a[1]));
+    def('ATOM', 'atom?', 1, 1, a => B(!(a[0] instanceof Cell)));
+    def('EQ', 'eq?', 2, 2, a => B(a[0] === a[1] || (isNum(a[0]) && isNum(a[1]) && a[0] == a[1] && isInt(a[0]) === isInt(a[1]))));
+    def(null, 'eqv?', 2, 2, a => B(I.eqv(a[0], a[1])));
+    def('EQUAL', 'equal?', 2, 2, a => B(I.equal(a[0], a[1])));
+    def('NULL NOT', 'null?', 1, 1, a => B(a[0] === EMPTY));
+    def(null, 'not', 1, 1, a => B(a[0] === FALSE));
+    def(null, 'pair?', 1, 1, a => B(a[0] instanceof Cell));
+    def('LISTP', 'list?', 1, 1, a => { let x = a[0], y = a[0]; for (;;) { if (x === EMPTY) return B(true); if (!(x instanceof Cell)) return B(false); x = CDR[x.i]; if (x === EMPTY) return B(true); if (!(x instanceof Cell)) return B(false); x = CDR[x.i]; y = CDR[y.i]; if (x === y) return B(false); } });
+    def('SYMBOLP', 'symbol?', 1, 1, a => B(a[0] instanceof Sym));
+    def('STRINGP', 'string?', 1, 1, a => B(typeof a[0] === 'string'));
+    def(null, 'char?', 1, 1, a => B(a[0] instanceof Char));
+    def(null, 'boolean?', 1, 1, a => B(a[0] === TRUE || a[0] === FALSE));
+    def(null, 'procedure?', 1, 1, a => B(a[0] instanceof Prim || a[0] instanceof Clo || a[0] instanceof Cont));
+    def('LIST', 'list', 0, -1, a => I.arrToList(a));
+    def('APPEND', 'append', 0, -1, a => {
+      if (!a.length) return EMPTY;
+      let r = a[a.length - 1];
+      for (let k = a.length - 2; k >= 0; k--) r = I.arrToList(I.listToArr(a[k], nm('APPEND', 'append')), r);
+      return r;
+    });
+    def('REVERSE', 'reverse', 1, 1, a => { let r = EMPTY; for (const v of I.listToArr(a[0], nm('REVERSE', 'reverse'))) r = I.cons(v, r); return r; });
+    def('LENGTH', 'length', 1, 1, a => I.listToArr(a[0], nm('LENGTH', 'length')).length);
+    const mem = (name, eq) => a => { for (let l = a[1]; l instanceof Cell; l = CDR[l.i]) if (eq(a[0], CAR[l.i])) return l; return L ? EMPTY : FALSE; };
+    def('MEMBER', 'member', 2, 2, mem('member', (x, y) => I.equal(x, y)));
+    def('MEMQ', 'memq', 2, 2, mem('memq', (x, y) => x === y));
+    def(null, 'memv', 2, 2, mem('memv', (x, y) => I.eqv(x, y)));
+    const ass = (name, eq) => a => { for (let l = a[1]; l instanceof Cell; l = CDR[l.i]) { const p = CAR[l.i]; if (!(p instanceof Cell)) throw I.err(`${name}: Element der Assoziationsliste ist kein Paar: ${I.short(p)}`); if (eq(a[0], CAR[p.i])) return p; } return L ? EMPTY : FALSE; };
+    def('ASSOC', 'assoc', 2, 2, ass(nm('ASSOC', 'assoc'), (x, y) => I.equal(x, y)));
+    def('ASSQ', 'assq', 2, 2, ass(nm('ASSQ', 'assq'), (x, y) => x === y));
+    def(null, 'assv', 2, 2, ass('assv', (x, y) => I.eqv(x, y)));
+    def('NCONC', 'append!', 0, -1, a => {
+      let r = EMPTY, last = null;
+      for (const v of a) { if (v === EMPTY) continue; if (!(v instanceof Cell)) { if (last) CDR[last.i] = v; else r = v; continue; } if (last) CDR[last.i] = v; else r = v; last = v; while (CDR[last.i] instanceof Cell) last = CDR[last.i]; }
+      return r;
+    });
+    def('RPLACA', 'set-car!', 2, 2, a => { if (!(a[0] instanceof Cell)) throw I.carErr(nm('RPLACA', 'set-car!'), a[0]); CAR[a[0].i] = a[1]; return L ? a[0] : UNSPEC; });
+    def('RPLACD', 'set-cdr!', 2, 2, a => { if (!(a[0] instanceof Cell)) throw I.carErr(nm('RPLACD', 'set-cdr!'), a[0]); CDR[a[0].i] = a[1]; return L ? a[0] : UNSPEC; });
+    def('LAST', 'last-pair', 1, 1, a => { let l = a[0]; if (!(l instanceof Cell)) return l; while (CDR[l.i] instanceof Cell) l = CDR[l.i]; return l; });
+    def('COPY', 'list-copy', 1, 1, a => { const cp = v => v instanceof Cell ? I.cons(cp(CAR[v.i]), cp(CDR[v.i])) : v; return L ? cp(a[0]) : I.arrToList(I.listToArr(a[0], 'list-copy')); });
+    def('NTH', null, 2, 2, a => { let l = a[1]; for (let k = idx(a[0], 'NTH'); k > 0; k--) l = I.cdr(l, 'NTH'); return I.car(l, 'NTH'); });
+    def(null, 'list-ref', 2, 2, a => { let l = a[0]; for (let k = idx(a[1], 'list-ref'); k > 0; k--) l = I.cdr(l, 'list-ref'); return I.car(l, 'list-ref'); });
+    def(null, 'list-tail', 2, 2, a => { let l = a[0]; for (let k = idx(a[1], 'list-tail'); k > 0; k--) l = I.cdr(l, 'list-tail'); return l; });
+    def('SUBST', null, 3, 3, a => { const s = v => I.equal(v, a[1]) ? a[0] : v instanceof Cell ? I.cons(s(CAR[v.i]), s(CDR[v.i])) : v; return s(a[2]); });
+    def('SUBLIS', null, 2, 2, a => { const al = I.listToArr(a[0], 'SUBLIS'); const s = v => { if (v instanceof Cell) return I.cons(s(CAR[v.i]), s(CDR[v.i])); for (const p of al) if (CAR[p.i] === v) return CDR[p.i]; return v; }; return s(a[1]); });
+    def('PAIRLIS', null, 3, 3, a => { const x = I.listToArr(a[0], 'PAIRLIS'), y = I.listToArr(a[1], 'PAIRLIS'); if (x.length !== y.length) throw I.err('PAIRLIS: Listen verschieden lang'); let r = a[2]; for (let k = x.length - 1; k >= 0; k--) r = I.cons(I.cons(x[k], y[k]), r); return r; });
+
+    /* Steuerung */
+    def('EVAL', 'eval', 1, 2, a => new TailEval(a[0], L ? (a.length > 1 ? a[1] : EMPTY) : EMPTY));
+    def('APPLY', 'apply', 1, -1, a => {
+      if (L) { if (a.length < 2 || a.length > 3) throw I.arityErr('APPLY', '2 oder 3', a.length); return new TailApply(a[0], I.listToArr(a[1], 'APPLY'), null, a.length === 3 ? a[2] : undefined); }
+      if (a.length === 1) return new TailApply(a[0], []);
+      return new TailApply(a[0], a.slice(1, -1).concat(I.listToArr(a[a.length - 1], 'apply')));
+    });
+    def('FUNCALL', null, 1, -1, a => new TailApply(a[0], a.slice(1)));
+    def(null, 'call-with-current-continuation call/cc', 1, 1, a => new TailApply(a[0], [new Cont(copyK(I.K))]));
+    def(null, 'force', 1, 1, a => { const p = a[0]; if (!(p instanceof Prom)) return p; if (p.done) return p.value; return new TailApply(p.thunk, [], { t: 'force', p }); });
+    def(null, 'interaction-environment scheme-report-environment null-environment', 0, 1, () => EMPTY);
+    def(null, 'procedure-name', 1, 1, a => a[0] instanceof Clo && a[0].name ? a[0].name : FALSE);
+    def('ERROR', 'error', 0, -1, a => { throw I.err('Fehler: ' + a.map((v, k) => k === 0 && typeof v === 'string' ? v : I.print(v, true)).join(' ')); });
+    def('GENSYM', 'gensym', 0, 1, () => { I.gensymCount++; return new Sym((L ? 'G' : 'g') + String(I.gensymCount).padStart(4, '0'), false); });
+    const tnames = a => { const out = []; const add = v => { if (v instanceof Sym) out.push(v); else if (v instanceof Clo && v.name) out.push(v.name); else if (v instanceof Cell) for (const e of I.listToArr(v)) add(e); else if (v !== EMPTY) throw I.err('TRACE: Funktionsname erwartet: ' + I.short(v)); }; a.forEach(add); return out; };
+    def('TRACE', 'trace', 0, -1, a => { const ns = tnames(a); ns.forEach(s => I.traced.add(s)); return I.arrToList(ns); });
+    def('UNTRACE', 'untrace', 0, -1, a => { const ns = a.length ? tnames(a) : [...I.traced]; ns.forEach(s => I.traced.delete(s)); return I.arrToList(ns); });
+    def('RECLAIM GC', 'gc', 0, 0, () => { I.gcAuto(); return I.stats.lastFreed; });
+    def(null, 'runtime current-time', 0, 0, () => Date.now());
+
+    /* Ausgabe */
+    if (L) {
+      def('PRINT', null, 1, 1, a => { I.out(I.print(a[0]) + '\n'); return a[0]; });
+      def('PRIN1', null, 1, 1, a => { I.out(I.print(a[0])); return a[0]; });
+      def('PRINC', null, 1, 1, a => { I.out(I.print(a[0], false)); return a[0]; });
+      def('TERPRI', null, 0, 0, () => { I.out('\n'); return EMPTY; });
+    } else {
+      def(null, 'display', 1, 2, a => { I.out(I.print(a[0], false)); return UNSPEC; });
+      def(null, 'write', 1, 2, a => { I.out(I.print(a[0], true)); return UNSPEC; });
+      def(null, 'write-char', 1, 2, a => { I.out(CH(a[0], 'write-char')); return UNSPEC; });
+      def(null, 'newline', 0, 1, () => { I.out('\n'); return UNSPEC; });
+    }
+
+    /* Eigenschaftslisten und Definitionen (LISP 1.5) */
+    if (L) {
+      def('GET', null, 2, 2, a => { const v = I.getprop(I.symArg(a[0], 'GET'), a[1]); return v === undefined ? EMPTY : v; });
+      def('PUTPROP', null, 3, 3, a => { I.putprop(I.symArg(a[0], 'PUTPROP'), a[2], a[1]); return a[1]; });
+      def('REMPROP', null, 2, 2, a => B(I.remprop(I.symArg(a[0], 'REMPROP'), a[1])));
+      def('PLIST', null, 1, 1, a => I.symArg(a[0], 'PLIST').plist);
+      const deflist = (lst, ind, who) => {
+        const names = [];
+        for (const p of I.listToArr(lst, who)) {
+          if (!(p instanceof Cell)) throw I.err(`${who}: Paar (NAME WERT) erwartet, erhalten: ${I.short(p)}`);
+          const name = I.symArg(CAR[p.i], who); const r = CDR[p.i];
+          if (!(r instanceof Cell)) throw I.err(`${who}: Wert fehlt für ${name.name}`);
+          I.putprop(name, ind, CAR[r.i]); names.push(name);
+        }
+        return I.arrToList(names);
+      };
+      def('DEFINE', null, 1, 1, a => deflist(a[0], I.Q.expr, 'DEFINE'));
+      def('DEFLIST', null, 2, 2, a => deflist(a[0], a[1], 'DEFLIST'));
+      def('CSET', null, 2, 2, a => { I.putprop(I.symArg(a[0], 'CSET'), I.Q.apval, a[1]); return a[1]; });
+      def('SET', null, 2, 2, a => { I.setLisp(I.symArg(a[0], 'SET'), a[1], I.env); return a[1]; });
+      def('ATTRIB', null, 2, 2, a => { const s = I.symArg(a[0], 'ATTRIB'); s.plist = I.arrToList(I.listToArr(s.plist).concat(I.listToArr(a[1], 'ATTRIB'))); return a[1]; });
+    }
+
+    /* Zeichenketten und Zeichen (Scheme) */
+    if (!L) {
+      def(null, 'symbol->string', 1, 1, a => I.symArg(a[0], 'symbol->string').name);
+      def(null, 'string->symbol', 1, 1, a => I.sym(STR(a[0], 'string->symbol')));
+      def(null, 'string-length', 1, 1, a => [...STR(a[0], 'string-length')].length);
+      def(null, 'string-ref', 2, 2, a => { const cs = [...STR(a[0], 'string-ref')], k = idx(a[1], 'string-ref'); if (k < 0 || k >= cs.length) throw I.err(`string-ref: Index ${k} außerhalb von 0…${cs.length - 1}`); return I.char(cs[k]); });
+      def(null, 'substring', 2, 3, a => { const cs = [...STR(a[0], 'substring')], s = idx(a[1], 'substring'), e = a.length > 2 ? idx(a[2], 'substring') : cs.length; if (s < 0 || e > cs.length || s > e) throw I.err(`substring: Bereich ${s}…${e} ungültig`); return cs.slice(s, e).join(''); });
+      def(null, 'string-append', 0, -1, a => a.map(v => STR(v, 'string-append')).join(''));
+      def(null, 'string-copy', 1, 1, a => STR(a[0], 'string-copy'));
+      def(null, 'string', 0, -1, a => a.map(v => CH(v, 'string')).join(''));
+      def(null, 'make-string', 1, 2, a => (a.length > 1 ? CH(a[1], 'make-string') : ' ').repeat(idx(a[0], 'make-string')));
+      def(null, 'string->list', 1, 1, a => I.arrToList([...STR(a[0], 'string->list')].map(c => I.char(c))));
+      def(null, 'list->string', 1, 1, a => I.listToArr(a[0], 'list->string').map(v => CH(v, 'list->string')).join(''));
+      def(null, 'string-upcase', 1, 1, a => STR(a[0], 'string-upcase').toUpperCase());
+      def(null, 'string-downcase', 1, 1, a => STR(a[0], 'string-downcase').toLowerCase());
+      const scmp = (n, f, ci) => def(null, n, 1, -1, a => { const s = a.map(v => { const t = STR(v, n); return ci ? t.toLowerCase() : t; }); for (let k = 0; k + 1 < s.length; k++) if (!f(s[k], s[k + 1])) return FALSE; return TRUE; });
+      scmp('string=?', (x, y) => x === y); scmp('string<?', (x, y) => x < y); scmp('string>?', (x, y) => x > y);
+      scmp('string<=?', (x, y) => x <= y); scmp('string>=?', (x, y) => x >= y); scmp('string-ci=?', (x, y) => x === y, true);
+      def(null, 'char->integer', 1, 1, a => CH(a[0], 'char->integer').codePointAt(0));
+      def(null, 'integer->char', 1, 1, a => I.char(String.fromCodePoint(idx(a[0], 'integer->char'))));
+      def(null, 'char-upcase', 1, 1, a => I.char(CH(a[0], 'char-upcase').toUpperCase()));
+      def(null, 'char-downcase', 1, 1, a => I.char(CH(a[0], 'char-downcase').toLowerCase()));
+      def(null, 'char-alphabetic?', 1, 1, a => B(/\p{L}/u.test(CH(a[0], 'char-alphabetic?'))));
+      def(null, 'char-numeric?', 1, 1, a => B(/\p{Nd}/u.test(CH(a[0], 'char-numeric?'))));
+      def(null, 'char-whitespace?', 1, 1, a => B(/\s/.test(CH(a[0], 'char-whitespace?'))));
+      def(null, 'char-upper-case?', 1, 1, a => { const c = CH(a[0], 'char-upper-case?'); return B(c !== c.toLowerCase()); });
+      def(null, 'char-lower-case?', 1, 1, a => { const c = CH(a[0], 'char-lower-case?'); return B(c !== c.toUpperCase()); });
+      const ccmp = (n, f, ci) => def(null, n, 1, -1, a => { const s = a.map(v => { const c = CH(v, n); return (ci ? c.toLowerCase() : c).codePointAt(0); }); for (let k = 0; k + 1 < s.length; k++) if (!f(s[k], s[k + 1])) return FALSE; return TRUE; });
+      ccmp('char=?', (x, y) => x === y); ccmp('char<?', (x, y) => x < y); ccmp('char>?', (x, y) => x > y);
+      ccmp('char<=?', (x, y) => x <= y); ccmp('char>=?', (x, y) => x >= y); ccmp('char-ci=?', (x, y) => x === y, true);
+      this.P = { cons: I.sym('cons').gval, list: I.sym('list').gval, append: I.sym('append').gval };
+    }
+  }
+
+  loadPrelude() {
+    const src = this.lisp ? PRELUDE_LISP : PRELUDE_SCHEME;
+    for (const job of this.parse(src).jobs) { this.startJob(job); this.run(1e7); }
+    this.lastValue = EMPTY;
+  }
+
+  /* ---------- Einlesen ---------- */
+  parse(text, mexpr) {
+    if (mexpr && this.lisp) {
+      const ds = new MParser(text, this).parseAll();
+      return { jobs: ds.map(d => ({ k: 'eval', d })), translation: ds.map(d => this.printJS(d)) };
+    }
+    const r = new Reader(text, this), ds = [];
+    for (let d = r.read(); d !== EOF; d = r.read()) ds.push(d);
+    const jobs = [];
+    for (let k = 0; k < ds.length; k++) {
+      const d = ds[k];
+      if (this.lisp && d instanceof Sym && k + 1 < ds.length && (ds[k + 1] === EMPTY || (ds[k + 1] && ds[k + 1].L))) { jobs.push({ k: 'evq', fn: d, a: ds[k + 1] }); k++; }
+      else jobs.push({ k: 'eval', d });
+    }
+    return { jobs, translation: null };
+  }
+  countJS(d) { if (d && d.L) { let n = d.L.length; for (const e of d.L) n += this.countJS(e); if (d.T !== undefined) n += this.countJS(d.T); return n; } return 0; }
+  heapify(d) {
+    if (d && d.L) { let t = d.T !== undefined ? this.heapify(d.T) : EMPTY; for (let k = d.L.length - 1; k >= 0; k--) t = this.cons(this.heapify(d.L[k]), t); return t; }
+    return d;
+  }
+  jobText(job) { return job.k === 'evq' ? job.fn.name + ' ' + this.printJS(job.a) : this.printJS(job.d); }
+  startJob(job) {
+    const need = this.countJS(job.k === 'evq' ? job.a : job.d) + 8;
+    this.K = []; this.st = DONE;
+    this.ensure(need);
+    this.K = [{ t: 'halt' }]; this.traceDepth = 0; this.traceLines = 0; this.steps = 0;
+    this.env = EMPTY; this.fname = null;
+    if (job.k === 'evq') {
+      const argl = this.heapify(job.a), s = job.fn;
+      if (this.SP.has(s)) { this.x = this.cons(s, argl); this.st = EV; return; }
+      const f = this.fnLookup(s, EMPTY);
+      this.fn = f.fn; this.fname = s;
+      this.args = f.fexpr ? [argl, EMPTY] : this.listToArr(argl, 'EVALQUOTE-Argumente');
+      this.st = AP; return;
+    }
+    this.x = this.heapify(job.d); this.st = EV;
+  }
+
+  /* ---------- Ausgabe ---------- */
+  atomStr(v, write) {
+    const L = this.lisp;
+    if (v === EMPTY) return L ? 'NIL' : '()';
+    if (v instanceof Sym) return v.name;
+    if (isNum(v)) return fmtNum(v);
+    if (typeof v === 'string') return write ? '"' + v.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/\n/g, '\\n') + '"' : v;
+    if (v instanceof Char) { if (!write) return v.c; const nmz = { ' ': 'space', '\n': 'newline', '\t': 'tab', '\0': 'nul' }; return '#\\' + (nmz[v.c] || v.c); }
+    if (v instanceof Special) return v.n;
+    if (v instanceof Prim) return L ? `#<SUBR ${v.name}>` : `#<primitive ${v.name}>`;
+    if (v instanceof Clo) return `#<procedure${v.name ? ' ' + v.name.name : ''}>`;
+    if (v instanceof Macro) return `#<makro ${v.name ? v.name.name : ''}>`;
+    if (v instanceof Cont) return '#<continuation>';
+    if (v instanceof Prom) return v.done ? '#<promise (erfüllt)>' : '#<promise>';
+    return String(v);
+  }
+  print(v, write = true, limit = 5000) {
+    const CAR = this.CAR, CDR = this.CDR, out = [];
+    let budget = limit;
+    const rec = (v, d) => {
+      if (budget <= 0) { out.push('…'); return; }
+      budget--;
+      if (v instanceof Cell) {
+        if (d > 150) { out.push('(…)'); return; }
+        out.push('(');
+        rec(CAR[v.i], d + 1);
+        let t = CDR[v.i];
+        while (t instanceof Cell) {
+          if (budget <= 0) { out.push(' …'); break; }
+          out.push(' '); rec(CAR[t.i], d + 1); t = CDR[t.i];
+        }
+        if (!(t instanceof Cell) && t !== EMPTY) { out.push(' . '); rec(t, d + 1); }
+        out.push(')'); return;
+      }
+      out.push(this.atomStr(v, write));
+    };
+    rec(v, 0);
+    return out.join('');
+  }
+  short(v, n = 60) { const s = this.print(v, true, 120); return s.length > n ? s.slice(0, n - 1) + '…' : s; }
+  printJS(d) {
+    if (d && d.L) return '(' + d.L.map(e => this.printJS(e)).join(' ') + (d.T !== undefined ? ' . ' + this.printJS(d.T) : '') + ')';
+    return this.atomStr(d, true);
+  }
+
+  /* ---------- Ansichten ---------- */
+  describeState() {
+    if (this.st === EV) return { art: 'EVAL', text: this.print(this.x, true, 400) };
+    if (this.st === RT) { const f = this.K[this.K.length - 1]; return { art: 'WERT', text: this.print(this.val, true, 400) + (f ? '   → an: ' + this.frameDesc(f) : '') }; }
+    if (this.st === AP) return { art: 'APPLY', text: this.fnDesc(this.fn, this.fname) + ' auf (' + (this.args || []).map(a => this.short(a, 40)).join(' ') + ')' };
+    return { art: 'FERTIG', text: this.print(this.lastValue, true, 400) };
+  }
+  frameDesc(f) {
+    const L = this.lisp;
+    switch (f.t) {
+      case 'halt': return 'oberste Ebene (Ergebnis an den Listener)';
+      case 'args': return `Argumente für ${f.name ? f.name.name : this.short(f.fn, 30)}: ${f.vals.length} von ${f.ex.length} ausgewertet` + (f.vals.length ? ' (' + f.vals.map(v => this.short(v, 20)).join(' ') + ')' : '');
+      case 'evop': return 'Operator von ' + this.short(f.x, 50);
+      case 'seq': return 'Folge, noch ' + this.short(f.rest, 50);
+      case 'if': return 'if wartet auf Bedingung';
+      case 'cond': return `${L ? 'COND' : 'cond'}: prüft ${this.short(this.CAR[this.CAR[f.cl.i].i], 40)}`;
+      case 'and': case 'or': return f.t + ', noch ' + this.short(f.rest, 40);
+      case 'define': return 'define ' + f.s.name;
+      case 'set': return 'set! ' + f.s.name;
+      case 'setq': return 'SETQ ' + f.s.name;
+      case 'cset': return 'CSETQ ' + f.s.name;
+      case 'prog': return 'PROG, nächste Anweisung ' + (f.pc instanceof Cell ? this.short(this.CAR[f.pc.i], 40) : '(Ende)');
+      case 'return': return 'RETURN';
+      case 'ret': return `Rückkehr aus ${f.name ? f.name.name : 'LAMBDA'}${f.tr ? ' (TRACE)' : ''}`;
+      case 'applyval': return 'berechnete Funktion';
+      case 'mexp': return 'Makro-Expansion';
+      case 'when': return f.neg ? 'unless' : 'when';
+      case 'case': return 'case';
+      case 'force': return 'force';
+      case 'condarrow': return 'cond =>';
+      case 'consstream': return 'cons-stream';
+      default: return f.t;
+    }
+  }
+  isUser(s) { const b = this.base.get(s); return !b || b.plist !== s.plist || b.gval !== s.gval; }
+  envView() {
+    const CAR = this.CAR, CDR = this.CDR, res = { frames: [], globals: [] };
+    const cur = this.st === DONE ? EMPTY : this.env;
+    if (this.lisp) {
+      const fr = [];
+      for (let e = cur; e instanceof Cell && fr.length < 500; e = CDR[e.i]) { const p = CAR[e.i]; if (p instanceof Cell) fr.push({ name: this.short(CAR[p.i], 40), value: CDR[p.i], cell: e.i }); }
+      res.frames.push(fr);
+      for (const s of this.symtab.values()) {
+        if (!this.isUser(s)) continue;
+        for (let p = s.plist; p instanceof Cell; ) { const q = CDR[p.i]; if (!(q instanceof Cell)) break; res.globals.push({ name: s.name, ind: CAR[p.i].name || this.short(CAR[p.i]), value: CAR[q.i] }); p = CDR[q.i]; }
+      }
+    } else {
+      for (let f = cur; f instanceof Cell && res.frames.length < 200; f = CDR[f.i]) {
+        const fr = [];
+        for (let b = CAR[f.i]; b instanceof Cell; b = CDR[b.i]) { const p = CAR[b.i]; fr.push({ name: CAR[p.i].name, value: CDR[p.i], cell: f.i }); }
+        res.frames.push(fr);
+      }
+      for (const s of this.symtab.values()) if (this.isUser(s) && s.gval !== UNBOUND) res.globals.push({ name: s.name, value: s.gval });
+    }
+    return res;
+  }
+  usedCount() { return this.N - this.freeCount; }
+}
+
+/* ================================================================== */
+function parseNumber(t) {
+  if (/^[+-]?\d+$/.test(t)) { const s = t.replace(/^\+/, ''); return s.replace('-', '').length > 15 ? normBig(BigInt(s)) : parseInt(s, 10); }
+  if (/^[+-]?(\d+\.\d*|\.\d+|\d+)([eE][+-]?\d+)?$/.test(t)) return parseFloat(t);
+  return null;
+}
+
+class Reader {
+  constructor(text, I) { this.s = text; this.p = 0; this.I = I; this.L = I.lisp; }
+  err(m) { const line = this.s.slice(0, this.p).split('\n').length; return new LispError(`Lesefehler (Zeile ${line}): ${m}`); }
+  isDelim(c) { return c === undefined || /[\s()";']/.test(c) || (this.L && c === ','); }
+  ws() {
+    const s = this.s;
+    for (;;) {
+      const c = s[this.p];
+      if (c === undefined) return;
+      if (/\s/.test(c) || (this.L && c === ',')) { this.p++; continue; }
+      if (c === ';') { while (this.p < s.length && s[this.p] !== '\n') this.p++; continue; }
+      if (c === '#' && s[this.p + 1] === '|') { const e = s.indexOf('|#', this.p + 2); this.p = e < 0 ? s.length : e + 2; continue; }
+      if (c === '#' && s[this.p + 1] === ';') { this.p += 2; this.read(); continue; }
+      return;
+    }
+  }
+  read() {
+    this.ws();
+    const s = this.s, I = this.I;
+    if (this.p >= s.length) return EOF;
+    const c = s[this.p];
+    if (c === '(') { this.p++; return this.readList(); }
+    if (c === ')') { this.p++; throw this.err('unerwartete schließende Klammer )'); }
+    const pref = (sym) => { const d = this.read(); if (d === EOF) throw this.err('Ausdruck nach Präfixzeichen fehlt'); return { L: [sym, d] }; };
+    if (c === "'") { this.p++; return pref(I.Q.quote); }
+    if (!this.L) {
+      if (c === '`') { this.p++; return pref(I.Q.quasiquote); }
+      if (c === ',') { this.p++; if (s[this.p] === '@') { this.p++; return pref(I.Q.splice); } return pref(I.Q.unquote); }
+    }
+    if (c === '"') return this.readString();
+    if (c === '#' && !this.L) {
+      const n = s[this.p + 1];
+      if (n === '\\') {
+        this.p += 2; let tok = s[this.p] || ''; this.p++;
+        while (this.p < s.length && !this.isDelim(s[this.p])) tok += s[this.p++];
+        if ([...tok].length === 1) return I.char(tok);
+        const names = { space: ' ', newline: '\n', tab: '\t', nul: '\0', null: '\0', return: '\r', linefeed: '\n', escape: '\x1b', altmode: '\x1b', backspace: '\b', delete: '\x7f', alarm: '\x07' };
+        const k = tok.toLowerCase();
+        if (names[k] !== undefined) return I.char(names[k]);
+        if (/^x[0-9a-f]+$/i.test(tok)) return I.char(String.fromCodePoint(parseInt(tok.slice(1), 16)));
+        throw this.err('unbekanntes Zeichen #\\' + tok);
+      }
+    }
+    return this.readAtom();
+  }
+  readList() {
+    const items = []; let tail;
+    for (;;) {
+      this.ws();
+      if (this.p >= this.s.length) throw this.err('fehlende schließende Klammer )');
+      const c = this.s[this.p];
+      if (c === ')') { this.p++; break; }
+      if (c === '.' && this.isDelim(this.s[this.p + 1])) {
+        this.p++;
+        if (!items.length) throw this.err('Punkt am Anfang einer Liste');
+        tail = this.read(); if (tail === EOF) throw this.err('Ausdruck nach dem Punkt fehlt');
+        this.ws();
+        if (this.s[this.p] !== ')') throw this.err('nach dem Ausdruck hinter dem Punkt muss ) folgen');
+        this.p++; break;
+      }
+      const d = this.read(); if (d === EOF) throw this.err('fehlende schließende Klammer )');
+      items.push(d);
+    }
+    if (!items.length) return EMPTY;
+    return tail === undefined ? { L: items } : { L: items, T: tail };
+  }
+  readString() {
+    this.p++; let out = '';
+    for (;;) {
+      if (this.p >= this.s.length) throw this.err('Zeichenkette nicht abgeschlossen (" fehlt)');
+      const c = this.s[this.p++];
+      if (c === '"') break;
+      if (c === '\\') { const n = this.s[this.p++]; out += n === 'n' ? '\n' : n === 't' ? '\t' : n; continue; }
+      out += c;
+    }
+    return out;
+  }
+  readAtom() {
+    let tok = '';
+    while (this.p < this.s.length && !this.isDelim(this.s[this.p])) tok += this.s[this.p++];
+    if (!tok) { const c = this.s[this.p++]; throw this.err('unerwartetes Zeichen ' + c); }
+    const num = parseNumber(tok);
+    if (num !== null) return num;
+    if (!this.L) {
+      const t = tok.toLowerCase();
+      if (t === '#t' || t === '#true') return TRUE;
+      if (t === '#f' || t === '#false') return FALSE;
+      if (/^#x[0-9a-f]+$/.test(t)) return parseInt(t.slice(2), 16);
+      if (/^#b[01]+$/.test(t)) return parseInt(t.slice(2), 2);
+      if (/^#o[0-7]+$/.test(t)) return parseInt(t.slice(2), 8);
+      if (/^#d/.test(t)) { const v = parseNumber(t.slice(2)); if (v !== null) return v; }
+      if (t[0] === '#') throw this.err('unbekannte #-Schreibweise: ' + tok);
+      return this.I.sym(t);
+    }
+    const u = tok.toUpperCase();
+    if (u === 'NIL') return EMPTY;
+    return this.I.sym(u);
+  }
+}
+
+/* M-Ausdrücke (LISP 1.5): f[x;y], [p → e; …], lambda[[x];e], label[f;e], f[x] = e */
+class MParser {
+  constructor(text, I) { this.I = I; this.src = text; this.toks = this.lex(text); this.i = 0; }
+  err(m, t) { const tok = t || this.toks[this.i] || this.toks[this.toks.length - 1]; const line = tok ? this.src.slice(0, tok.pos).split('\n').length : 1; return new LispError(`M-Ausdruck (Zeile ${line}): ${m}`); }
+  lex(s) {
+    const t = []; let i = 0;
+    while (i < s.length) {
+      const c = s[i];
+      if (c === ';' && s[i + 1] === ';') { while (i < s.length && s[i] !== '\n') i++; continue; }
+      if (/\s/.test(c) || c === ',') { i++; continue; }
+      if (c === '-' && s[i + 1] === '>') { t.push({ t: '->', pos: i }); i += 2; continue; }
+      if (c === '→') { t.push({ t: '->', pos: i }); i++; continue; }
+      if (/[0-9]/.test(c) || (c === '-' && /[0-9]/.test(s[i + 1] || ''))) {
+        let j = i + 1; while (j < s.length && /[0-9.]/.test(s[j])) j++;
+        t.push({ t: 'num', v: parseNumber(s.slice(i, j)), pos: i }); i = j; continue;
+      }
+      if (/[A-Za-z]/.test(c)) {
+        let j = i + 1; while (j < s.length && (/[A-Za-z0-9*]/.test(s[j]) || (s[j] === '-' && /[A-Za-z0-9]/.test(s[j + 1] || '')))) j++;
+        t.push({ t: 'id', v: s.slice(i, j), pos: i }); i = j; continue;
+      }
+      if ('[];()=.'.includes(c)) { t.push({ t: c, pos: i }); i++; continue; }
+      throw new LispError(`M-Ausdruck: unerwartetes Zeichen "${c}" (Zeile ${s.slice(0, i).split('\n').length})`);
+    }
+    return t;
+  }
+  peek() { return this.toks[this.i]; }
+  is(ty) { const p = this.toks[this.i]; return p && p.t === ty; }
+  next() { const p = this.toks[this.i++]; if (!p) throw this.err('unerwartetes Ende'); return p; }
+  expect(ty) { const p = this.next(); if (p.t !== ty) throw this.err(`"${ty}" erwartet, gefunden "${p.v || p.t}"`, p); return p; }
+  S(n) { return this.I.sym(n.toUpperCase()); }
+  parseAll() { const out = []; while (this.i < this.toks.length) out.push(this.top()); return out; }
+  top() {
+    const Q = this.I.Q, e = this.expr();
+    if (this.is('=')) {
+      this.i++;
+      const body = this.expr();
+      let name, lam;
+      if (e instanceof Sym) { name = e; lam = body; }
+      else if (e && e.L && e.L[0] instanceof Sym && e.L.slice(1).every(v => v instanceof Sym)) {
+        name = e.L[0]; const ps = e.L.slice(1);
+        lam = { L: [Q.lambda, ps.length ? { L: ps } : EMPTY, body] };
+      } else throw this.err('links von "=" muss name[x; y; …] stehen');
+      return { L: [this.S('DEFINE'), { L: [Q.quote, { L: [{ L: [name, lam] }] }] }] };
+    }
+    return e;
+  }
+  expr() { let e = this.primary(); while (this.is('[')) e = { L: [e, ...this.args()] }; return e; }
+  args() {
+    this.expect('['); const a = [];
+    if (this.is(']')) { this.i++; return a; }
+    for (;;) { a.push(this.expr()); if (this.is(';')) { this.i++; continue; } this.expect(']'); return a; }
+  }
+  primary() {
+    const Q = this.I.Q, t = this.next();
+    if (t.t === 'num') return t.v;
+    if (t.t === '[') {
+      const cl = [];
+      for (;;) {
+        if (this.is(']')) { this.i++; break; }
+        const p = this.expr(); this.expect('->'); const e = this.expr();
+        cl.push({ L: [p, e] });
+        if (this.is(';')) { this.i++; continue; }
+        this.expect(']'); break;
+      }
+      return { L: [this.S('COND'), ...cl] };
+    }
+    if (t.t === '(') return { L: [Q.quote, this.sdata()] };
+    if (t.t === 'id') {
+      const n = t.v;
+      if (/^[a-z]/.test(n)) {
+        if (this.is('[')) {
+          if (n === 'lambda') {
+            this.expect('['); this.expect('['); const ps = [];
+            while (!this.is(']')) { const p = this.expect('id'); ps.push(this.S(p.v)); if (this.is(';')) this.i++; }
+            this.expect(']'); this.expect(';'); const body = this.expr(); this.expect(']');
+            return { L: [Q.lambda, ps.length ? { L: ps } : EMPTY, body] };
+          }
+          if (n === 'label') {
+            this.expect('['); const nm = this.expect('id'); this.expect(';'); const f = this.expr(); this.expect(']');
+            return { L: [Q.label, this.S(nm.v), f] };
+          }
+          return { L: [this.S(n), ...this.args()] };
+        }
+        return this.S(n);
+      }
+      if (n === 'NIL') return EMPTY;
+      if (n === 'T' || n === 'F') return this.S(n);
+      return { L: [Q.quote, this.S(n)] };
+    }
+    throw this.err(`unerwartetes Symbol "${t.v || t.t}"`, t);
+  }
+  sdata() {
+    const items = []; let tail;
+    for (;;) {
+      const t = this.next();
+      if (t.t === ')') break;
+      if (t.t === '.') { tail = this.sitem(this.next()); this.expect(')'); break; }
+      items.push(this.sitem(t));
+    }
+    if (!items.length) return EMPTY;
+    return tail === undefined ? { L: items } : { L: items, T: tail };
+  }
+  sitem(t) {
+    if (t.t === '(') return this.sdata();
+    if (t.t === 'num') return t.v;
+    if (t.t === 'id') return t.v.toUpperCase() === 'NIL' ? EMPTY : this.S(t.v);
+    throw this.err(`in S-Ausdruck unerwartet: "${t.t}"`, t);
+  }
+}
+
+const PRELUDE_LISP = `
+(DEFUN MAPCAR (%FN %L) (COND ((NULL %L) NIL) (T (CONS (FUNCALL %FN (CAR %L)) (MAPCAR %FN (CDR %L))))))
+(DEFUN MAPLIST (%L %FN) (COND ((NULL %L) NIL) (T (CONS (FUNCALL %FN %L) (MAPLIST (CDR %L) %FN)))))
+(DEFUN MAPC (%FN %L) (PROG () A (COND ((NULL %L) (RETURN NIL))) (FUNCALL %FN (CAR %L)) (SETQ %L (CDR %L)) (GO A)))
+`;
+const PRELUDE_SCHEME = `
+(define (map f l . ls)
+  (define (map1 f l) (if (null? l) '() (cons (f (car l)) (map1 f (cdr l)))))
+  (if (null? ls)
+      (map1 f l)
+      (let loop ((ls (cons l ls)))
+        (if (memq #t (map1 null? ls)) '()
+            (cons (apply f (map1 car ls)) (loop (map1 cdr ls)))))))
+(define (for-each f l . ls)
+  (if (null? ls)
+      (let loop ((l l)) (if (null? l) (if #f #f) (begin (f (car l)) (loop (cdr l)))))
+      (let loop ((ls (cons l ls)))
+        (if (memq #t (map null? ls)) (if #f #f)
+            (begin (apply f (map car ls)) (loop (map cdr ls)))))))
+(define (filter p l) (cond ((null? l) '()) ((p (car l)) (cons (car l) (filter p (cdr l)))) (else (filter p (cdr l)))))
+(define (fold-left f acc l) (if (null? l) acc (fold-left f (f acc (car l)) (cdr l))))
+(define (fold-right f init l) (if (null? l) init (f (car l) (fold-right f init (cdr l)))))
+(define (stream-car s) (car s))
+(define (stream-cdr s) (force (cdr s)))
+(define the-empty-stream '())
+(define (stream-null? s) (null? s))
+`;
+
+return { Interp, LispError, EMPTY, TRUE, FALSE, UNSPEC, Cell, Sym, Char, Prim, Clo, Macro, Cont, Prom, Special, isNum, fmtNum };
+})();
+if (typeof module !== 'undefined') module.exports = LispCore;
+
+</script>
+<script>
+const LISP_EXAMPLES = [
+{ id: 'l-grund', title: '1 · Die sieben Grundfunktionen', code:
+`; Die sieben Grundfunktionen nach McCarthy (1960):
+; QUOTE ATOM EQ CAR CDR CONS COND
+; EVALQUOTE-Stil: Funktionsname, dahinter die Argumentliste.
+; Die Argumente werden NICHT ausgewertet.
+CAR ((A B C))
+CDR ((A B C))
+CONS (A (B C))
+CONS (A B)
+ATOM (A)
+ATOM ((A B))
+EQ (A A)
+EQ (A B)
+
+; Dasselbe als S-Ausdruck mit EVAL: Konstanten brauchen QUOTE
+(CONS (QUOTE A) (QUOTE (B C)))
+(CAR (CDR (QUOTE (A B C))))
+(COND ((ATOM (QUOTE (X))) (QUOTE ATOM))
+      (T (QUOTE LISTE)))
+(QUOTE (A . (B . (C . NIL))))
+` },
+{ id: 'l-fak', title: '2 · Fakultät und Fibonacci', code:
+`; Rekursion ist das Grundmuster von Lisp
+DEFINE ((
+  (FAKULTAET (LAMBDA (N)
+     (COND ((ZEROP N) 1)
+           (T (TIMES N (FAKULTAET (SUB1 N)))))))
+  (FIB (LAMBDA (N)
+     (COND ((LESSP N 2) N)
+           (T (PLUS (FIB (SUB1 N)) (FIB (DIFFERENCE N 2)))))))
+))
+FAKULTAET (10)
+FAKULTAET (30)
+FIB (15)
+(FAKULTAET 5)
+
+; TRACE zeigt jeden Aufruf mit Argumenten und Wert
+TRACE ((FAKULTAET))
+FAKULTAET (3)
+UNTRACE ((FAKULTAET))
+` },
+{ id: 'l-mexpr', title: '3 · M-Ausdrücke (wie 1960)', mexpr: true, code:
+`;; M-Ausdrücke wie in McCarthys Aufsatz von 1960.
+;; klein = Funktionen und Variablen, GROSS = Konstanten (Atome)
+;; [p1 → e1; p2 → e2] ist der bedingte Ausdruck, ;; leitet Kommentare ein.
+fakt[n] = [zerop[n] → 1; T → times[n; fakt[sub1[n]]]]
+fakt[6]
+
+ff[x] = [atom[x] → x; T → ff[car[x]]]
+ff[((A . B) . C)]
+
+anhaengen[x; y] = [null[x] → y; T → cons[car[x]; anhaengen[cdr[x]; y]]]
+anhaengen[(A B); (C D E)]
+
+lambda[[x]; times[x; x]][7]
+label[ff2; lambda[[x]; [atom[x] → x; T → ff2[car[x]]]]][((K L) M)]
+` },
+{ id: 'l-listen', title: '4 · APPEND, REVERSE, MAPCAR selbst gebaut', code:
+`; Eigene Versionen der Listenfunktionen – deutsche Namen,
+; damit die eingebauten APPEND/REVERSE/MAPCAR erhalten bleiben
+DEFINE ((
+  (ANHAENGEN (LAMBDA (X Y)
+     (COND ((NULL X) Y)
+           (T (CONS (CAR X) (ANHAENGEN (CDR X) Y))))))
+  (UMDREHEN (LAMBDA (X)
+     (COND ((NULL X) NIL)
+           (T (ANHAENGEN (UMDREHEN (CDR X)) (LIST (CAR X)))))))
+  (ABBILDEN (LAMBDA (F X)
+     (COND ((NULL X) NIL)
+           (T (CONS (F (CAR X)) (ABBILDEN F (CDR X)))))))
+  (ENTHALTEN (LAMBDA (A X)
+     (COND ((NULL X) NIL)
+           ((EQUAL A (CAR X)) T)
+           (T (ENTHALTEN A (CDR X))))))
+))
+ANHAENGEN ((A B) (C D))
+UMDREHEN ((1 2 3 4))
+ABBILDEN (ADD1 (1 2 3))
+(ABBILDEN (FUNCTION (LAMBDA (X) (TIMES X X))) (QUOTE (1 2 3 4)))
+ENTHALTEN (C (A B C))
+
+; Die eingebauten Gegenstücke
+(APPEND (QUOTE (A B)) (QUOTE (C D)))
+(REVERSE (QUOTE (1 2 3)))
+(MAPCAR (QUOTE SUB1) (QUOTE (10 20 30)))
+(MEMBER (QUOTE C) (QUOTE (A B C D)))
+(ASSOC (QUOTE B) (QUOTE ((A . 1) (B . 2) (C . 3))))
+(APPLY (QUOTE PLUS) (QUOTE (1 2 3 4)))
+(FUNCALL (QUOTE TIMES) 6 7)
+` },
+{ id: 'l-diff', title: '5 · Symbolisches Ableiten und Vereinfachen', code:
+`; McCarthys Klassiker: Ableiten von Ausdrücken in Präfixform
+DEFINE ((
+  (ABL (LAMBDA (E X)
+     (COND ((ATOM E) (COND ((EQ E X) 1) (T 0)))
+           ((EQ (CAR E) (QUOTE PLUS))
+              (LIST (QUOTE PLUS) (ABL (CADR E) X) (ABL (CADDR E) X)))
+           ((EQ (CAR E) (QUOTE TIMES))
+              (LIST (QUOTE PLUS)
+                    (LIST (QUOTE TIMES) (CADR E) (ABL (CADDR E) X))
+                    (LIST (QUOTE TIMES) (ABL (CADR E) X) (CADDR E))))
+           (T (QUOTE UNBEKANNT)))))
+  (VEREINFACHE (LAMBDA (E)
+     (COND ((ATOM E) E)
+           (T (VEREINF1 (CAR E) (VEREINFACHE (CADR E)) (VEREINFACHE (CADDR E)))))))
+  (VEREINF1 (LAMBDA (OP A B)
+     (COND ((AND (NUMBERP A) (NUMBERP B))
+              (COND ((EQ OP (QUOTE PLUS)) (PLUS A B)) (T (TIMES A B))))
+           ((EQ OP (QUOTE PLUS))
+              (COND ((EQUAL A 0) B) ((EQUAL B 0) A) (T (LIST OP A B))))
+           ((OR (EQUAL A 0) (EQUAL B 0)) 0)
+           ((EQUAL A 1) B)
+           ((EQUAL B 1) A)
+           (T (LIST OP A B)))))
+))
+ABL ((TIMES X X) X)
+VEREINFACHE ((PLUS (TIMES X 1) (TIMES 1 X)))
+(VEREINFACHE (ABL (QUOTE (PLUS (TIMES 3 (TIMES X X)) (TIMES 2 X))) (QUOTE X)))
+` },
+{ id: 'l-plist', title: '6 · Eigenschaftslisten als Datenbank', code:
+`; Jedes Atom hat eine Eigenschaftsliste (Indikator Wert Indikator Wert …)
+; Hier: Biersorten mit Stammwürze (°P) und Alkohol (% vol)
+DEFLIST (((PILS 11.5) (MAERZEN 13.5) (BOCK 16.5) (WEIZEN 12.5) (DUNKEL 12.8)) STAMMWUERZE)
+DEFLIST (((PILS 4.9) (MAERZEN 5.6) (BOCK 7.2) (WEIZEN 5.3) (DUNKEL 5.1)) ALKOHOL)
+(PUTPROP (QUOTE BOCK) (QUOTE UNTERGAERIG) (QUOTE HEFE))
+(PUTPROP (QUOTE WEIZEN) (QUOTE OBERGAERIG) (QUOTE HEFE))
+(GET (QUOTE BOCK) (QUOTE STAMMWUERZE))
+(PLIST (QUOTE BOCK))
+(CSETQ SORTEN (QUOTE (PILS MAERZEN BOCK WEIZEN DUNKEL)))
+DEFINE ((
+  (STAERKER-ALS (LAMBDA (GRENZE L)
+     (COND ((NULL L) NIL)
+           ((GREATERP (GET (CAR L) (QUOTE STAMMWUERZE)) GRENZE)
+              (CONS (CAR L) (STAERKER-ALS GRENZE (CDR L))))
+           (T (STAERKER-ALS GRENZE (CDR L))))))
+))
+(STAERKER-ALS 12.6 SORTEN)
+(MAPCAR (FUNCTION (LAMBDA (S) (CONS S (GET S (QUOTE ALKOHOL))))) SORTEN)
+; Auch Funktionen stehen in der Eigenschaftsliste:
+(GET (QUOTE STAERKER-ALS) (QUOTE EXPR))
+` },
+{ id: 'l-prog', title: '7 · PROG, GO und RETURN', code:
+`; Die imperative Seite von LISP 1.5: Programmvariablen, Marken, Sprünge
+DEFINE ((
+  (FAKIT (LAMBDA (N) (PROG (ERG)
+        (SETQ ERG 1)
+   SCHLEIFE
+        (COND ((ZEROP N) (RETURN ERG)))
+        (SETQ ERG (TIMES ERG N))
+        (SETQ N (SUB1 N))
+        (GO SCHLEIFE))))
+  (UMKEHR (LAMBDA (L) (PROG (ERG)
+   WEITER
+        (COND ((NULL L) (RETURN ERG)))
+        (SETQ ERG (CONS (CAR L) ERG))
+        (SETQ L (CDR L))
+        (GO WEITER))))
+))
+FAKIT (20)
+UMKEHR ((A B C D E))
+` },
+{ id: 'l-fexpr', title: '8 · FEXPR: unausgewertete Argumente', code:
+`; Ein FEXPR bekommt seine Argumente als Liste, unausgewertet,
+; und dazu die aktuelle Bindungsliste A
+DEFLIST ((
+  (WENN (LAMBDA (L A)
+     (COND ((EVAL (CAR L) A) (EVAL (CADR L) A))
+           (T (EVAL (CADDR L) A)))))
+  (ZITAT (LAMBDA (L) L))
+) FEXPR)
+(WENN (GREATERP 3 2) (QUOTE JA) (QUOTE NEIN))
+(ZITAT A B (C D))
+DEFINE ((
+  (BETRAG (LAMBDA (X) (WENN (MINUSP X) (MINUS X) X)))
+))
+BETRAG (-7)
+; Code ist Daten: eine Liste bauen und auswerten
+(CSETQ AUSDRUCK (LIST (QUOTE PLUS) 1 2 3))
+(EVAL AUSDRUCK)
+` },
+{ id: 'l-dyn', title: '9 · Dynamische Bindung und Funarg-Problem', code:
+`; Dynamische Bindung: eine freie Variable wird beim AUFRUFER gesucht
+(CSETQ X (QUOTE GLOBAL))
+DEFINE ((
+  (ZEIGE-X (LAMBDA () X))
+  (TEST (LAMBDA (X) (ZEIGE-X)))
+))
+(ZEIGE-X)
+(TEST (QUOTE LOKAL))
+
+; Das Funarg-Problem: eine Funktion als Wert verliert ihre Umgebung
+DEFINE ((
+  (ADDIERER (LAMBDA (N) (QUOTE (LAMBDA (X) (PLUS X N)))))
+  (ADDIERER2 (LAMBDA (N) (FUNCTION (LAMBDA (X) (PLUS X N)))))
+))
+(CSETQ N 1000)
+(APPLY (ADDIERER 5) (QUOTE (10)))
+(APPLY (ADDIERER2 5) (QUOTE (10)))
+(ADDIERER2 5)
+` },
+{ id: 'l-hanoi', title: '10 · Türme von Hanoi', code:
+`DEFINE ((
+  (HANOI (LAMBDA (N VON NACH UEBER)
+     (COND ((ZEROP N) NIL)
+           (T (APPEND (HANOI (SUB1 N) VON UEBER NACH)
+                      (CONS (LIST VON (QUOTE NACH) NACH)
+                            (HANOI (SUB1 N) UEBER NACH VON)))))))
+))
+HANOI (3 LINKS RECHTS MITTE)
+(LENGTH (HANOI 10 (QUOTE A) (QUOTE B) (QUOTE C)))
+` },
+{ id: 'l-sort', title: '11 · Sortieren durch Einfügen', code:
+`DEFINE ((
+  (EINFUEGEN (LAMBDA (X L)
+     (COND ((NULL L) (LIST X))
+           ((LESSP X (CAR L)) (CONS X L))
+           (T (CONS (CAR L) (EINFUEGEN X (CDR L)))))))
+  (SORTIERE (LAMBDA (L)
+     (COND ((NULL L) NIL)
+           (T (EINFUEGEN (CAR L) (SORTIERE (CDR L)))))))
+))
+SORTIERE ((31 4 15 9 26 5 35 8))
+` },
+{ id: 'l-meta', title: '12 · Metazirkulärer Interpreter (McCarthy)', code:
+`; eval und apply nach McCarthy (1960), in LISP selbst geschrieben.
+; A ist die Bindungsliste (a-list) des interpretierten Programms.
+DEFINE ((
+  (EVAL1 (LAMBDA (E A)
+     (COND ((ATOM E) (COND ((NUMBERP E) E) (T (CDR (ASSOC1 E A)))))
+           ((ATOM (CAR E))
+              (COND ((EQ (CAR E) (QUOTE QUOTE)) (CADR E))
+                    ((EQ (CAR E) (QUOTE COND)) (EVCON (CDR E) A))
+                    (T (APPLY1 (CAR E) (EVLIS (CDR E) A) A))))
+           (T (APPLY1 (CAR E) (EVLIS (CDR E) A) A)))))
+  (APPLY1 (LAMBDA (FN X A)
+     (COND ((ATOM FN)
+              (COND ((EQ FN (QUOTE CAR)) (CAAR X))
+                    ((EQ FN (QUOTE CDR)) (CDAR X))
+                    ((EQ FN (QUOTE CONS)) (CONS (CAR X) (CADR X)))
+                    ((EQ FN (QUOTE ATOM)) (ATOM (CAR X)))
+                    ((EQ FN (QUOTE EQ)) (EQ (CAR X) (CADR X)))
+                    (T (APPLY1 (EVAL1 FN A) X A))))
+           ((EQ (CAR FN) (QUOTE LAMBDA))
+              (EVAL1 (CADDR FN) (PAIRLIS1 (CADR FN) X A)))
+           ((EQ (CAR FN) (QUOTE LABEL))
+              (APPLY1 (CADDR FN) X (CONS (CONS (CADR FN) (CADDR FN)) A))))))
+  (EVCON (LAMBDA (C A)
+     (COND ((EVAL1 (CAAR C) A) (EVAL1 (CADAR C) A))
+           (T (EVCON (CDR C) A)))))
+  (EVLIS (LAMBDA (M A)
+     (COND ((NULL M) NIL)
+           (T (CONS (EVAL1 (CAR M) A) (EVLIS (CDR M) A))))))
+  (PAIRLIS1 (LAMBDA (X Y A)
+     (COND ((NULL X) A)
+           (T (CONS (CONS (CAR X) (CAR Y)) (PAIRLIS1 (CDR X) (CDR Y) A))))))
+  (ASSOC1 (LAMBDA (X A)
+     (COND ((EQ (CAAR A) X) (CAR A))
+           (T (ASSOC1 X (CDR A))))))
+))
+EVAL1 ((CONS (QUOTE A) (QUOTE (B C))) ((T . T)))
+EVAL1 (((LAMBDA (X Y) (CONS Y X)) (QUOTE A) (QUOTE B)) ((T . T)))
+EVAL1 (((LABEL FF (LAMBDA (X) (COND ((ATOM X) X) (T (FF (CAR X))))))
+        (QUOTE ((A B) C)))
+       ((T . T)))
+` },
+{ id: 'l-gc', title: '13 · Speicher und Garbage Collection', code:
+`; Erzeugt viel Müll. Reiter "Speicher" öffnen und zusehen.
+DEFINE ((
+  (MUELL (LAMBDA (N) (PROG (L)
+   S    (COND ((ZEROP N) (RETURN (QUOTE FERTIG))))
+        (SETQ L (LIST N N N N N N N N))
+        (SETQ N (SUB1 N))
+        (GO S))))
+))
+MUELL (20000)
+(RECLAIM)
+` }
+];
+
+const SCHEME_EXAMPLES = [
+{ id: 's-fak', title: '1 · Fakultät, Fibonacci, endständige Rekursion', code:
+`; Rekursiv: der Stapel wächst mit n
+(define (fakultaet n)
+  (if (= n 0)
+      1
+      (* n (fakultaet (- n 1)))))
+
+; Endständig rekursiv: läuft in konstantem Stapelplatz
+(define (fakultaet-iter n)
+  (let schleife ((i n) (acc 1))
+    (if (= i 0)
+        acc
+        (schleife (- i 1) (* acc i)))))
+
+(define (fib n)
+  (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2)))))
+
+(define (fib-iter n)
+  (do ((i 0 (+ i 1))
+       (a 0 b)
+       (b 1 (+ a b)))
+      ((= i n) a)))
+
+(fakultaet 20)
+(fakultaet-iter 50)
+(fib 20)
+(fib-iter 100)
+
+; Eine Million Aufrufe ohne Stapelüberlauf:
+(define (zaehle n) (if (= n 0) 'fertig (zaehle (- n 1))))
+(zaehle 1000000)
+` },
+{ id: 's-listen', title: '2 · Listenfunktionen selbst gebaut', code:
+`(define (mein-append x y)
+  (if (null? x) y (cons (car x) (mein-append (cdr x) y))))
+(define (mein-reverse l)
+  (let loop ((l l) (acc '()))
+    (if (null? l) acc (loop (cdr l) (cons (car l) acc)))))
+(define (mein-map f l)
+  (if (null? l) '() (cons (f (car l)) (mein-map f (cdr l)))))
+(define (mein-filter p l)
+  (cond ((null? l) '())
+        ((p (car l)) (cons (car l) (mein-filter p (cdr l))))
+        (else (mein-filter p (cdr l)))))
+(define (falte f init l)
+  (if (null? l) init (falte f (f init (car l)) (cdr l))))
+
+(mein-append '(a b) '(c d))
+(mein-reverse '(1 2 3 4 5))
+(mein-map (lambda (x) (* x x)) '(1 2 3 4))
+(mein-filter odd? '(1 2 3 4 5 6 7))
+(falte + 0 '(1 2 3 4 5 6 7 8 9 10))
+(map + '(1 2 3) '(10 20 30))
+(apply max '(3 1 4 1 5))
+(assq 'b '((a 1) (b 2) (c 3)))
+` },
+{ id: 's-closure', title: '3 · Closures und lexikalische Bindung', code:
+`(define (make-zaehler)
+  (let ((n 0))
+    (lambda ()
+      (set! n (+ n 1))
+      n)))
+(define z1 (make-zaehler))
+(define z2 (make-zaehler))
+(z1) (z1) (z1) (z2)
+
+; Lexikalische Bindung: x wird dort gesucht, wo die Funktion steht
+(define x 'global)
+(define (zeige-x) x)
+(define (test x) (zeige-x))
+(test 'lokal)          ; => global  (in LISP 1.5: LOKAL)
+
+(define (addierer n) (lambda (x) (+ x n)))
+(define plus5 (addierer 5))
+(plus5 10)
+(map (addierer 100) '(1 2 3))
+
+; Ein Konto als Closure mit Nachrichten
+(define (konto saldo)
+  (lambda (nachricht betrag)
+    (cond ((eq? nachricht 'einzahlen) (set! saldo (+ saldo betrag)) saldo)
+          ((eq? nachricht 'abheben)
+           (if (> betrag saldo)
+               "Deckung reicht nicht"
+               (begin (set! saldo (- saldo betrag)) saldo)))
+          (else (error "Unbekannte Nachricht" nachricht)))))
+(define k (konto 100))
+(k 'einzahlen 50)
+(k 'abheben 30)
+(k 'abheben 500)
+` },
+{ id: 's-deriv', title: '4 · Symbolisches Ableiten (SICP)', code:
+`(define (variable? x) (symbol? x))
+(define (same-variable? a b) (and (variable? a) (variable? b) (eq? a b)))
+(define (=number? e n) (and (number? e) (= e n)))
+(define (make-sum a b)
+  (cond ((=number? a 0) b)
+        ((=number? b 0) a)
+        ((and (number? a) (number? b)) (+ a b))
+        (else (list '+ a b))))
+(define (make-product a b)
+  (cond ((or (=number? a 0) (=number? b 0)) 0)
+        ((=number? a 1) b)
+        ((=number? b 1) a)
+        ((and (number? a) (number? b)) (* a b))
+        (else (list '* a b))))
+(define (sum? e) (and (pair? e) (eq? (car e) '+)))
+(define (product? e) (and (pair? e) (eq? (car e) '*)))
+(define (deriv e v)
+  (cond ((number? e) 0)
+        ((variable? e) (if (same-variable? e v) 1 0))
+        ((sum? e) (make-sum (deriv (cadr e) v) (deriv (caddr e) v)))
+        ((product? e)
+         (make-sum (make-product (cadr e) (deriv (caddr e) v))
+                   (make-product (deriv (cadr e) v) (caddr e))))
+        (else (error "Unbekannter Ausdruck" e))))
+(deriv '(+ x 3) 'x)
+(deriv '(* x y) 'x)
+(deriv '(* (* x y) (+ x 3)) 'x)
+` },
+{ id: 's-hanoi', title: '5 · Türme von Hanoi', code:
+`(define (hanoi n von nach ueber)
+  (if (= n 0)
+      '()
+      (append (hanoi (- n 1) von ueber nach)
+              (list (list von '-> nach))
+              (hanoi (- n 1) ueber nach von))))
+(hanoi 3 'links 'rechts 'mitte)
+(length (hanoi 12 'a 'b 'c))
+(define (zeige-zuege n)
+  (for-each (lambda (z) (display z) (newline))
+            (hanoi n 'a 'c 'b)))
+(zeige-zuege 3)
+` },
+{ id: 's-sort', title: '6 · Sortieren (Einfügen, Quicksort, Mergesort)', code:
+`(define (einfuege-sort l less?)
+  (define (einfuegen x s)
+    (cond ((null? s) (list x))
+          ((less? x (car s)) (cons x s))
+          (else (cons (car s) (einfuegen x (cdr s))))))
+  (if (null? l) '() (einfuegen (car l) (einfuege-sort (cdr l) less?))))
+
+(define (quicksort l less?)
+  (if (null? l)
+      '()
+      (let ((p (car l)) (rest (cdr l)))
+        (append (quicksort (filter (lambda (x) (less? x p)) rest) less?)
+                (list p)
+                (quicksort (filter (lambda (x) (not (less? x p))) rest) less?)))))
+
+(define (merge a b less?)
+  (cond ((null? a) b)
+        ((null? b) a)
+        ((less? (car b) (car a)) (cons (car b) (merge a (cdr b) less?)))
+        (else (cons (car a) (merge (cdr a) b less?)))))
+(define (split l)
+  (if (or (null? l) (null? (cdr l)))
+      (list l '())
+      (let ((r (split (cddr l))))
+        (list (cons (car l) (car r)) (cons (cadr l) (cadr r))))))
+(define (mergesort l less?)
+  (if (or (null? l) (null? (cdr l)))
+      l
+      (let ((h (split l)))
+        (merge (mergesort (car h) less?) (mergesort (cadr h) less?) less?))))
+
+(einfuege-sort '(31 4 15 9 26 5 35 8) <)
+(quicksort '(31 4 15 9 26 5 35 8) <)
+(mergesort '(31 4 15 9 26 5 35 8) >)
+(mergesort '("pils" "bock" "weizen" "dunkel") string<?)
+` },
+{ id: 's-mengen', title: '7 · Mengen als Listen', code:
+`(define (element? x s)
+  (cond ((null? s) #f) ((equal? x (car s)) #t) (else (element? x (cdr s)))))
+(define (hinzu x s) (if (element? x s) s (cons x s)))
+(define (vereinigung a b)
+  (if (null? a) b (vereinigung (cdr a) (hinzu (car a) b))))
+(define (schnitt a b)
+  (cond ((null? a) '())
+        ((element? (car a) b) (cons (car a) (schnitt (cdr a) b)))
+        (else (schnitt (cdr a) b))))
+(define (differenz a b)
+  (cond ((null? a) '())
+        ((element? (car a) b) (differenz (cdr a) b))
+        (else (cons (car a) (differenz (cdr a) b)))))
+(define (potenzmenge s)
+  (if (null? s)
+      '(())
+      (let ((rest (potenzmenge (cdr s))))
+        (append rest (map (lambda (t) (cons (car s) t)) rest)))))
+(define a '(1 2 3 4))
+(define b '(3 4 5))
+(vereinigung a b)
+(schnitt a b)
+(differenz a b)
+(potenzmenge '(x y z))
+` },
+{ id: 's-eliza', title: '8 · Mini-ELIZA', code:
+`; Eine Mini-ELIZA nach Weizenbaum (1966): Muster mit Segmentvariablen (* x)
+(define (segment? p) (and (pair? p) (eq? (car p) '*)))
+(define (erste n l) (if (= n 0) '() (cons (car l) (erste (- n 1) (cdr l)))))
+(define (passt muster eingabe bindungen)
+  (cond ((not bindungen) #f)
+        ((null? muster) (if (null? eingabe) bindungen #f))
+        ((segment? (car muster)) (passt-segment muster eingabe bindungen 0))
+        ((null? eingabe) #f)
+        ((eq? (car muster) (car eingabe))
+         (passt (cdr muster) (cdr eingabe) bindungen))
+        (else #f)))
+(define (passt-segment muster eingabe bindungen n)
+  (if (> n (length eingabe))
+      #f
+      (or (passt (cdr muster) (list-tail eingabe n)
+                 (cons (cons (cadr (car muster)) (erste n eingabe)) bindungen))
+          (passt-segment muster eingabe bindungen (+ n 1)))))
+(define (spiegeln woerter)
+  (map (lambda (w)
+         (let ((p (assq w '((ich . du) (du . ich) (mein . dein) (meine . deine)
+                            (dein . mein) (bin . bist) (mir . dir) (mich . dich)))))
+           (if p (cdr p) w)))
+       woerter))
+(define (ersetze vorlage bindungen)
+  (cond ((null? vorlage) '())
+        ((segment? (car vorlage))
+         (append (spiegeln (cdr (assq (cadr (car vorlage)) bindungen)))
+                 (ersetze (cdr vorlage) bindungen)))
+        (else (cons (car vorlage) (ersetze (cdr vorlage) bindungen)))))
+(define regeln
+  '((((* x) hallo (* y))     (hallo! wie geht es dir?))
+    (((* x) ich bin (* y))   (warum bist du (* y) ?))
+    (((* x) ich habe (* y))  (seit wann hast du (* y) ?))
+    (((* x) mutter (* y))    (erzaehl mir mehr ueber deine familie.))
+    (((* x) computer (* y))  (machen dir computer angst?))
+    (((* x) immer (* y))     (kannst du ein beispiel nennen?))
+    (((* x))                 (bitte erzaehl weiter.))))
+(define (eliza eingabe)
+  (let suche ((r regeln))
+    (let ((b (passt (car (car r)) eingabe '())))
+      (if b (ersetze (cadr (car r)) b) (suche (cdr r))))))
+
+(eliza '(ich bin heute muede))
+(eliza '(meine mutter kocht gut))
+(eliza '(ich habe einen neuen computer))
+(eliza '(das wetter ist schlecht))
+(define (gespraech saetze)
+  (for-each (lambda (s)
+              (display "> ") (display s) (newline)
+              (display (eliza s)) (newline))
+            saetze))
+(gespraech '((hallo eliza) (ich bin traurig) (es regnet immer)))
+` },
+{ id: 's-church', title: '9 · Church-Zahlen und Y-Kombinator', code:
+`; Zahlen nur aus Funktionen: n = "wende f n-mal an"
+(define null-c (lambda (f) (lambda (x) x)))
+(define (nachf n) (lambda (f) (lambda (x) (f ((n f) x)))))
+(define (plus-c m n) (lambda (f) (lambda (x) ((m f) ((n f) x)))))
+(define (mal-c m n) (lambda (f) (m (n f))))
+(define (hoch-c m n) (n m))
+(define (->zahl n) ((n (lambda (k) (+ k 1))) 0))
+(define eins (nachf null-c))
+(define zwei (nachf eins))
+(define drei (plus-c eins zwei))
+(->zahl drei)
+(->zahl (mal-c drei drei))
+(->zahl (hoch-c zwei (mal-c drei drei)))
+
+; Church-Wahrheitswerte
+(define wahr (lambda (a) (lambda (b) a)))
+(define falsch (lambda (a) (lambda (b) b)))
+((wahr 'ja) 'nein)
+((falsch 'ja) 'nein)
+
+; Der Y-Kombinator in der Variante für strikte Auswertung (Z-Kombinator):
+; Rekursion ohne define, ohne Namen
+(define Y
+  (lambda (f)
+    ((lambda (x) (f (lambda (v) ((x x) v))))
+     (lambda (x) (f (lambda (v) ((x x) v)))))))
+(define fak
+  (Y (lambda (selbst)
+       (lambda (n) (if (= n 0) 1 (* n (selbst (- n 1))))))))
+(fak 10)
+(define fib-y
+  (Y (lambda (fib)
+       (lambda (n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))))))
+(fib-y 15)
+` },
+{ id: 's-makro', title: '10 · Code ist Daten und Makros', code:
+`; Programme als Listen bauen und auswerten
+(define ausdruck (list '+ 1 2 3))
+ausdruck
+(eval ausdruck)
+(define (mache-funktion parameter rumpf)
+  (eval (list 'lambda parameter rumpf)))
+(define quadrat (mache-funktion '(x) '(* x x)))
+(quadrat 12)
+
+; Quasiquote als Schablone
+(define (potenz-ausdruck n)
+  (if (= n 0) 1 \`(* x ,(potenz-ausdruck (- n 1)))))
+(potenz-ausdruck 3)
+(define kubik (eval \`(lambda (x) ,(potenz-ausdruck 3))))
+(kubik 4)
+
+; Makros mit syntax-rules (hier NICHT hygienisch)
+(define-syntax tausche!
+  (syntax-rules ()
+    ((_ a b) (let ((tmp a)) (set! a b) (set! b tmp)))))
+(define p 1)
+(define q 2)
+(tausche! p q)
+(list p q)
+
+(define-syntax solange
+  (syntax-rules ()
+    ((_ bedingung koerper ...)
+     (let schleife ()
+       (if bedingung (begin koerper ... (schleife)) #f)))))
+(define i 0)
+(solange (< i 5) (display i) (set! i (+ i 1)))
+
+; Makro im alten Lisp-Stil: eine Funktion, die Code berechnet
+(define-macro (mein-unless test . koerper)
+  \`(if ,test #f (begin ,@koerper)))
+(mein-unless (> 1 2) 'ausgefuehrt)
+
+; Die Falle ohne Hygiene: die Variable heißt zufällig tmp
+(define tmp 10)
+(define r 20)
+(tausche! tmp r)
+(list tmp r)        ; => (10 20) – nichts vertauscht!
+` },
+{ id: 's-callcc', title: '11 · call/cc: Fortsetzungen', code:
+`; Vorzeitiger Ausstieg aus einer Schleife
+(define (finde-erstes pred l)
+  (call/cc
+    (lambda (zurueck)
+      (for-each (lambda (x) (if (pred x) (zurueck x))) l)
+      #f)))
+(finde-erstes even? '(1 3 5 6 7 8))
+(finde-erstes even? '(1 3 5))
+
+; Eine Fortsetzung aufheben und später erneut betreten
+(define gespeichert #f)
+(+ 100 (call/cc (lambda (k) (set! gespeichert k) 1)))
+(gespeichert 5)
+(gespeichert 42)
+` },
+{ id: 's-meta', title: '12 · Metazirkulärer Interpreter (SICP)', code:
+`; Ein metazirkulärer Interpreter nach SICP 4.1, stark gekürzt.
+; Umgebung = Liste von Rahmen, Rahmen = Liste von (name . wert)
+(define (m-eval ausdr umg)
+  (cond ((or (number? ausdr) (string? ausdr) (boolean? ausdr)) ausdr)
+        ((symbol? ausdr) (nachschlagen ausdr umg))
+        ((eq? (car ausdr) 'quote) (cadr ausdr))
+        ((eq? (car ausdr) 'if)
+         (if (m-eval (cadr ausdr) umg)
+             (m-eval (caddr ausdr) umg)
+             (m-eval (cadddr ausdr) umg)))
+        ((eq? (car ausdr) 'lambda)
+         (list 'prozedur (cadr ausdr) (cddr ausdr) umg))
+        ((eq? (car ausdr) 'define)
+         (definiere! (cadr ausdr) (m-eval (caddr ausdr) umg) umg))
+        ((eq? (car ausdr) 'begin) (folge (cdr ausdr) umg))
+        (else (m-apply (m-eval (car ausdr) umg)
+                       (map (lambda (a) (m-eval a umg)) (cdr ausdr))))))
+
+(define (m-apply proz argumente)
+  (cond ((procedure? proz) (apply proz argumente))
+        ((and (pair? proz) (eq? (car proz) 'prozedur))
+         (folge (caddr proz)
+                (cons (map cons (cadr proz) argumente) (cadddr proz))))
+        (else (error "Keine Prozedur:" proz))))
+
+(define (folge ausdruecke umg)
+  (if (null? (cdr ausdruecke))
+      (m-eval (car ausdruecke) umg)
+      (begin (m-eval (car ausdruecke) umg)
+             (folge (cdr ausdruecke) umg))))
+
+(define (nachschlagen name umg)
+  (if (null? umg)
+      (error "Ungebunden:" name)
+      (let ((b (assq name (car umg))))
+        (if b (cdr b) (nachschlagen name (cdr umg))))))
+
+(define (definiere! name wert umg)
+  (set-car! umg (cons (cons name wert) (car umg)))
+  name)
+
+(define globale-umgebung
+  (list (list (cons 'car car) (cons 'cdr cdr) (cons 'cons cons)
+              (cons 'null? null?) (cons 'eq? eq?) (cons '+ +) (cons '- -)
+              (cons '* *) (cons '= =) (cons '< <) (cons 'list list))))
+
+(define (meta a) (m-eval a globale-umgebung))
+
+(meta '(+ 1 2))
+(meta '((lambda (x y) (cons y x)) 1 2))
+(meta '(define fakultaet
+         (lambda (n) (if (= n 0) 1 (* n (fakultaet (- n 1)))))))
+(meta '(fakultaet 10))
+(meta '(define map1
+         (lambda (f l)
+           (if (null? l) (quote ()) (cons (f (car l)) (map1 f (cdr l)))))))
+(meta '(map1 (lambda (x) (* x x)) (list 1 2 3 4)))
+` },
+{ id: 's-str', title: '13 · Zeichen, Zeichenketten, Zahlen', code:
+`(define s "Lisp-Werkbank")
+(string-length s)
+(string-ref s 0)
+(substring s 0 4)
+(string-append "Hallo, " "Welt")
+(string->list "Lisp")
+(list->string (reverse (string->list "Lisp")))
+(map char-upcase (string->list "lisp"))
+(char->integer #\\A)
+(integer->char 955)
+(string->symbol "hallo")
+(symbol->string 'abc)
+(number->string 255 2)
+(string->number "42")
+(define (palindrom? s)
+  (let ((l (string->list s))) (equal? l (reverse l))))
+(palindrom? "reliefpfeiler")
+(define (zaehle-vokale s)
+  (let loop ((l (string->list s)) (n 0))
+    (cond ((null? l) n)
+          ((memv (char-downcase (car l)) '(#\\a #\\e #\\i #\\o #\\u))
+           (loop (cdr l) (+ n 1)))
+          (else (loop (cdr l) n)))))
+(zaehle-vokale "Lisp-Werkbank")
+; Ganze Zahlen beliebiger Größe, Gleitkomma, exakte Division
+(expt 2 100)
+(/ 10 4)
+(/ 12 4)
+(quotient 17 5)
+(remainder 17 5)
+(sqrt 144)
+(sqrt 2)
+` },
+{ id: 's-gc', title: '14 · Speicher und Garbage Collection', code:
+`; Erzeugt viel Müll – Reiter "Speicher" öffnen und zusehen
+(define (wegwerf-liste n)
+  (let loop ((i 0) (acc '()))
+    (if (= i n) acc (loop (+ i 1) (cons i acc)))))
+(define (muell k)
+  (do ((i 0 (+ i 1))) ((= i k) 'fertig) (wegwerf-liste 100)))
+(muell 500)
+(define behalten (wegwerf-liste 1000))
+(gc)
+(length behalten)
+; Gemeinsame Teilstrukturen: im Reiter "Kästchen" ansehen
+(define teil '(c d))
+(define zwei-listen (list (cons 'a teil) (cons 'b teil)))
+zwei-listen
+` }
+];
+if (typeof module !== 'undefined') module.exports = { LISP_EXAMPLES, SCHEME_EXAMPLES };
+
+</script>
+<script>
+(function () {
+'use strict';
+const C = LispCore;
+const $ = id => document.getElementById(id);
+const out = $('out'), inp = $('inp'), ed = $('ed'), edHl = $('edHl');
+
+let mode = 'lisp', memSize = 32768, I = null;
+let busy = false, stopReq = false, pendingStep = null, gcAnim = false;
+let ttyBuf = [], ttyTimer = 0, traceBuf = [], traceTimer = 0;
+let history = [], histPos = 0;
+let editorText = { lisp: null, scheme: null };
+let boxValue = null, boxLabel = '';
+let activeTab = 'box';
+
+/* ---------------- Ausgabe ---------------- */
+function tty(text, cls) {
+  ttyBuf.push([text, cls || '']);
+  if (!ttyTimer) ttyTimer = requestAnimationFrame(flushTty);
+}
+function flushTty() {
+  ttyTimer = 0;
+  const frag = document.createDocumentFragment();
+  for (const [t, c] of ttyBuf) { const s = document.createElement('span'); if (c) s.className = c; s.textContent = t; frag.appendChild(s); }
+  ttyBuf = [];
+  out.appendChild(frag);
+  while (out.childNodes.length > 4000) out.removeChild(out.firstChild);
+  out.scrollTop = out.scrollHeight;
+}
+function traceOut(s, depth) {
+  traceBuf.push(' '.repeat(Math.min(depth, 40)) + s);
+  if (!traceTimer) traceTimer = requestAnimationFrame(flushTrace);
+}
+function flushTrace() {
+  traceTimer = 0;
+  const log = $('traceLog');
+  log.textContent += traceBuf.join('\n') + '\n';
+  traceBuf = [];
+  if (log.textContent.length > 400000) log.textContent = log.textContent.slice(-300000);
+  log.scrollTop = log.scrollHeight;
+}
+
+/* ---------------- Interpreter ---------------- */
+function newInterp() {
+  I = new C.Interp(mode, memSize, {
+    out: s => tty(s, 'res'),
+    trace: traceOut,
+    gc: st => { tty(`; GC: ${st.lastFreed} Zellen eingesammelt, ${I ? I.freeCount : ''} frei\n`, 'info'); }
+  });
+  I.traceAll = $('chkTrace').checked;
+  boxValue = null; boxLabel = '';
+  $('prompt').textContent = mode === 'lisp' ? '*' : '1 ]=>';
+  $('modeTag').textContent = mode === 'lisp' ? 'LISP 1.5 · dynamische Bindung' : 'Scheme (R4RS-Teilmenge) · lexikalische Bindung';
+  $('mWrap').style.display = mode === 'lisp' ? '' : 'none';
+  $('mLisp').classList.toggle('on', mode === 'lisp');
+  $('mScheme').classList.toggle('on', mode === 'scheme');
+  tty(`${mode === 'lisp' ? 'LISP 1.5' : 'Scheme'} bereit · ${memSize} Cons-Zellen · nach dem Start ${I.usedCount()} belegt\n`, 'info');
+  fillExamples();
+  renderHelp();
+  refreshViews();
+  status();
+}
+function status(extra) {
+  if (!I) return;
+  const s = `${mode === 'lisp' ? 'LISP 1.5' : 'Scheme'} · Zellen ${I.usedCount()}/${I.N} belegt · ${I.freeCount} frei · GC ${I.stats.gcs}× · Schritte ${I.steps}` + (extra ? ' · ' + extra : busy ? (pendingStep ? ' · angehalten (Einzelschritt)' : ' · läuft …') : ' · bereit');
+  $('status').textContent = s;
+}
+function setBusy(b) {
+  busy = b;
+  $('btnStop').disabled = !b;
+  $('btnStep').disabled = !(b && pendingStep);
+  $('btnCont').disabled = !(b && pendingStep);
+  for (const id of ['btnRun', 'btnEval', 'btnReset', 'mLisp', 'mScheme', 'memSize', 'btnGC', 'btnBox']) $(id).disabled = b;
+  status();
+}
+
+function printError(e) {
+  if (!(e instanceof C.LispError)) { console.error(e); e = { message: 'Interner Fehler: ' + (e && e.message || e) }; }
+  let s = (mode === 'lisp' ? '*** ' : ';') + e.message + '\n';
+  if (e.where) s += (mode === 'lisp' ? '    ' : ';  ') + e.where + '\n';
+  if (e.trace && e.trace.length) s += (mode === 'lisp' ? '    ' : ';  ') + 'Aufrufkette: ' + e.trace.join(' ← ') + '\n';
+  tty(s, 'err');
+}
+
+function drive() {
+  return new Promise((resolve, reject) => {
+    const tick = () => {
+      pendingStep = null;
+      if (stopReq) { stopReq = false; I.abort(); reject(new C.LispError('Abgebrochen (Halt gedrückt)')); return; }
+      try {
+        if ($('chkStep').checked) {
+          const done = I.run(1);
+          if (done) { resolve(); return; }
+          pendingStep = tick; setBusy(true); showState(); return;
+        }
+        const t0 = performance.now();
+        let done = false;
+        while (!done && performance.now() - t0 < 30) done = I.run(4000);
+        status();
+        if (done) resolve(); else setTimeout(tick, 0);
+      } catch (e) { reject(e); }
+    };
+    tick();
+  });
+}
+
+async function runText(text, opts) {
+  opts = opts || {};
+  if (busy || gcAnim) return;
+  let parsed;
+  try { parsed = I.parse(text, mode === 'lisp' && $('chkM').checked); }
+  catch (e) { printError(e); return; }
+  const jobs = parsed.jobs;
+  if (!jobs.length) return;
+  setBusy(true);
+  if ($('chkStep').checked) switchTab('trace');
+  for (let k = 0; k < jobs.length; k++) {
+    const job = jobs[k];
+    if (!opts.silent) {
+      tty(`${$('prompt').textContent} ${I.jobText(job)}\n`, 'echo');
+      if (parsed.translation && opts.showTrans !== false) { /* Übersetzung steht in der Echozeile */ }
+    }
+    try {
+      I.startJob(job);
+      await drive();
+      const v = I.lastValue;
+      if (opts.silent) { boxValue = v; boxLabel = opts.label || ''; I.viewRoots = [v]; }
+      else {
+        const s = I.print(v, true);
+        if (s !== '') tty(s + '\n', 'res'); else tty((mode === 'lisp' ? '' : ';Unspezifizierter Wert') + '\n', 'info');
+        if ($('chkBoxLast').checked) { boxValue = v; boxLabel = I.jobText(job); I.viewRoots = [v]; }
+      }
+    } catch (e) {
+      printError(e);
+      break;
+    } finally { flushTty(); }
+  }
+  pendingStep = null;
+  setBusy(false);
+  showState();
+  refreshViews();
+}
+
+/* ---------------- Listener-Eingabe ---------------- */
+function balanced(s) {
+  let d = 0, inStr = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (inStr) { if (c === '\\') i++; else if (c === '"') inStr = false; continue; }
+    if (c === '"') inStr = true;
+    else if (c === ';') { while (i < s.length && s[i] !== '\n') i++; }
+    else if (c === '#' && s[i + 1] === '\\') i += 2;
+    else if (c === '(' ) d++;
+    else if (c === ')') d--;
+  }
+  return d <= 0 && !inStr;
+}
+function submit() {
+  const t = inp.value;
+  if (!t.trim()) return;
+  history.push(t); histPos = history.length;
+  inp.value = '';
+  runText(t);
+}
+inp.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    if (mode === 'lisp' && $('chkM').checked) { e.preventDefault(); submit(); return; }
+    if (balanced(inp.value)) { e.preventDefault(); submit(); return; }
+  }
+  if (e.key === 'ArrowUp' && inp.selectionStart === 0 && history.length) { e.preventDefault(); histPos = Math.max(0, histPos - 1); inp.value = history[histPos]; }
+  if (e.key === 'ArrowDown' && inp.selectionEnd === inp.value.length && history.length) { e.preventDefault(); histPos = Math.min(history.length, histPos + 1); inp.value = history[histPos] || ''; }
+});
+$('btnEval').onclick = submit;
+$('btnClear').onclick = () => { out.textContent = ''; };
+$('btnStop').onclick = () => { stopReq = true; if (pendingStep) { const f = pendingStep; f(); } };
+$('btnStep').onclick = () => { if (pendingStep) { const f = pendingStep; f(); } };
+$('btnCont').onclick = () => { $('chkStep').checked = false; if (pendingStep) { const f = pendingStep; f(); } };
+$('chkTrace').onchange = () => { if (I) I.traceAll = $('chkTrace').checked; if ($('chkTrace').checked) switchTab('trace'); };
+$('chkStep').onchange = () => { if ($('chkStep').checked) switchTab('trace'); };
+$('chkM').onchange = () => { $('prompt').textContent = $('chkM').checked ? 'M>' : '*'; };
+
+/* ---------------- Modus, Speicher, Thema ---------------- */
+function setMode(m) {
+  if (busy || m === mode) return;
+  editorText[mode] = ed.value;
+  mode = m;
+  $('chkM').checked = false;
+  newInterp();
+  if (editorText[mode] !== null) setEditor(editorText[mode]); else loadExample(0);
+}
+$('mLisp').onclick = () => setMode('lisp');
+$('mScheme').onclick = () => setMode('scheme');
+$('memSize').onchange = () => { memSize = +$('memSize').value; tty('; Speichergröße geändert – Neustart\n', 'info'); newInterp(); };
+$('btnReset').onclick = () => { tty('; Neustart\n', 'info'); newInterp(); };
+$('btnTheme').onclick = () => {
+  const ph = document.documentElement.getAttribute('data-theme') === 'phosphor';
+  if (ph) document.documentElement.removeAttribute('data-theme'); else document.documentElement.setAttribute('data-theme', 'phosphor');
+  $('btnTheme').textContent = ph ? 'Phosphor' : 'Papier';
+  memColors = null; refreshViews();
+};
+
+/* ---------------- Beispiele, Laden, Speichern ---------------- */
+function examples() { return mode === 'lisp' ? LISP_EXAMPLES : SCHEME_EXAMPLES; }
+function fillExamples() {
+  const sel = $('exSel'); sel.innerHTML = '';
+  const o0 = document.createElement('option'); o0.value = ''; o0.textContent = 'Beispielprogramme …'; sel.appendChild(o0);
+  examples().forEach((ex, k) => { const o = document.createElement('option'); o.value = k; o.textContent = ex.title; sel.appendChild(o); });
+}
+function loadExample(k) {
+  const ex = examples()[k]; if (!ex) return;
+  setEditor(ex.code);
+  if (mode === 'lisp') { $('chkM').checked = !!ex.mexpr; $('prompt').textContent = ex.mexpr ? 'M>' : '*'; }
+}
+$('exSel').onchange = () => { const v = $('exSel').value; if (v !== '') loadExample(+v); $('exSel').value = ''; };
+$('btnRun').onclick = () => runText(ed.value);
+$('btnLoad').onclick = () => $('file').click();
+$('file').onchange = () => {
+  const f = $('file').files[0]; if (!f) return;
+  const r = new FileReader();
+  r.onload = () => { setEditor(String(r.result)); tty(`; ${f.name} geladen (${String(r.result).length} Zeichen)\n`, 'info'); };
+  r.readAsText(f);
+  $('file').value = '';
+};
+$('btnSave').onclick = () => {
+  const blob = new Blob([ed.value], { type: 'text/plain;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = mode === 'lisp' ? 'programm.lisp' : 'programm.scm';
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+};
+
+/* ---------------- Editor: Klammernhilfe und Einrücken ---------------- */
+function scanTokens(s) {
+  /* liefert Klammerpositionen mit Partner, Kommentare und Zeichenketten */
+  const parens = [], stack = [], match = new Map(), bad = new Set(), spans = [];
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '"') { const st = i; i++; while (i < s.length && s[i] !== '"') { if (s[i] === '\\') i++; i++; } spans.push([st, i + 1, 's']); continue; }
+    if (c === ';') { const st = i; while (i < s.length && s[i] !== '\n') i++; spans.push([st, i, 'c']); i--; continue; }
+    if (c === '#' && s[i + 1] === '\\') { i += 2; continue; }
+    if (c === '#' && s[i + 1] === '|') { const st = i; const e = s.indexOf('|#', i + 2); i = e < 0 ? s.length : e + 1; spans.push([st, i + 1, 'c']); continue; }
+    if (c === '(' || c === '[') { stack.push(i); parens.push(i); }
+    else if (c === ')' || c === ']') { parens.push(i); if (stack.length) { const o = stack.pop(); match.set(o, i); match.set(i, o); } else bad.add(i); }
+  }
+  for (const o of stack) bad.add(o);
+  return { match, bad, spans };
+}
+function esc(s) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+function renderHl() {
+  const s = ed.value, { match, bad, spans } = scanTokens(s);
+  const pos = ed.selectionStart;
+  const mark = new Map();
+  let p = -1;
+  if (ed.selectionStart === ed.selectionEnd) {
+    if (pos > 0 && match.has(pos - 1) && ')]'.includes(s[pos - 1])) p = pos - 1;
+    else if (match.has(pos) && '(['.includes(s[pos])) p = pos;
+    else if (pos > 0 && match.has(pos - 1)) p = pos - 1;
+  }
+  if (p >= 0) { mark.set(p, 'pm'); mark.set(match.get(p), 'pm'); }
+  for (const b of bad) mark.set(b, 'bad');
+  const pts = [];
+  for (const [a, b, c] of spans) pts.push([a, b, c]);
+  pts.sort((x, y) => x[0] - y[0]);
+  let html = '', i = 0, k = 0;
+  while (i < s.length) {
+    if (k < pts.length && pts[k][0] === i) { const [a, b, c] = pts[k++]; html += `<span class="${c}">${esc(s.slice(a, Math.min(b, s.length)))}</span>`; i = Math.min(b, s.length); continue; }
+    const next = k < pts.length ? pts[k][0] : s.length;
+    let j = i;
+    while (j < next) {
+      if (mark.has(j)) { html += esc(s.slice(i, j)) + `<span class="${mark.get(j)}">${esc(s[j])}</span>`; i = j + 1; }
+      j++;
+    }
+    html += esc(s.slice(i, next)); i = next;
+  }
+  edHl.innerHTML = html + '\n ';
+  edHl.scrollTop = ed.scrollTop; edHl.scrollLeft = ed.scrollLeft;
+  const before = s.slice(0, pos), line = before.split('\n').length, col = pos - before.lastIndexOf('\n');
+  $('edPos').textContent = `Zeile ${line}, Spalte ${col}` + (bad.size ? ` · ${bad.size} Klammer(n) ohne Partner` : '');
+}
+function setEditor(t) { ed.value = t; ed.scrollTop = 0; renderHl(); }
+const BODY = new Set(['define', 'lambda', 'let', 'let*', 'letrec', 'letrec*', 'named-lambda', 'do', 'when', 'unless', 'define-syntax', 'define-macro', 'syntax-rules', 'case', 'prog', 'defun', 'label', 'call/cc', 'call-with-current-continuation']);
+function indentFor(s, pos) {
+  const stack = [];
+  for (let i = 0; i < pos; i++) {
+    const c = s[i];
+    if (c === '"') { i++; while (i < pos && s[i] !== '"') { if (s[i] === '\\') i++; i++; } continue; }
+    if (c === ';') { while (i < pos && s[i] !== '\n') i++; continue; }
+    if (c === '#' && s[i + 1] === '\\') { i += 2; continue; }
+    if (c === '(') stack.push(i); else if (c === ')') stack.pop();
+  }
+  if (!stack.length) return 0;
+  const o = stack[stack.length - 1];
+  const col = o - (s.lastIndexOf('\n', o - 1) + 1);
+  const lineEnd = (() => { const e = s.indexOf('\n', o); return e < 0 || e > pos ? pos : e; })();
+  const rest = s.slice(o + 1, lineEnd);
+  if (/^\s*[(\[]/.test(rest) || /^\s*$/.test(rest)) return col + 1;
+  const m = /^(\S+?)(?=[\s()]|$)/.exec(rest);
+  const op = m ? m[1].toLowerCase() : '';
+  if (BODY.has(op)) return col + 2;
+  const m2 = /^\S+?(?=[\s(]|$)\s+(?=\S)/.exec(rest);
+  if (m2) return col + 1 + m2[0].length;
+  return col + 1;
+}
+function reindentAll() {
+  const lines = ed.value.split('\n');
+  let acc = '';
+  for (let k = 0; k < lines.length; k++) {
+    const t = lines[k].replace(/^\s+/, '');
+    const ind = t === '' ? 0 : indentFor(acc, acc.length);
+    acc += (k ? '' : '') + ' '.repeat(ind) + t + (k < lines.length - 1 ? '\n' : '');
+  }
+  const pos = ed.selectionStart;
+  ed.value = acc; ed.selectionStart = ed.selectionEnd = Math.min(pos, acc.length);
+  renderHl();
+}
+$('btnIndent').onclick = reindentAll;
+ed.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); runText(ed.value); return; }
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    const s = ed.value, a = ed.selectionStart, b = ed.selectionEnd;
+    const head = s.slice(0, a);
+    const ind = indentFor(head, head.length);
+    const ins = '\n' + ' '.repeat(ind);
+    ed.value = head + ins + s.slice(b).replace(/^[ \t]+/, '');
+    ed.selectionStart = ed.selectionEnd = a + ins.length;
+    renderHl(); return;
+  }
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    const s = ed.value, a = ed.selectionStart;
+    const ls = s.lastIndexOf('\n', a - 1) + 1;
+    let le = s.indexOf('\n', ls); if (le < 0) le = s.length;
+    const line = s.slice(ls, le).replace(/^\s+/, '');
+    const ind = indentFor(s, ls);
+    ed.value = s.slice(0, ls) + ' '.repeat(ind) + line + s.slice(le);
+    ed.selectionStart = ed.selectionEnd = ls + ind + Math.max(0, a - ls - (s.slice(ls, le).length - line.length));
+    renderHl(); return;
+  }
+});
+ed.addEventListener('input', renderHl);
+ed.addEventListener('scroll', () => { edHl.scrollTop = ed.scrollTop; edHl.scrollLeft = ed.scrollLeft; });
+for (const ev of ['keyup', 'click', 'select']) ed.addEventListener(ev, renderHl);
+document.addEventListener('selectionchange', () => { if (document.activeElement === ed) renderHl(); });
+
+/* ---------------- Reiter ---------------- */
+function switchTab(t) {
+  activeTab = t;
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  document.querySelectorAll('.views .tab').forEach(d => { d.hidden = d.id !== 'tab-' + t; });
+  refreshViews();
+}
+document.querySelectorAll('nav.tabs button').forEach(b => b.onclick = () => switchTab(b.dataset.tab));
+function refreshViews() {
+  if (!I) return;
+  if (activeTab === 'box') renderBox();
+  else if (activeTab === 'mem') renderMem();
+  else if (activeTab === 'env') renderEnv();
+  else if (activeTab === 'trace') showState();
+  status();
+}
+
+/* ---------------- Kästchen-und-Pfeil-Ansicht ---------------- */
+function svgEl(tag, attrs, text) {
+  const e = document.createElementNS('http://www.w3.org/2000/svg', tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (text !== undefined) e.textContent = text;
+  return e;
+}
+function renderBox() {
+  const host = $('boxSvg'); host.innerHTML = '';
+  const v = boxValue;
+  if (v === null) { $('boxInfo').textContent = 'Noch kein Wert. Einen Ausdruck oben eingeben oder im Listener etwas auswerten.'; return; }
+  $('boxInfo').textContent = (boxLabel ? boxLabel + '  ⇒  ' : '') + I.short(v, 160);
+  const CAR = I.CAR, CDR = I.CDR, Cell = C.Cell;
+  if (!(v instanceof Cell)) {
+    const svg = svgEl('svg', { width: 320, height: 70, viewBox: '0 0 320 70' });
+    svg.appendChild(svgEl('text', { x: 14, y: 40, fill: 'currentColor', 'font-size': 16, 'font-family': 'monospace' }, 'Atom: ' + I.short(v, 30)));
+    host.appendChild(svg); return;
+  }
+  const pos = new Map(), rowNext = [], nodes = [], edges = [], labels = [];
+  const LIMIT = 260; let count = 0, truncated = false;
+  const small = a => { const s = I.atomStr(a, true); return s.length <= 4 ? s : null; };
+  const occupy = (row, c) => { rowNext[row] = Math.max(rowNext[row] || 0, c); };
+  function chain(cell, row, minCol) {
+    const col = Math.max(minCol, rowNext[row] || 0);
+    const list = [];
+    let p = cell;
+    while (p instanceof Cell && !pos.has(p.i)) {
+      if (count >= LIMIT) { truncated = true; break; }
+      pos.set(p.i, { c: col + list.length, r: row }); list.push(p); count++;
+      p = CDR[p.i];
+    }
+    occupy(row, col + list.length);
+    list.forEach((cl, k) => nodes.push({ cell: cl, c: col + k, r: row }));
+    for (let k = 0; k < list.length; k++) {
+      const cl = list[k], d = CDR[cl.i];
+      if (k < list.length - 1) { edges.push({ kind: 'cdr', from: cl.i, to: list[k + 1].i }); continue; }
+      if (d instanceof Cell) { if (pos.has(d.i)) edges.push({ kind: 'share', from: cl.i, half: 1, to: d.i }); else edges.push({ kind: 'more', from: cl.i, half: 1 }); }
+      else if (d !== C.EMPTY) {
+        const sm = small(d);
+        if (sm) nodes.find(n => n.cell === cl).cdrText = sm;
+        else { const lc = Math.max(col + k + 1, rowNext[row] || 0); labels.push({ c: lc, r: row, text: I.short(d, 14) }); occupy(row, lc + 1); edges.push({ kind: 'lbl', from: cl.i, half: 1, lc, lr: row }); }
+      }
+    }
+    for (let k = 0; k < list.length; k++) {
+      const cl = list[k], a = CAR[cl.i];
+      if (a instanceof Cell) {
+        if (pos.has(a.i)) edges.push({ kind: 'share', from: cl.i, half: 0, to: a.i });
+        else if (count >= LIMIT) { truncated = true; edges.push({ kind: 'more', from: cl.i, half: 0 }); }
+        else { chain(a, row + 1, col + k); edges.push({ kind: 'car', from: cl.i, to: a.i }); }
+      } else if (a !== C.EMPTY) {
+        const sm = small(a);
+        if (sm) nodes.find(n => n.cell === cl).carText = sm;
+        else { const lc = Math.max(col + k, rowNext[row + 1] || 0); labels.push({ c: lc, r: row + 1, text: I.short(a, 14) }); occupy(row + 1, lc + 1); edges.push({ kind: 'lbl', from: cl.i, half: 0, lc, lr: row + 1 }); }
+      } else nodes.find(n => n.cell === cl).carNil = true;
+    }
+    return col;
+  }
+  chain(v, 0, 0);
+  const CW = 92, RH = 66, X0 = 48, Y0 = 24, BW = 32, BH = 26;
+  const bx = c => X0 + c * CW, by = r => Y0 + r * RH;
+  let maxC = 0, maxR = 0;
+  for (const n of nodes) { maxC = Math.max(maxC, n.c); maxR = Math.max(maxR, n.r); }
+  for (const l of labels) { maxC = Math.max(maxC, l.c); maxR = Math.max(maxR, l.r); }
+  const W = X0 + (maxC + 1) * CW + 30, H = Y0 + (maxR + 1) * RH + 20;
+  const svg = svgEl('svg', { width: W, height: H, viewBox: `0 0 ${W} ${H}`, style: 'color:var(--ink)', 'font-family': 'monospace' });
+  const defs = svgEl('defs', {});
+  for (const [id, col] of [['ah', 'currentColor'], ['ahs', 'var(--accent)']]) {
+    const m = svgEl('marker', { id, viewBox: '0 0 10 10', refX: 9, refY: 5, markerWidth: 7, markerHeight: 7, orient: 'auto-start-reverse' });
+    m.appendChild(svgEl('path', { d: 'M0,0 L10,5 L0,10 z', fill: col })); defs.appendChild(m);
+  }
+  svg.appendChild(defs);
+  svg.appendChild(svgEl('text', { x: 4, y: Y0 + 17, 'font-size': 11, fill: 'var(--dim)' }, 'Wert'));
+  svg.appendChild(svgEl('line', { x1: 34, y1: Y0 + BH / 2, x2: X0 - 2, y2: Y0 + BH / 2, stroke: 'currentColor', 'stroke-width': 1.5, 'marker-end': 'url(#ah)' }));
+  const P = i => pos.get(i);
+  for (const e of edges) {
+    const f = P(e.from), x = bx(f.c), y = by(f.r);
+    const sx = x + (e.half ? BW * 1.5 : BW / 2), sy = y + BH / 2;
+    if (e.kind === 'cdr') { const t = P(e.to); svg.appendChild(svgEl('line', { x1: x + BW * 1.5, y1: sy, x2: bx(t.c) - 1, y2: by(t.r) + BH / 2, stroke: 'currentColor', 'stroke-width': 1.5, 'marker-end': 'url(#ah)' })); }
+    else if (e.kind === 'car') { const t = P(e.to); svg.appendChild(svgEl('line', { x1: x + BW / 2, y1: sy, x2: bx(t.c) + BW / 2, y2: by(t.r) - 1, stroke: 'currentColor', 'stroke-width': 1.5, 'marker-end': 'url(#ah)' })); }
+    else if (e.kind === 'lbl') { const lx = bx(e.lc) + BW, ly = by(e.lr); const ty = e.lr === f.r ? sy : ly + 4; const tx = e.lr === f.r ? bx(e.lc) - 2 : lx; svg.appendChild(svgEl('line', { x1: sx, y1: sy, x2: tx, y2: ty, stroke: 'currentColor', 'stroke-width': 1.3, 'marker-end': 'url(#ah)' })); }
+    else if (e.kind === 'share') {
+      const t = P(e.to), tx = bx(t.c) + BW, ty = by(t.r);
+      const cy = Math.min(sy, ty) - 30 - Math.abs(t.c - f.c) * 4;
+      svg.appendChild(svgEl('path', { d: `M${sx},${sy} C${sx},${cy} ${tx},${cy} ${tx},${ty - 1}`, fill: 'none', stroke: 'var(--accent)', 'stroke-width': 1.5, 'stroke-dasharray': '5 3', 'marker-end': 'url(#ahs)' }));
+    } else if (e.kind === 'more') { svg.appendChild(svgEl('text', { x: sx + 8, y: sy + 30, 'font-size': 13, fill: 'var(--accent)' }, '…')); }
+  }
+  for (const n of nodes) {
+    const x = bx(n.c), y = by(n.r);
+    svg.appendChild(svgEl('rect', { x, y, width: BW * 2, height: BH, fill: 'var(--paper)', stroke: 'currentColor', 'stroke-width': 1.6 }));
+    svg.appendChild(svgEl('line', { x1: x + BW, y1: y, x2: x + BW, y2: y + BH, stroke: 'currentColor', 'stroke-width': 1.2 }));
+    svg.appendChild(svgEl('text', { x: x + 1, y: y - 4, 'font-size': 9.5, fill: 'var(--dim)' }, '#' + n.cell.i));
+    const d = CDR[n.cell.i];
+    if (d === C.EMPTY) svg.appendChild(svgEl('line', { x1: x + BW + 3, y1: y + BH - 3, x2: x + 2 * BW - 3, y2: y + 3, stroke: 'currentColor', 'stroke-width': 1.3 }));
+    if (n.carNil) svg.appendChild(svgEl('line', { x1: x + 3, y1: y + BH - 3, x2: x + BW - 3, y2: y + 3, stroke: 'currentColor', 'stroke-width': 1.3 }));
+    if (n.carText) svg.appendChild(svgEl('text', { x: x + BW / 2, y: y + 17, 'font-size': 11.5, 'text-anchor': 'middle', fill: 'currentColor' }, n.carText));
+    if (n.cdrText) svg.appendChild(svgEl('text', { x: x + BW * 1.5, y: y + 17, 'font-size': 11.5, 'text-anchor': 'middle', fill: 'currentColor' }, n.cdrText));
+    if (!n.carText && !n.carNil && !(CAR[n.cell.i] instanceof Cell) && !(edges.some(e => e.from === n.cell.i && e.half === 0 && e.kind === 'lbl'))) {/* nichts */}
+    if (CAR[n.cell.i] instanceof Cell || edges.some(e => e.from === n.cell.i && e.half === 0 && (e.kind === 'lbl' || e.kind === 'share')))
+      svg.appendChild(svgEl('circle', { cx: x + BW / 2, cy: y + BH / 2, r: 2.6, fill: 'currentColor' }));
+    if ((d instanceof Cell) || edges.some(e => e.from === n.cell.i && e.half === 1 && e.kind === 'lbl'))
+      svg.appendChild(svgEl('circle', { cx: x + BW * 1.5, cy: y + BH / 2, r: 2.6, fill: 'currentColor' }));
+  }
+  for (const l of labels) {
+    const x = bx(l.c), y = by(l.r);
+    svg.appendChild(svgEl('text', { x: x + BW, y: y + 18, 'font-size': 12, 'text-anchor': 'middle', fill: 'currentColor', 'font-weight': 700 }, l.text));
+  }
+  host.appendChild(svg);
+  if (truncated) $('boxInfo').textContent += `   (gekürzt: nur die ersten ${LIMIT} Zellen gezeichnet)`;
+}
+async function showBoxExpr() {
+  const t = $('boxExpr').value.trim(); if (!t) return;
+  await runText(t, { silent: true, label: t });
+  switchTab('box');
+}
+$('btnBox').onclick = showBoxExpr;
+$('boxExpr').addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); showBoxExpr(); } });
+function showCellInBox(i, label) {
+  if (!I.used[i]) return;
+  boxValue = I.cells[i]; boxLabel = label || ('Zelle #' + i); I.viewRoots = [boxValue];
+  switchTab('box');
+}
+
+/* ---------------- Speicher-Ansicht ---------------- */
+let memColors = null;
+function hexToRgb(c) {
+  const d = document.createElement('div'); d.style.color = c; document.body.appendChild(d);
+  const m = getComputedStyle(d).color.match(/\d+/g); d.remove(); return m.slice(0, 3).map(Number);
+}
+function cssVar(n) { return getComputedStyle(document.documentElement).getPropertyValue(n).trim(); }
+function memGeom() { const cols = I.N <= 16384 ? 128 : 256; return { cols, rows: Math.ceil(I.N / cols), pitch: 4 }; }
+function renderMem() {
+  if (!memColors) memColors = { free: hexToRgb(cssVar('--mem-free')), used: hexToRgb(cssVar('--mem-used')), mark: hexToRgb(cssVar('--mem-mark')), freed: hexToRgb(cssVar('--mem-freed')), sweep: hexToRgb(cssVar('--mem-sweep')), bg: hexToRgb(cssVar('--paper')) };
+  const { cols, rows, pitch } = memGeom();
+  const cv = $('memCv'), W = cols * pitch, H = rows * pitch;
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  cv.style.width = '100%'; cv.style.maxWidth = (W * 1.6) + 'px';
+  const ctx = cv.getContext('2d'), img = ctx.createImageData(W, H), d = img.data;
+  const showMark = !!I.gcPhase, sweepPos = I.sweepPos;
+  for (let k = 0; k < d.length; k += 4) { d[k] = memColors.bg[0]; d[k + 1] = memColors.bg[1]; d[k + 2] = memColors.bg[2]; d[k + 3] = 255; }
+  for (let i = 0; i < I.N; i++) {
+    let c;
+    if (I.used[i]) c = (showMark && I.mark[i]) ? memColors.mark : memColors.used;
+    else c = I.freedFlag[i] ? memColors.freed : memColors.free;
+    if (I.gcPhase === 'sweep' && i >= sweepPos && i < sweepPos + cols) c = memColors.sweep;
+    const x0 = (i % cols) * pitch, y0 = Math.floor(i / cols) * pitch;
+    for (let y = 0; y < pitch - 1; y++) for (let x = 0; x < pitch - 1; x++) { const o = ((y0 + y) * W + x0 + x) * 4; d[o] = c[0]; d[o + 1] = c[1]; d[o + 2] = c[2]; }
+  }
+  ctx.putImageData(img, 0, 0);
+  const st = I.stats, used = I.usedCount();
+  $('memStats').innerHTML = [
+    ['Zellen gesamt', I.N], ['belegt', used + ` (${Math.round(used * 100 / I.N)} %)`], ['frei', I.freeCount],
+    ['GC-Läufe', st.gcs], ['zuletzt markiert', st.lastMarked], ['zuletzt eingesammelt', st.lastFreed],
+    ['insgesamt eingesammelt', st.totalFreed], ['CONS seit Start', st.conses]
+  ].map(([a, b]) => `<div class="stat"><b>${b}</b><span>${a}</span></div>`).join('');
+  const fl = []; let p = I.freeHead;
+  while (p >= 0 && fl.length < 24) { fl.push('#' + p); p = I.CDR[p]; }
+  $('freeList').textContent = 'Freispeicherliste: Kopf → ' + (fl.length ? fl.join(' → ') + (p >= 0 ? ' → …' : ' → Ende') : '(leer)') + `   (${I.freeCount} Zellen)`;
+}
+function memIndex(ev) {
+  const cv = $('memCv'), r = cv.getBoundingClientRect(), { cols, pitch } = memGeom();
+  const x = (ev.clientX - r.left) * cv.width / r.width, y = (ev.clientY - r.top) * cv.height / r.height;
+  const i = Math.floor(y / pitch) * cols + Math.floor(x / pitch);
+  return i >= 0 && i < I.N ? i : -1;
+}
+$('memCv').addEventListener('mousemove', ev => {
+  const i = memIndex(ev); if (i < 0) return;
+  if (I.used[i]) $('memInfo').textContent = `Zelle #${i}: belegt\nCAR: ${I.short(I.CAR[i], 70)}\nCDR: ${I.short(I.CDR[i], 70)}`;
+  else $('memInfo').textContent = `Zelle #${i}: frei → nächste freie Zelle ${I.CDR[i] >= 0 ? '#' + I.CDR[i] : '(Ende der Liste)'}`;
+});
+$('memCv').addEventListener('click', ev => { const i = memIndex(ev); if (i >= 0 && I.used[i] && !busy) showCellInBox(i); });
+$('btnGC').onclick = () => {
+  if (busy || gcAnim) return;
+  gcAnim = true; setBusy(true); $('btnStop').disabled = true;
+  const g = I.gcGen(true);
+  const step = () => {
+    let r;
+    for (let k = 0; k < 2; k++) { r = g.next(); if (r.done) break; }
+    $('gcPhase').textContent = I.gcPhase === 'mark' ? `Mark-Phase: ${r.value ? r.value.marked : ''} Zellen erreichbar …` : I.gcPhase === 'sweep' ? 'Sweep-Phase: unmarkierte Zellen kommen in die Freispeicherliste …' : '';
+    renderMem();
+    if (!r.done) { requestAnimationFrame(step); return; }
+    $('gcPhase').textContent = `Fertig: ${I.stats.lastMarked} Zellen erreichbar, ${I.stats.lastFreed} eingesammelt.`;
+    tty(`; GC (manuell): ${I.stats.lastFreed} Zellen eingesammelt, ${I.freeCount} frei\n`, 'info');
+    gcAnim = false; setBusy(false); renderMem();
+  };
+  requestAnimationFrame(step);
+};
+
+/* ---------------- Umgebungs-Ansicht ---------------- */
+function renderEnv() {
+  const v = I.envView(), host = $('envBox');
+  const running = I.st !== 0;
+  let html = '';
+  const row = (n, val, extra) => `<tr><td class="n" data-v="${val}">${esc(n)}</td>${extra !== undefined ? `<td>${esc(extra)}</td>` : ''}<td class="v">${esc(I.short(vals[val], 140))}</td></tr>`;
+  const vals = [];
+  const add = x => { vals.push(x); return vals.length - 1; };
+  if (mode === 'lisp') {
+    html += `<p class="note">LISP 1.5 bindet <b>dynamisch</b>: alle Bindungen stehen in <b>einer</b> Assoziationsliste (a-list). Jeder Funktionsaufruf legt seine Parameter vorne auf, die Suche läuft von vorn nach hinten. ${running ? 'Aktuelle a-list während des Laufs:' : 'Außerhalb eines Laufs ist die a-list leer; im Einzelschritt sieht man sie wachsen.'}</p>`;
+    const fr = v.frames[0];
+    html += `<table class="env"><tr><th>Variable</th><th>Wert (a-list, vorn = zuletzt gebunden)</th></tr>` + (fr.length ? fr.map(b => row(b.name, add(b.value))).join('') : '<tr><td colspan="2">(leer)</td></tr>') + '</table>';
+    html += `<p class="note">Globale Werte und Funktionen stehen in den Eigenschaftslisten der Atome (APVAL, EXPR, FEXPR, eigene Indikatoren). Nur selbst angelegte:</p>`;
+    html += `<table class="env"><tr><th>Atom</th><th>Indikator</th><th>Wert</th></tr>` + (v.globals.length ? v.globals.map(g => row(g.name, add(g.value), g.ind)).join('') : '<tr><td colspan="3">(noch nichts definiert)</td></tr>') + '</table>';
+  } else {
+    html += `<p class="note">Scheme bindet <b>lexikalisch</b>: eine Umgebung ist eine Kette von Rahmen. Ein Rahmen entsteht bei jedem Prozeduraufruf und zeigt auf den Rahmen, in dem die Prozedur <b>definiert</b> wurde – nicht auf den des Aufrufers. ${running ? 'Aktuelle Kette während des Laufs (innerster Rahmen zuerst):' : 'Außerhalb eines Laufs gibt es nur die globale Umgebung; im Einzelschritt sieht man die Rahmen.'}</p>`;
+    v.frames.forEach((fr, k) => {
+      html += `<table class="env"><tr><th colspan="2">Rahmen ${k + 1}${k === 0 ? ' (innerster)' : ''} · Zelle #${fr.length ? fr[0].cell : '?'}</th></tr>` + (fr.length ? fr.map(b => row(b.name, add(b.value))).join('') : '<tr><td colspan="2">(leer)</td></tr>') + '</table>';
+    });
+    html += `<table class="env"><tr><th colspan="2">Globale Umgebung (selbst definiert)</th></tr>` + (v.globals.length ? v.globals.map(g => row(g.name, add(g.value))).join('') : '<tr><td colspan="2">(noch nichts definiert)</td></tr>') + '</table>';
+  }
+  host.innerHTML = html;
+  host.querySelectorAll('td.n').forEach(td => td.onclick = () => {
+    const val = vals[+td.dataset.v]; boxValue = val; boxLabel = td.textContent; I.viewRoots = [val]; switchTab('box');
+  });
+}
+
+/* ---------------- Einzelschritt / Spur ---------------- */
+function showState() {
+  if (!I) return;
+  const s = I.describeState();
+  const box = $('stateBox');
+  box.innerHTML = `<span class="art">${s.art}</span>${busy ? (pendingStep ? 'angehalten nach Schritt ' + I.steps : 'läuft') : 'bereit'}<pre>${esc(s.text)}</pre>`;
+  if (busy && pendingStep) {
+    const K = I.K, items = [];
+    for (let k = K.length - 1; k >= 0 && items.length < 30; k--) items.push(`<li>${esc(I.frameDesc(K[k]))}</li>`);
+    $('stackBox').innerHTML = `<b style="font-size:12px">Fortsetzungsstapel (${K.length} Rahmen, oben = als Nächstes)</b><ol class="stack">${items.join('')}</ol>`;
+  } else $('stackBox').innerHTML = '';
+  if (activeTab === 'env') renderEnv();
+  status();
+}
+$('btnTraceClear').onclick = () => { $('traceLog').textContent = ''; };
+
+/* ---------------- Hilfe ---------------- */
+function renderHelp() {
+  const L = `
+<h3>LISP 1.5 – Kurzreferenz</h3>
+<h4>Eingabe</h4>
+<ul>
+<li><b>EVALQUOTE-Stil</b> wie 1962: <code>CONS (A (B C))</code> – ein Funktionsname, dahinter die Argumentliste; die Argumente werden <i>nicht</i> ausgewertet.</li>
+<li><b>S-Ausdruck mit EVAL</b>: <code>(CONS (QUOTE A) (QUOTE (B C)))</code>. Regel: Ein Atom, auf das direkt eine Liste folgt, bildet ein EVALQUOTE-Paar; alles andere wird ausgewertet.</li>
+<li><b>M-Ausdrücke</b> (Haken „M-Ausdrücke“): <code>fakt[n] = [zerop[n] → 1; T → times[n; fakt[sub1[n]]]]</code>. Klein geschrieben = Funktion/Variable, GROSS = Konstante. <code>-&gt;</code> geht statt <code>→</code>, <code>;;</code> leitet einen Kommentar ein. Die Übersetzung erscheint als S-Ausdruck im Listener.</li>
+<li>Kleinbuchstaben werden in Großbuchstaben gewandelt, Komma trennt wie ein Leerzeichen: <code>(A,B,C)</code>.</li>
+</ul>
+<h4>Sonderformen</h4>
+<table><tr><th>Form</th><th>Bedeutung</th></tr>
+<tr><td><code>(QUOTE x)</code>, <code>'x</code></td><td>x unausgewertet</td></tr>
+<tr><td><code>(COND (p e …) …)</code></td><td>bedingter Ausdruck; keine Klausel wahr → NIL</td></tr>
+<tr><td><code>(LAMBDA (x …) e …)</code></td><td>Funktion (wertet zu sich selbst aus)</td></tr>
+<tr><td><code>(LABEL f (LAMBDA …))</code></td><td>Funktion mit Namen für Rekursion</td></tr>
+<tr><td><code>(FUNCTION f)</code></td><td>FUNARG: Funktion samt aktueller a-list (Lösung des Funarg-Problems)</td></tr>
+<tr><td><code>(PROG (v …) anweisung | marke …)</code></td><td>Programm mit Variablen (anfangs NIL), Marken sind Atome</td></tr>
+<tr><td><code>(GO marke)</code>, <code>(RETURN e)</code></td><td>Sprung bzw. Verlassen des innersten PROG</td></tr>
+<tr><td><code>(SETQ v e …)</code>, <code>(CSETQ v e)</code></td><td>Bindung ändern bzw. globalen Wert (APVAL) setzen</td></tr>
+<tr><td><code>(AND …)</code>, <code>(OR …)</code></td><td>mit Kurzschluss</td></tr>
+<tr><td><code>(DEFUN f (x) e …)</code>, <code>(DEFUN f FEXPR (l a) …)</code></td><td>Komfortform aus MacLisp (nicht LISP 1.5)</td></tr>
+</table>
+<h4>Funktionen (Auswahl)</h4>
+<p><code>CAR CDR CONS ATOM EQ EQUAL NULL NOT</code> · <code>CAAR … CDDDDR</code> · <code>LIST APPEND REVERSE LENGTH MEMBER MEMQ ASSOC ASSQ NCONC RPLACA RPLACD LAST COPY NTH SUBST SUBLIS PAIRLIS</code> · <code>PLUS DIFFERENCE TIMES QUOTIENT REMAINDER ADD1 SUB1 MINUS ABS MAX MIN EXPT SQRT</code> (auch <code>+ - * / = &lt; &gt; &lt;= &gt;=</code>) · <code>ZEROP MINUSP ONEP ODDP EVENP NUMBERP FIXP FLOATP GREATERP LESSP</code> · <code>EVAL APPLY FUNCALL MAPCAR MAPLIST MAPC</code> · <code>DEFINE DEFLIST GET PUTPROP REMPROP PLIST CSET SET ATTRIB GENSYM</code> · <code>PRINT PRIN1 PRINC TERPRI</code> · <code>TRACE UNTRACE RECLAIM ERROR</code></p>
+<ul>
+<li><code>DEFINE ((name (LAMBDA …)) …)</code> legt die EXPR-Eigenschaft an, <code>DEFLIST (((name wert) …) INDIKATOR)</code> beliebige Eigenschaften, z. B. FEXPR.</li>
+<li>Ein <b>FEXPR</b> erhält seine Argumente unausgewertet als Liste und – bei zwei Parametern – die aktuelle a-list.</li>
+<li><code>TRACE ((F G))</code> bzw. <code>(TRACE (QUOTE F))</code> zeigt Argumente und Wert jedes Aufrufs.</li>
+</ul>`;
+  const S = `
+<h3>Scheme – Kurzreferenz</h3>
+<h4>Sonderformen</h4>
+<table><tr><th>Form</th><th>Bedeutung</th></tr>
+<tr><td><code>(define x e)</code>, <code>(define (f . args) …)</code></td><td>global oder im aktuellen Rahmen (interne Definitionen)</td></tr>
+<tr><td><code>(lambda (x y . rest) …)</code></td><td>Closure: Code plus Umgebung</td></tr>
+<tr><td><code>if cond case and or when unless begin</code></td><td><code>cond</code> mit <code>else</code> und <code>=&gt;</code></td></tr>
+<tr><td><code>let</code>, benanntes <code>let</code>, <code>let* letrec letrec*</code></td><td>lokale Bindungen, Schleifen über endständige Rekursion</td></tr>
+<tr><td><code>(do ((v init schritt) …) (test erg …) rumpf …)</code></td><td>Schleife</td></tr>
+<tr><td><code>quote ' quasiquote &#96; unquote , unquote-splicing ,@</code></td><td>Daten und Schablonen</td></tr>
+<tr><td><code>set!</code></td><td>Zuweisung an bestehende Bindung</td></tr>
+<tr><td><code>delay</code>, <code>cons-stream</code></td><td>verzögerte Auswertung, mit <code>force</code>, <code>stream-car/cdr</code></td></tr>
+<tr><td><code>(define-syntax n (syntax-rules (lit …) (muster schablone) …))</code></td><td>Makro mit Mustern und <code>...</code></td></tr>
+<tr><td><code>(define-macro (n . args) rumpf)</code></td><td>Makro im alten Lisp-Stil: Funktion, die Code liefert</td></tr>
+</table>
+<h4>Prozeduren (Auswahl)</h4>
+<p><code>car cdr cons set-car! set-cdr! c[ad]{2,4}r list length append reverse list-tail list-ref memq memv member assq assv assoc last-pair list-copy append!</code> · <code>eq? eqv? equal? not null? pair? list? symbol? number? integer? string? char? boolean? procedure?</code> · <code>+ - * / quotient remainder modulo = &lt; &gt; &lt;= &gt;= abs min max gcd lcm expt sqrt exp log sin cos tan atan floor ceiling round truncate exact-&gt;inexact inexact-&gt;exact number-&gt;string string-&gt;number zero? positive? negative? odd? even? random</code> · <code>string-length string-ref substring string-append string-copy string=? string&lt;? string-ci=? string-&gt;list list-&gt;string string-&gt;symbol symbol-&gt;string string-upcase string-downcase</code> · <code>char-&gt;integer integer-&gt;char char-upcase char-downcase char-alphabetic? char-numeric? char-whitespace? char=? char&lt;?</code> · <code>map for-each apply eval call/cc force</code> · <code>display write newline error</code> · Extras: <code>filter fold-left fold-right gensym trace untrace gc runtime</code></p>`;
+  const D = `
+<h3>Unterschiede LISP 1.5 ↔ Scheme</h3>
+<table><tr><th></th><th>LISP 1.5</th><th>Scheme</th></tr>
+<tr><td>Bindung</td><td>dynamisch, eine a-list</td><td>lexikalisch, Kette von Rahmen</td></tr>
+<tr><td>Funktion als Wert</td><td>nur mit <code>FUNCTION</code> → FUNARG</td><td>jede <code>lambda</code> ist eine Closure</td></tr>
+<tr><td>Namensräume</td><td>Funktionen in der Eigenschaftsliste (EXPR, SUBR), Werte in APVAL/a-list</td><td>ein gemeinsamer Namensraum</td></tr>
+<tr><td>Wahrheitswerte</td><td>NIL = falsch = leere Liste, T</td><td><code>#f</code>, <code>#t</code>; <code>()</code> ist wahr</td></tr>
+<tr><td>Iteration</td><td><code>PROG</code>, <code>GO</code>, <code>RETURN</code></td><td>endständige Rekursion, <code>do</code></td></tr>
+<tr><td>Endständige Aufrufe</td><td>jeder Aufruf belegt einen Stapelrahmen</td><td>ohne Stapelwachstum</td></tr>
+<tr><td>Groß/klein</td><td>alles groß</td><td>alles klein</td></tr>
+</table>
+<h3>Wo die Werkbank abweicht</h3>
+<h4>vom LISP 1.5 Programmer's Manual (1962)</h4>
+<ul>
+<li>Zahlen: ganze Zahlen beliebiger Größe und Gleitkommazahlen; keine Oktalzahlen mit Q, kein Festkomma-Überlauf.</li>
+<li>Kommentare mit <code>;</code> und das Hochkomma <code>'</code> gab es 1962 nicht – beides ist hier erlaubt.</li>
+<li>Rümpfe von <code>LAMBDA</code> und Klauseln von <code>COND</code> dürfen mehrere Ausdrücke enthalten (wie in MacLisp).</li>
+<li><code>COND</code> ohne wahre Klausel liefert NIL statt eines Fehlers.</li>
+<li><code>(CAR NIL)</code> ist ein Fehler (im Original undefiniert).</li>
+<li>Globale Werte stehen direkt unter APVAL, nicht in einer eingepackten Liste.</li>
+<li><code>MEMBER</code> liefert den Rest der Liste ab dem Fund statt T. <code>MAPCAR</code> nimmt die Funktion zuerst (MacLisp-Reihenfolge), <code>MAPLIST</code> wie 1962 die Liste zuerst.</li>
+<li>Ergänzt aus späteren Lisps: <code>DEFUN FUNCALL ASSOC MEMQ NTH GENSYM PUTPROP PLIST</code> und die Zeichen <code>+ - * / = &lt; &gt;</code>.</li>
+<li><code>EQ</code> vergleicht auch Zahlen nach Wert. <code>LAMBDA</code> und <code>LABEL</code> werten zu sich selbst aus. <code>GO</code> und <code>RETURN</code> wirken nur innerhalb des PROG der eigenen Funktion.</li>
+<li>Kein Compiler, keine Felder (Arrays), kein READ, keine Ein-/Ausgabe auf Band.</li>
+</ul>
+<h4>von R4RS (1991)</h4>
+<ul>
+<li>Keine Brüche und keine komplexen Zahlen: <code>(/ 1 3)</code> liefert <code>0.333…</code>; Gleitkommazahlen mit ganzzahligem Wert erscheinen ohne Nachkommastellen.</li>
+<li>Keine Vektoren, keine Ports, kein <code>read</code>, kein <code>dynamic-wind</code>.</li>
+<li><code>syntax-rules</code> ist <b>nicht hygienisch</b> (siehe Beispiel 10); <code>define-macro</code> ist eine Erweiterung.</li>
+<li><code>eq?</code> auf gleichen Zeichenketten liefert <code>#t</code>; Zeichen werden geteilt.</li>
+<li><code>define-syntax</code> wirkt immer global. <code>eval</code> ignoriert sein zweites Argument und wertet global aus.</li>
+<li>Symbole werden beim Einlesen klein geschrieben (wie R4RS), <code>string-&gt;symbol</code> erhält die Schreibweise.</li>
+</ul>
+<h3>Speicher und Garbage Collection</h3>
+<ul>
+<li>Alle Paare – Daten, Programmtext, Bindungen, Umgebungsrahmen, Eigenschaftslisten – liegen in einem Feld fester Größe aus Cons-Zellen. Freie Zellen bilden eine Freispeicherliste über ihre CDR-Hälfte.</li>
+<li>Ist die Liste leer, läuft automatisch Mark-and-Sweep: Markieren ab den Wurzeln (Symbole, Register der Maschine, Fortsetzungsstapel, letzter Wert), dann Durchlauf über alle Zellen.</li>
+<li>Symbole, Zahlen, Zeichenketten und Prozedur-Objekte liegen außerhalb des Zellspeichers; Symbole werden nie eingesammelt.</li>
+<li>Der Auswerter ist eine Registermaschine mit eigenem Fortsetzungsstapel (EVAL, WERT, APPLY). Darum gibt es in Scheme echte endständige Rekursion und <code>call/cc</code>, und der Einzelschritt zeigt jeden Schritt.</li>
+</ul>
+<h3>Tasten</h3>
+<ul><li>Listener: Enter wertet aus, sobald die Klammern aufgehen; Umschalt+Enter für eine neue Zeile; Pfeil hoch/runter blättert im Verlauf.</li>
+<li>Editor: Enter rückt automatisch ein, Tab rückt die Zeile neu ein, Strg+Enter führt das Programm aus. Die zur Schreibmarke gehörende Klammer wird hervorgehoben, Klammern ohne Partner rot.</li></ul>
+<p class="note">Die Seite speichert nichts im Browser: Programme bitte über „Speichern“ als Datei sichern. Mehr zu Lisp und den anderen Werkbänken: <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a></p>`;
+  $('tab-help').innerHTML = mode === 'lisp' ? L + S + D : S + L + D;
+}
+
+/* ---------------- Start ---------------- */
+newInterp();
+loadExample(0);
+tty(mode === 'lisp' ? 'Beispiel: CAR ((A B C))   oder   (CONS (QUOTE A) NIL)\n' : '', 'info');
+window.__lisp = { get I() { return I; }, runText, setMode };
+})();
+</script>
+</body>
+</html>
