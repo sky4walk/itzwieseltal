@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Braurechner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,900;1,700&family=Crimson+Pro:wght@300;400;600&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg:        #1A1008;
+      --bg2:       #221508;
+      --bg3:       #2C1C0A;
+      --amber:     #C8720A;
+      --amber-l:   #F0A030;
+      --amber-d:   #7A4200;
+      --amber-dd:  #3D2000;
+      --foam:      #F5EDD6;
+      --foam-d:    #C8B890;
+      --malt:      #8B5E2A;
+      --copper:    #A06820;
+      --text:      #E8D8B8;
+      --text-d:    #8A6A3A;
+      --green:     #5A9A40;
+      --red:       #C05030;
+      --border:    rgba(200,114,10,0.2);
+      --border-b:  rgba(200,114,10,0.5);
+      --card-bg:   rgba(34,21,8,0.95);
+      --result-bg: rgba(200,114,10,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Crimson Pro', serif;
+      font-size: 18px;
+      line-height: 1.6;
+      min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse at 10% 0%, rgba(120,60,0,0.3) 0%, transparent 50%),
+        radial-gradient(ellipse at 90% 100%, rgba(80,40,0,0.25) 0%, transparent 50%);
+    }
+
+    /* Grain texture */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── LAYOUT ── */
+    .page { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 0 24px 80px; }
+
+    /* ── HEADER ── */
+    header {
+      text-align: center;
+      padding: 64px 0 48px;
+      position: relative;
+    }
+
+    .header-rule {
+      display: flex; align-items: center; gap: 20px;
+      margin-bottom: 20px;
+    }
+    .header-rule::before, .header-rule::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(to right, transparent, var(--amber-d));
+    }
+    .header-rule::after { background: linear-gradient(to left, transparent, var(--amber-d)); }
+
+    .header-icon { font-size: 2rem; }
+
+    h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      font-weight: 900;
+      color: var(--amber-l);
+      letter-spacing: -1px;
+      line-height: 1;
+      text-shadow: 0 0 40px rgba(200,114,10,0.3);
+    }
+
+    .subtitle {
+      margin-top: 10px;
+      font-size: 0.8rem;
+      color: var(--text-d);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      font-family: 'Source Code Pro', monospace;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: center;
+      margin: 36px 0 48px;
+    }
+
+    nav a {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.68rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-d);
+      text-decoration: none;
+      padding: 6px 14px;
+      border: 1px solid var(--amber-dd);
+      border-radius: 2px;
+      transition: all 0.2s;
+    }
+    nav a:hover {
+      color: var(--amber-l);
+      border-color: var(--amber-d);
+      background: rgba(200,114,10,0.06);
+    }
+
+    /* ── CALC CARD ── */
+    .calc {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      margin-bottom: 24px;
+      overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .calc:hover { border-color: var(--border-b); }
+
+    .calc-header {
+      padding: 20px 28px 18px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: baseline;
+      gap: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .calc-icon {
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .calc-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--amber-l);
+      flex: 1;
+    }
+
+    .calc-toggle {
+      font-size: 0.7rem;
+      color: var(--text-d);
+      font-family: 'Source Code Pro', monospace;
+      transition: transform 0.25s;
+    }
+    .calc-toggle.open { transform: rotate(180deg); }
+
+    .calc-body {
+      display: none;
+      padding: 24px 28px;
+    }
+    .calc-body.open { display: block; animation: fadeIn 0.2s ease; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .calc-hint {
+      font-size: 0.85rem;
+      color: var(--text-d);
+      margin-bottom: 20px;
+      font-style: italic;
+      line-height: 1.5;
+    }
+
+    /* ── FIELDS ── */
+    .fields {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .field {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .field label {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-d);
+    }
+
+    .field input, .field select {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--amber-dd);
+      color: var(--foam);
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.9rem;
+      padding: 9px 13px;
+      border-radius: 2px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+      -moz-appearance: textfield;
+    }
+    .field input::-webkit-outer-spin-button,
+    .field input::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .field input:focus, .field select:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 2px rgba(200,114,10,0.15);
+    }
+
+    .field select option { background: #221508; }
+
+    /* Radio group */
+    .radio-group {
+      display: flex;
+      gap: 4px;
+      flex-wrap: wrap;
+    }
+
+    .radio-group label {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.72rem;
+      color: var(--text-d);
+      padding: 7px 14px;
+      border: 1px solid var(--amber-dd);
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.05em;
+    }
+
+    .radio-group input[type=radio] { display: none; }
+    .radio-group input[type=radio]:checked + label {
+      background: var(--amber-d);
+      color: var(--foam-d);
+      border-color: var(--amber);
+    }
+
+    /* ── RESULT ── */
+    .result {
+      background: var(--result-bg);
+      border: 1px solid var(--border-b);
+      border-radius: 2px;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 16px;
+    }
+
+    .result-item {}
+
+    .result-label {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--text-d);
+      margin-bottom: 3px;
+    }
+
+    .result-value {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: var(--amber-l);
+      line-height: 1;
+    }
+
+    .result-unit {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.72rem;
+      color: var(--text-d);
+      margin-top: 2px;
+    }
+
+    .result-value.good { color: #7DC860; }
+    .result-value.warn { color: var(--amber-l); }
+    .result-value.bad  { color: #E06040; }
+
+    /* ── DIVIDER ── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 20px 0;
+    }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center;
+      padding-top: 40px;
+      font-size: 0.75rem;
+      color: var(--amber-dd);
+      font-family: 'Source Code Pro', monospace;
+      letter-spacing: 0.08em;
+    }
+
+    /* ── HOPFENGABEN (IBU Multi-Hop) ── */
+    .hopfen-gaben { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; }
+
+    .hopfen-gabe {
+      background: rgba(0,0,0,0.25);
+      border: 1px solid var(--amber-dd);
+      border-radius: 2px;
+      padding: 14px 16px 12px;
+    }
+    .hopfen-gabe-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .hopfen-gabe-nr {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.62rem;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      color: var(--amber-d);
+    }
+    .hopfen-gabe-ibu-val {
+      font-family: 'Playfair Display', serif;
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--amber-l);
+    }
+    .hopfen-gabe-ibu-unit {
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.62rem;
+      color: var(--text-d);
+      margin-left: 4px;
+    }
+    .btn-remove {
+      background: none;
+      border: 1px solid var(--amber-dd);
+      color: var(--text-d);
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.62rem;
+      padding: 4px 10px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.08em;
+    }
+    .btn-remove:hover { border-color: var(--red); color: var(--red); }
+
+    .btn-add {
+      background: none;
+      border: 1px solid var(--amber-d);
+      color: var(--amber);
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.68rem;
+      padding: 9px 18px;
+      border-radius: 2px;
+      cursor: pointer;
+      transition: all 0.15s;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    .btn-add:hover { background: rgba(200,114,10,0.1); border-color: var(--amber); }
+
+    .field input[type=text] {
+      background: rgba(0,0,0,0.4);
+      border: 1px solid var(--amber-dd);
+      color: var(--foam);
+      font-family: 'Source Code Pro', monospace;
+      font-size: 0.9rem;
+      padding: 9px 13px;
+      border-radius: 2px;
+      outline: none;
+      transition: border-color 0.15s, box-shadow 0.15s;
+      width: 100%;
+    }
+    .field input[type=text]:focus {
+      border-color: var(--amber);
+      box-shadow: 0 0 0 2px rgba(200,114,10,0.15);
+    }
+    .w-sub { font-size:0.8rem; color:var(--text-d); margin:4px 0 12px; font-family:'Source Code Pro',monospace; letter-spacing:0.05em; }
+    .field input:disabled { opacity:0.7; cursor:not-allowed; }
+    .w-bewertung { list-style:none; margin:0 0 4px; padding:0; display:flex; flex-direction:column; gap:6px; font-size:0.9rem; }
+    .w-bewertung li { padding:6px 10px; border-left:3px solid var(--border-b); background:var(--result-bg); line-height:1.4; }
+    .w-bewertung li.good { border-left-color:#7DC860; }
+    .w-bewertung li.warn { border-left-color:var(--amber-l); }
+    .w-bewertung li.bad  { border-left-color:#E06040; }
+    .w-table-wrap { overflow-x:auto; }
+    .w-table { width:100%; border-collapse:collapse; font-size:0.9rem; }
+    .w-table th, .w-table td { padding:6px 10px; border-bottom:1px solid var(--border); text-align:right; white-space:nowrap; }
+    .w-table th:first-child, .w-table td:first-child { text-align:left; white-space:normal; }
+    .w-table th { font-family:'Source Code Pro',monospace; font-size:0.65rem; letter-spacing:0.05em; color:var(--text-d); font-weight:normal; text-transform:uppercase; }
+    .w-table td.good { color:#7DC860; } .w-table td.warn { color:var(--amber-l); } .w-table td.bad { color:#E06040; }
+  </style>
+</head>
+<body>
+<div class="page">
+
+<header>
+  <div class="header-rule"><span class="header-icon">🍺</span></div>
+  <h1>Braurechner</h1>
+  <p class="subtitle">Berechnungen für Hobbybrauer</p>
+</header>
+
+<nav>
+  <a href="#karbonisierung">Karbonisierung</a>
+  <a href="#alkohol">Alkohol</a>
+  <a href="#stammwuerze">Stammwürze-Korrektur</a>
+  <a href="#einheiten">Einheiten</a>
+  <a href="#sudhausausbeute">Sudhausausbeute</a>
+  <a href="#hopfen">Hopfen</a>
+  <a href="#mischkreuz">Mischkreuz</a>
+  <a href="#wasser">Restalkalität</a>
+  <a href="#zapfdruck">Zapfdruck</a>
+  <a href="#spundung">Spundungsdruck</a>
+  <a href="#verduennung">Verdünnung</a>
+  <a href="#topf">Topfvolumen</a>
+</nav>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 1. KARBONISIERUNG -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="karbonisierung">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🫧</span>
+    <span class="calc-title">Karbonisierung / Nachgärung</span>
+    <span class="calc-toggle open">▼</span>
+  </div>
+  <div class="calc-body open">
+    <p class="calc-hint">Berechnet die benötigte Speise- oder Zuckermenge für die gewünschte Karbonisierung. Maßgeblich für das bereits gelöste CO₂ ist die höchste Temperatur, die das Jungbier nach der Hauptgärung hatte. Bei Speise ist die Rechnung eine Näherung: Die Speise soll etwa auf den Restextrakt des Jungbiers vergären, ihr Eigenvolumen bleibt unberücksichtigt.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Höchste Temp. nach Hauptgärung (°C)</label>
+        <input type="number" id="k_temp" value="18" step="0.5" oninput="calcKarbo()">
+      </div>
+      <div class="field">
+        <label>Gewünschter CO₂-Gehalt (g/L)</label>
+        <input type="number" id="k_co2" value="5.0" step="0.1" oninput="calcKarbo()">
+      </div>
+      <div class="field">
+        <label>Restextrakt Jungbier (°Plato)</label>
+        <input type="number" id="k_re" value="2.5" step="0.1" oninput="calcKarbo()">
+      </div>
+      <div class="field">
+        <label>Zugabeart</label>
+        <select id="k_type" onchange="toggleSpeise(); calcKarbo()">
+          <option value="zucker">Haushaltszucker</option>
+          <option value="traubenzucker">Traubenzucker</option>
+          <option value="speise">Speise</option>
+        </select>
+      </div>
+      <div class="field" id="k_speise_field" style="display:none">
+        <label>Stammwürze Speise (°Plato)</label>
+        <input type="number" id="k_speise_sw" value="12" step="0.5" oninput="calcKarbo()">
+      </div>
+    </div>
+    <div class="result" id="k_result">
+      <div class="result-item">
+        <div class="result-label">Benötigte Menge</div>
+        <div class="result-value" id="k_out">—</div>
+        <div class="result-unit" id="k_unit">g/L oder ml/L</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Gelöstes CO₂ im Bier</div>
+        <div class="result-value" id="k_co2_geloest">—</div>
+        <div class="result-unit">g/L (temperaturabhängig)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 2. ALKOHOL -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="alkohol">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🔬</span>
+    <span class="calc-title">Alkoholgehalt</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Berechnet Alkohol, Vergärungsgrad und Restextrakt aus Stammwürze und Jungbierwert.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Stammwürze</label>
+        <input type="number" id="a_sw" value="12" step="0.1" oninput="calcAlkohol()">
+      </div>
+      <div class="field">
+        <label>Einheit Stammwürze</label>
+        <select id="a_sw_unit" onchange="calcAlkohol()">
+          <option value="plato">°Plato</option>
+          <option value="brix">°Brix (Refraktometer)</option>
+          <option value="sg">SG (z.B. 1.048)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Restextrakt Jungbier</label>
+        <input type="number" id="a_re" value="3.0" step="0.1" oninput="calcAlkohol()">
+      </div>
+      <div class="field">
+        <label>Einheit Restextrakt</label>
+        <select id="a_re_unit" onchange="calcAlkohol()">
+          <option value="plato">°Plato (Spindel)</option>
+          <option value="brix">°Brix (Refraktometer, korrigiert)</option>
+        </select>
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Alkohol</div>
+        <div class="result-value" id="a_alkohol">—</div>
+        <div class="result-unit">Vol. %</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Scheinb. Endvergärungsgrad</div>
+        <div class="result-value" id="a_evg_s">—</div>
+        <div class="result-unit">%</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Tatsächl. Endvergärungsgrad</div>
+        <div class="result-value" id="a_evg_t">—</div>
+        <div class="result-unit">%</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Tatsächl. Restextrakt</div>
+        <div class="result-value" id="a_re_t">—</div>
+        <div class="result-unit">°Plato</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 3. STAMMWÜRZE KORREKTUR -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="stammwuerze">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🌡️</span>
+    <span class="calc-title">Stammwürze-Korrektur (Temperatur)</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Korrigiert den Spindelwert, wenn die Würze nicht bei der Eichtemperatur der Spindel gemessen wurde. Warme Würze ist leichter, die Spindel zeigt dann zu wenig an. Über ca. 60 °C wird die Korrektur ungenau — besser abgekühlt messen.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Spindel geeicht auf (°C)</label>
+        <input type="number" id="sw_eich" value="20" step="1" oninput="calcSwKorr()">
+      </div>
+      <div class="field">
+        <label>Messtemperatur (°C)</label>
+        <input type="number" id="sw_mess" value="65" step="0.5" oninput="calcSwKorr()">
+      </div>
+      <div class="field">
+        <label>Gemessene Stammwürze (°Plato)</label>
+        <input type="number" id="sw_wert" value="12" step="0.1" oninput="calcSwKorr()">
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Tatsächliche Stammwürze</div>
+        <div class="result-value" id="sw_out">—</div>
+        <div class="result-unit">°Plato</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Abweichung</div>
+        <div class="result-value" id="sw_diff">—</div>
+        <div class="result-unit">°Plato</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 4. EINHEITEN -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="einheiten">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">⚖️</span>
+    <span class="calc-title">Einheiten umrechnen (°Plato / Brix / SG)</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Umrechnung zwischen den Messskalen — gilt nur für unvergärte Würze ohne Alkohol. Brix entspricht dem Refraktometerwert mit Würzekorrekturfaktor 1,04.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Eingabewert</label>
+        <input type="number" id="eu_wert" value="12" step="0.01" oninput="calcEinheiten()">
+      </div>
+      <div class="field">
+        <label>Einheit</label>
+        <select id="eu_unit" onchange="calcEinheiten()">
+          <option value="plato">°Plato</option>
+          <option value="brix">°Brix</option>
+          <option value="sg">SG (z.B. 1.048)</option>
+        </select>
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">°Plato</div>
+        <div class="result-value" id="eu_plato">—</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">°Brix</div>
+        <div class="result-value" id="eu_brix">—</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">SG</div>
+        <div class="result-value" id="eu_sg">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 5. SUDHAUSAUSBEUTE -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="sudhausausbeute">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🏭</span>
+    <span class="calc-title">Sudhausausbeute</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Typische Werte im Hobbybereich: 55–70 %. Je höher die Schüttung, desto geringer die Ausbeute.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Stammwürze (°Plato)</label>
+        <input type="number" id="sha_sw" value="12" step="0.1" oninput="calcSHA()">
+      </div>
+      <div class="field">
+        <label>Ausschlagvolumen (L)</label>
+        <input type="number" id="sha_vol" value="25" step="0.5" oninput="calcSHA()">
+      </div>
+      <div class="field">
+        <label>Schüttung (kg)</label>
+        <input type="number" id="sha_schuet" value="5" step="0.1" oninput="calcSHA()">
+      </div>
+      <div class="field">
+        <label>Volumen gemessen bei</label>
+        <select id="sha_temp" onchange="calcSHA()">
+          <option value="100">100°C (nach dem Kochen)</option>
+          <option value="20">20°C (kalt)</option>
+        </select>
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Sudhausausbeute</div>
+        <div class="result-value" id="sha_out">—</div>
+        <div class="result-unit">%</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Extrakt gesamt</div>
+        <div class="result-value" id="sha_extrakt">—</div>
+        <div class="result-unit">kg</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 6. HOPFEN -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="hopfen">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🌿</span>
+    <span class="calc-title">Hopfenberechnung & IBU</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Berechnet die Bittere (IBU) mehrerer Hopfengaben nach der <strong style="color:var(--amber)">Tinseth-Formel</strong>. Pellets bringen ~10 % mehr Ausbeute als Dolden. Die Nachisomerisierungszeit (Whirlpool ≥ 80 °C) wird für alle Gaben zur Kochzeit addiert — kürzere Zeit eintragen wenn die Würze schnell kühlt.</p>
+
+    <div class="divider"></div>
+    <p style="font-size:0.8rem;color:var(--text-d);margin-bottom:14px;font-family:'Source Code Pro',monospace;letter-spacing:0.05em;">IBU-RECHNER (TINSETH)</p>
+
+    <div class="fields" style="margin-bottom:20px">
+      <div class="field">
+        <label>Würzevolumen (L)</label>
+        <input type="number" id="ibu_vol" value="25" step="0.5" min="0.1" oninput="calcIBU()">
+      </div>
+      <div class="field">
+        <label>Stammwürze (°Plato)</label>
+        <input type="number" id="ibu_sw" value="12" step="0.1" min="0" oninput="calcIBU()">
+      </div>
+      <div class="field">
+        <label>Nachisomerisierungszeit (min)</label>
+        <input type="number" id="ibu_nachiso" value="0" step="1" min="0" oninput="calcIBU()">
+      </div>
+    </div>
+
+    <div class="hopfen-gaben" id="ibu_gaben"></div>
+    <button class="btn-add" onclick="addHopfenGabe()">+ Hopfengabe hinzufügen</button>
+
+    <div class="result" style="margin-bottom:24px">
+      <div class="result-item">
+        <div class="result-label">Gesamtbittere</div>
+        <div class="result-value" id="ibu_total">—</div>
+        <div class="result-unit">IBU (mg Iso-α-Säuren/L)</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Iso-α-Säuren gesamt</div>
+        <div class="result-value" id="ibu_bu">—</div>
+        <div class="result-unit">mg</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <p style="font-size:0.8rem;color:var(--text-d);margin-bottom:12px;font-family:'Source Code Pro',monospace;letter-spacing:0.05em;">HOPFENMENGE AUS IBU BERECHNEN</p>
+    <div class="fields">
+      <div class="field">
+        <label>Alphasäure (%)</label>
+        <input type="number" id="h_alpha" value="8" step="0.1" oninput="calcHopfen()">
+      </div>
+      <div class="field">
+        <label>Gewünschte Bittere (IBU)</label>
+        <input type="number" id="h_ibu" value="35" step="1" oninput="calcHopfen()">
+      </div>
+      <div class="field">
+        <label>Ausnutzung (%)</label>
+        <input type="number" id="h_ausnutzung" value="25" step="1" oninput="calcHopfen()">
+      </div>
+      <div class="field">
+        <label>Ausschlagmenge (L)</label>
+        <input type="number" id="h_vol" value="25" step="0.5" oninput="calcHopfen()">
+      </div>
+    </div>
+    <div class="result" style="margin-bottom:24px">
+      <div class="result-item">
+        <div class="result-label">Menge</div>
+        <div class="result-value" id="h_out_gl">—</div>
+        <div class="result-unit">g/L</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Gesamt</div>
+        <div class="result-value" id="h_out_g">—</div>
+        <div class="result-unit">g</div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+    <p style="font-size:0.8rem;color:var(--text-d);margin-bottom:12px;font-family:'Source Code Pro',monospace;letter-spacing:0.05em;">ALTERNATIVEN HOPFEN UMRECHNEN</p>
+    <div class="fields">
+      <div class="field">
+        <label>Alpha laut Rezept (%)</label>
+        <input type="number" id="h_alt_alpha_rezept" value="8" step="0.1" oninput="calcHopfenAlt()">
+      </div>
+      <div class="field">
+        <label>Menge laut Rezept (g)</label>
+        <input type="number" id="h_alt_menge_rezept" value="50" step="1" oninput="calcHopfenAlt()">
+      </div>
+      <div class="field">
+        <label>Alpha eigener Hopfen (%)</label>
+        <input type="number" id="h_alt_alpha_eigen" value="6.5" step="0.1" oninput="calcHopfenAlt()">
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Eigene Hopfenmenge</div>
+        <div class="result-value" id="h_alt_out">—</div>
+        <div class="result-unit">g</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 7. MISCHKREUZ -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="mischkreuz">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🔀</span>
+    <span class="calc-title">Mischkreuz (Temperatur & Stammwürze)</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Wieviel Liter einer Zulaufflüssigkeit müssen zugegeben werden um eine Zieltemperatur oder -konzentration zu erreichen? Anwendung z.B. beim Dekoktionsmaischen.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Volumen Hauptmasse (L)</label>
+        <input type="number" id="mx_vol" value="20" step="0.5" oninput="calcMisch()">
+      </div>
+      <div class="field">
+        <label>Temp./Konzentration Hauptmasse</label>
+        <input type="number" id="mx_t1" value="63" step="0.5" oninput="calcMisch()">
+      </div>
+      <div class="field">
+        <label>Temp./Konzentration Zulauf</label>
+        <input type="number" id="mx_t2" value="100" step="0.5" oninput="calcMisch()">
+      </div>
+      <div class="field">
+        <label>Gewünschter Zielwert</label>
+        <input type="number" id="mx_tz" value="73" step="0.5" oninput="calcMisch()">
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Zugabe</div>
+        <div class="result-value" id="mx_out">—</div>
+        <div class="result-unit">Liter</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Gesamtvolumen</div>
+        <div class="result-value" id="mx_gesamt">—</div>
+        <div class="result-unit">Liter</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 8. RESTALKALITÄT -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="wasser">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">💧</span>
+    <span class="calc-title">Wasseranalyse, Restalkalität & Aufbereitung</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Werte aus dem Wasseranalysebericht des Versorgers eingeben oder eine hinterlegte Analyse wählen. Fehlt Hydrogencarbonat bzw. die Säurekapazität im Bericht (wie bei den Stadtwerken Schwabach), wird sie aus der Ionenbilanz geschätzt. Milchsäure (80%ig): 1 ml auf 10 L senkt die RA um ca. 3 °dH.</p>
+
+    <div class="fields">
+      <div class="field">
+        <label>Hinterlegte Wasseranalyse</label>
+        <select id="w_preset" onchange="applyWasserPreset()">
+          <option value="schwabach" selected>Schwabach Mitte/Süd (Stadtwerke, 10/2025)</option>
+          <option value="eigen">Eigene Werte</option>
+        </select>
+      </div>
+    </div>
+
+    <p class="w-sub">KATIONEN (mg/L)</p>
+    <div class="fields">
+      <div class="field"><label>Calcium Ca</label><input type="number" id="w_ca" value="64" step="1" min="0" oninput="wasserManuell()"></div>
+      <div class="field"><label>Magnesium Mg</label><input type="number" id="w_mg" value="25" step="1" min="0" oninput="wasserManuell()"></div>
+      <div class="field"><label>Natrium Na</label><input type="number" id="w_na" value="8" step="1" min="0" oninput="wasserManuell()"></div>
+      <div class="field"><label>Kalium K</label><input type="number" id="w_k" value="8" step="1" min="0" oninput="wasserManuell()"></div>
+    </div>
+
+    <p class="w-sub">ANIONEN (mg/L)</p>
+    <div class="fields">
+      <div class="field"><label>Chlorid Cl</label><input type="number" id="w_cl" value="25" step="1" min="0" oninput="wasserManuell()"></div>
+      <div class="field"><label>Sulfat SO₄</label><input type="number" id="w_so4" value="32" step="1" min="0" oninput="wasserManuell()"></div>
+      <div class="field"><label>Nitrat NO₃</label><input type="number" id="w_no3" value="33" step="1" min="0" oninput="wasserManuell()"></div>
+    </div>
+
+    <p class="w-sub">CARBONAT & KONTROLLE</p>
+    <div class="fields">
+      <div class="field">
+        <label>Angabe im Bericht</label>
+        <select id="w_sk_quelle" onchange="wasserQuelle()">
+          <option value="bilanz" selected>Nicht angegeben – aus Ionenbilanz schätzen</option>
+          <option value="sk">Säurekapazität KS4,3 (mmol/L)</option>
+          <option value="kh">Carbonathärte (°dH)</option>
+          <option value="hco3">Hydrogencarbonat HCO₃ (mg/L)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label id="w_sk_label">Säurekapazität geschätzt (mmol/L)</label>
+        <input type="number" id="w_sk" value="2.5" step="0.1" min="0" oninput="wasserManuell()" disabled>
+      </div>
+      <div class="field">
+        <label>Gesamthärte laut Bericht (°dH) <span style="font-size:0.75em;color:var(--text-d)">optional, zur Kontrolle</span></label>
+        <input type="number" id="w_gh_bericht" value="14.5" step="0.1" min="0" oninput="wasserManuell()">
+      </div>
+    </div>
+
+    <div class="result" style="margin-bottom:16px">
+      <div class="result-item"><div class="result-label">Calciumhärte</div><div class="result-value" id="w_ca_haerte">—</div><div class="result-unit">°dH</div></div>
+      <div class="result-item"><div class="result-label">Magnesiumhärte</div><div class="result-value" id="w_mg_haerte">—</div><div class="result-unit">°dH</div></div>
+      <div class="result-item"><div class="result-label">Gesamthärte</div><div class="result-value" id="w_gh">—</div><div class="result-unit">°dH</div></div>
+      <div class="result-item"><div class="result-label">Carbonathärte</div><div class="result-value" id="w_kh">—</div><div class="result-unit">°dH</div></div>
+      <div class="result-item"><div class="result-label">Restalkalität</div><div class="result-value" id="w_ra">—</div><div class="result-unit">°dH</div></div>
+    </div>
+    <div class="result" style="margin-bottom:16px">
+      <div class="result-item"><div class="result-label">Hydrogencarbonat</div><div class="result-value" id="w_hco3">—</div><div class="result-unit">mg/L</div></div>
+      <div class="result-item"><div class="result-label">Sulfat : Chlorid</div><div class="result-value" id="w_ratio">—</div><div class="result-unit" id="w_ratio_txt">—</div></div>
+      <div class="result-item"><div class="result-label">Ionenbilanz</div><div class="result-value" id="w_bilanz">—</div><div class="result-unit" id="w_bilanz_txt">% Abweichung</div></div>
+    </div>
+    <ul class="w-bewertung" id="w_bewertung"></ul>
+
+    <div class="divider"></div>
+    <p class="w-sub">AUFBEREITUNG</p>
+    <div class="fields">
+      <div class="field">
+        <label>Bierstil (setzt Ziel-RA)</label>
+        <select id="w_stil" onchange="wasserStil()">
+          <option value="0">Pils, sehr hell (≤ 0 °dH)</option>
+          <option value="2" selected>Helles, Weizen, Kölsch (~2 °dH)</option>
+          <option value="5">Märzen, Amber, Rotbier (~5 °dH)</option>
+          <option value="8">Dunkel, Bock (~8 °dH)</option>
+          <option value="12">Stout, Schwarzbier (~12 °dH)</option>
+          <option value="frei">Ziel-RA frei eingeben</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Gewünschte Restalkalität (°dH)</label>
+        <input type="number" id="w_ra_ziel" value="2" step="0.5" oninput="document.getElementById('w_stil').value='frei'; calcWasser()">
+      </div>
+      <div class="field">
+        <label>Wassermenge (L)</label>
+        <input type="number" id="w_vol" value="30" step="1" min="0" oninput="calcWasser()">
+      </div>
+      <div class="field">
+        <label>Anteil Osmose-/VE-Wasser (%)</label>
+        <input type="number" id="w_osmo" value="0" step="5" min="0" max="100" oninput="calcWasser()">
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item"><div class="result-label">RA nach Verschnitt</div><div class="result-value" id="w_ra_misch">—</div><div class="result-unit">°dH</div></div>
+      <div class="result-item"><div class="result-label">Calcium nach Verschnitt</div><div class="result-value" id="w_ca_misch">—</div><div class="result-unit">mg/L</div></div>
+      <div class="result-item"><div class="result-label">Milchsäure 80% zugeben</div><div class="result-value" id="w_ms">—</div><div class="result-unit">ml</div></div>
+      <div class="result-item"><div class="result-label">Milchsäure-Konzentration</div><div class="result-value" id="w_ms_konz">—</div><div class="result-unit">g/L Brauwasser (merkbar ab ~0,3)</div></div>
+      <div class="result-item"><div class="result-label">oder Sauermalz ca.</div><div class="result-value" id="w_sm">—</div><div class="result-unit">g (≈ 2,5 % Milchsäure)</div></div>
+      <div class="result-item"><div class="result-label">Nur Verschnitt: Osmose-Anteil</div><div class="result-value" id="w_osmo_noetig">—</div><div class="result-unit">% für Ziel-RA</div></div>
+    </div>
+    <p class="calc-hint" id="w_hinweis" style="margin-top:14px"></p>
+
+    <div class="divider"></div>
+    <p class="w-sub">BRAUZUSÄTZE – WIE ÄNDERT SICH DAS WASSER?</p>
+    <p class="calc-hint">Mengen für die oben angegebene Wassermenge (nach Verschnitt) eintragen. Die Säuren bauen Hydrogencarbonat ab, die Salze bringen Calcium, Magnesium, Natrium, Sulfat oder Chlorid mit.</p>
+    <div class="fields">
+      <div class="field"><label>Milchsäure 80 % (ml)</label><input type="number" id="z_ms" value="0" step="0.5" min="0" oninput="calcWasser()"></div>
+      <div class="field"><label>Sauermalz (g) <span style="font-size:0.75em;color:var(--text-d)">≈ 2,5 % Milchsäure</span></label><input type="number" id="z_sm" value="0" step="10" min="0" oninput="calcWasser()"></div>
+      <div class="field"><label>Phosphorsäure 75 % (ml)</label><input type="number" id="z_ps" value="0" step="0.5" min="0" oninput="calcWasser()"></div>
+      <div class="field"><label>Braugips CaSO₄·2H₂O (g)</label><input type="number" id="z_gips" value="0" step="0.5" min="0" oninput="calcWasser()"></div>
+      <div class="field"><label>Calciumchlorid – Form</label>
+        <select id="z_cacl_form" onchange="caclForm()">
+          <option value="loesung" selected>Lösung (ml)</option>
+          <option value="dihydrat">Dihydrat CaCl₂·2H₂O (g)</option>
+          <option value="wasserfrei">wasserfrei CaCl₂ (g)</option>
+        </select>
+      </div>
+      <div class="field"><label id="z_cacl_label">Calciumchlorid-Lösung (ml)</label><input type="number" id="z_cacl" value="0" step="0.5" min="0" oninput="calcWasser()"></div>
+      <div class="field" id="z_cacl_konz_feld"><label>Konzentration Lösung (% CaCl₂) <span style="font-size:0.75em;color:var(--text-d)">siehe Etikett</span></label><input type="number" id="z_cacl_konz" value="33" step="1" min="1" max="45" oninput="calcWasser()"></div>
+      <div class="field"><label>Bittersalz MgSO₄·7H₂O (g)</label><input type="number" id="z_mgso4" value="0" step="0.5" min="0" oninput="calcWasser()"></div>
+      <div class="field"><label>Kochsalz NaCl (g) <span style="font-size:0.75em;color:var(--text-d)">ohne Jod</span></label><input type="number" id="z_nacl" value="0" step="0.5" min="0" oninput="calcWasser()"></div>
+      <div class="field"><label>Natron NaHCO₃ (g)</label><input type="number" id="z_natron" value="0" step="0.5" min="0" oninput="calcWasser()"></div>
+    </div>
+    <div class="w-table-wrap">
+      <table class="w-table">
+        <thead><tr><th>Wert</th><th>Ausgang</th><th>mit Zusätzen</th><th>Änderung</th></tr></thead>
+        <tbody id="z_tabelle"></tbody>
+      </table>
+    </div>
+    <div class="result" style="margin-top:16px">
+      <div class="result-item"><div class="result-label">Restalkalität mit Zusätzen</div><div class="result-value" id="z_ra">—</div><div class="result-unit">°dH</div></div>
+      <div class="result-item"><div class="result-label">Säure gesamt (als Milchsäure)</div><div class="result-value" id="z_ms_konz">—</div><div class="result-unit">g/L (merkbar ab ~0,3)</div></div>
+      <div class="result-item"><div class="result-label">Noch nötig für Ziel-RA</div><div class="result-value" id="z_ms_rest">—</div><div class="result-unit">ml Milchsäure 80 %</div></div>
+    </div>
+    <p class="calc-hint" id="z_hinweis" style="margin-top:14px"></p>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 9. ZAPFDRUCK -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="zapfdruck">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🍻</span>
+    <span class="calc-title">Zapfdruck berechnen</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Berechnet den nötigen CO₂-Druck für eine Zapfanlage unter Berücksichtigung der Leitungsreibung. Der Leitungswiderstand hängt stark von Schlauchmaterial und Zapfgeschwindigkeit ab — Richtwert 0,1–0,2 bar/m für 6 mm Innendurchmesser, bei Bedarf mit eigenen Erfahrungswerten anpassen. Andere Durchmesser werden mit (6/d)⁴ umgerechnet.</p>
+    <div class="fields">
+      <div class="field">
+        <label>CO₂-Gehalt des Bieres (g/L)</label>
+        <input type="number" id="zd_co2" value="5.0" step="0.1" oninput="calcZapf()">
+      </div>
+      <div class="field">
+        <label>Biertemperatur (°C)</label>
+        <input type="number" id="zd_temp" value="6" step="0.5" oninput="calcZapf()">
+      </div>
+      <div class="field">
+        <label>Schlauchlänge (m)</label>
+        <input type="number" id="zd_laenge" value="3" step="0.5" oninput="calcZapf()">
+      </div>
+      <div class="field">
+        <label>Schlauchdurchmesser (mm)</label>
+        <select id="zd_dm" onchange="calcZapf()">
+          <option value="4">4 mm</option>
+          <option value="5">5 mm</option>
+          <option value="6" selected>6 mm</option>
+          <option value="8">8 mm</option>
+          <option value="10">10 mm</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Höhenunterschied (m, + = aufwärts)</label>
+        <input type="number" id="zd_hoehe" value="0.5" step="0.1" oninput="calcZapf()">
+      </div>
+      <div class="field">
+        <label>Leitungswiderstand 6 mm (bar/m)</label>
+        <input type="number" id="zd_reib6" value="0.15" step="0.01" min="0" oninput="calcZapf()">
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Spundungsdruck</div>
+        <div class="result-value" id="zd_spund">—</div>
+        <div class="result-unit">bar</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Reibungsverlust</div>
+        <div class="result-value" id="zd_reib">—</div>
+        <div class="result-unit">bar</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Zapfdruck gesamt</div>
+        <div class="result-value" id="zd_out">—</div>
+        <div class="result-unit">bar (max. 3 bar AT)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 10. SPUNDUNGSDRUCK -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="spundung">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🛢️</span>
+    <span class="calc-title">Spundungsdruck im Fass</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Berechnet den Gleichgewichtsdruck im Fass bei einer gegebenen Temperatur und CO₂-Zielgehalt.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Biertemperatur (°C)</label>
+        <input type="number" id="sp_temp" value="10" step="0.5" oninput="calcSpund()">
+      </div>
+      <div class="field">
+        <label>Gewünschter CO₂-Gehalt (g/L)</label>
+        <input type="number" id="sp_co2" value="5.0" step="0.1" oninput="calcSpund()">
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Spundungsdruck</div>
+        <div class="result-value" id="sp_out">—</div>
+        <div class="result-unit">bar (Überdruck)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 11. VERDÜNNUNG -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="verduennung">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🚿</span>
+    <span class="calc-title">Verdünnungsrechner</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Wieviel Wasser muss zugegeben werden um eine zu hohe Stammwürze auf den Zielwert zu verdünnen?</p>
+    <div class="fields">
+      <div class="field">
+        <label>Volumen Würze (L)</label>
+        <input type="number" id="vd_vol" value="25" step="0.5" oninput="calcVerd()">
+      </div>
+      <div class="field">
+        <label>Aktuelle Stammwürze (°Plato)</label>
+        <input type="number" id="vd_sw_ist" value="14" step="0.1" oninput="calcVerd()">
+      </div>
+      <div class="field">
+        <label>Gewünschte Stammwürze (°Plato)</label>
+        <input type="number" id="vd_sw_ziel" value="12" step="0.1" oninput="calcVerd()">
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Zugabe Wasser</div>
+        <div class="result-value" id="vd_out">—</div>
+        <div class="result-unit">Liter</div>
+      </div>
+      <div class="result-item">
+        <div class="result-label">Gesamtvolumen</div>
+        <div class="result-value" id="vd_gesamt">—</div>
+        <div class="result-unit">Liter</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────────────────────────────────────────────────── -->
+<!-- 12. TOPFVOLUMEN -->
+<!-- ─────────────────────────────────────────────────────── -->
+<div class="calc" id="topf">
+  <div class="calc-header" onclick="toggleCalc(this)">
+    <span class="calc-icon">🪣</span>
+    <span class="calc-title">Topfvolumen</span>
+    <span class="calc-toggle">▼</span>
+  </div>
+  <div class="calc-body">
+    <p class="calc-hint">Berechnet das Volumen eines zylindrischen Behälters.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Innendurchmesser (cm)</label>
+        <input type="number" id="tv_dm" value="40" step="0.5" oninput="calcTopf()">
+      </div>
+      <div class="field">
+        <label>Füllhöhe (cm)</label>
+        <input type="number" id="tv_h" value="35" step="0.5" oninput="calcTopf()">
+      </div>
+    </div>
+    <div class="result">
+      <div class="result-item">
+        <div class="result-label">Volumen</div>
+        <div class="result-value" id="tv_out">—</div>
+        <div class="result-unit">Liter</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  Braurechner · Alle Berechnungen ohne Gewähr · Prost! 🍺<br>
+  <a href="https://zwieselbrau.wordpress.com" style="color:var(--amber-d)">zwieselbrau.wordpress.com</a>
+</footer>
+
+</div><!-- .page -->
+
+<script>
+// ── HELPERS ──────────────────────────────────────────────
+function v(id) { return parseFloat(document.getElementById(id).value) || 0; }
+function s(id) { return document.getElementById(id).value; }
+function set(id, val, dec=2) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = isNaN(val) || !isFinite(val) ? '—' : (+val).toFixed(dec);
+}
+function dash(...ids) { ids.forEach(id => { const el = document.getElementById(id); if (el) el.textContent = '—'; }); }
+
+function toggleCalc(header) {
+  const body = header.nextElementSibling;
+  const tog  = header.querySelector('.calc-toggle');
+  body.classList.toggle('open');
+  tog.classList.toggle('open');
+}
+
+// ── UMRECHNUNGEN (eine gemeinsame Basis für alle Rechner) ──
+const WCF = 1.04; // Würzekorrekturfaktor Refraktometer (Brix_Anzeige / Plato)
+
+function platoToSG(p) { return 1 + p / (258.6 - 0.8794 * p); }
+function sgToPlato(sg) { return 258.6 * (sg - 1) / (1 + 0.8794 * (sg - 1)); }
+
+// unvergorene Würze → °Plato
+function toPlato(val, unit) {
+  if (unit === 'brix') return val / WCF;
+  if (unit === 'sg')   return sgToPlato(val);
+  return val;
+}
+
+// ── CO2 ──────────────────────────────────────────────────
+// CO2-Löslichkeit in Bier [g/L pro bar Absolutdruck]
+// CO2 [g/L] = (p_ü + 1,013) · e^(−10,73797 + 2617,25/T) · 10
+function co2Loeslichkeit(tempC) {
+  return 10 * Math.exp(-10.73797 + 2617.25 / (tempC + 273.15));
+}
+// Rest-CO2 im Jungbier bei Atmosphärendruck [g/L]
+function co2Rest(tempC) { return 1.013 * co2Loeslichkeit(tempC); }
+// Gleichgewichtsdruck (Überdruck, bar) für CO2-Gehalt [g/L] bei Temperatur [°C]
+function spundP(co2gL, tempC) {
+  return co2gL / co2Loeslichkeit(tempC) - 1.013;
+}
+
+// ── 1. KARBONISIERUNG ───────────────────────────────────
+function toggleSpeise() {
+  const isSpeise = s('k_type') === 'speise';
+  document.getElementById('k_speise_field').style.display = isSpeise ? '' : 'none';
+}
+
+function calcKarbo() {
+  const temp    = v('k_temp');
+  const co2Ziel = v('k_co2');
+  const re      = v('k_re');
+  const type    = s('k_type');
+  const unitEl  = document.getElementById('k_unit');
+
+  // bereits gelöstes CO2 (höchste Temperatur nach der Hauptgärung)
+  const co2Gel = co2Rest(temp);
+  set('k_co2_geloest', co2Gel, 2);
+
+  const deltaCO2 = Math.max(0, co2Ziel - co2Gel);
+
+  let out = 0;
+  let unit = '';
+
+  if (type === 'zucker') {
+    // Saccharose: theoretisch 0,51 g CO2/g, praktisch ~0,48–0,50
+    out = deltaCO2 / 0.48;
+    unit = 'g Zucker pro Liter';
+  } else if (type === 'traubenzucker') {
+    // Traubenzucker (Dextrose-Monohydrat): ~0,44 g CO2/g
+    out = deltaCO2 / 0.44;
+    unit = 'g Traubenzucker pro Liter';
+  } else {
+    // Speise: vergärbarer Extrakt ≈ SW_Speise − Restextrakt (Näherung,
+    // Endvergärung der Speise ≈ Restextrakt des Jungbiers)
+    const swSpeise   = v('k_speise_sw');
+    const vergaerbar = swSpeise - re;
+    unit = 'ml Speise pro Liter';
+    if (vergaerbar <= 0) { dash('k_out'); unitEl.textContent = unit; return; }
+    // g vergärbarer Extrakt pro Liter Speise (°P = g/100 g, mal Dichte)
+    const extraktGL = vergaerbar * 10 * platoToSG(swSpeise);
+    const co2ProLiterSpeise = extraktGL * 0.48; // g CO2 pro Liter Speise
+    out = deltaCO2 / co2ProLiterSpeise * 1000; // ml/L
+  }
+
+  set('k_out', out, 1);
+  unitEl.textContent = unit;
+}
+
+// ── 2. ALKOHOL ───────────────────────────────────────────
+function calcAlkohol() {
+  const swUnit = s('a_sw_unit');
+  const sw     = toPlato(v('a_sw'), swUnit);
+  let   re     = v('a_re');
+
+  // Refraktometer-Endwert → scheinbarer Restextrakt (Sean Terrill, kubisch)
+  if (s('a_re_unit') === 'brix') {
+    const ob = (swUnit === 'brix' ? v('a_sw') : sw * WCF) / WCF; // korrigiertes Brix Anfang
+    const fb = re / WCF;                                         // korrigiertes Brix Ende
+    const fg = 1 - 0.0044993*ob + 0.011774*fb + 0.00027581*ob*ob - 0.0012717*fb*fb
+                 - 0.0000072800*ob*ob*ob + 0.000063293*fb*fb*fb;
+    re = sgToPlato(fg);
+  }
+
+  if (sw <= 0) { dash('a_alkohol','a_evg_s','a_evg_t','a_re_t'); return; }
+
+  // Scheinbarer EVG
+  const evgS = (sw - re) / sw * 100;
+  // Tatsächlicher EVG (≈ 0,81 × scheinbarer)
+  const evgT = evgS * 0.81;
+  // Tatsächlicher Restextrakt
+  const reT = sw - evgT / 100 * sw;
+  // Balling: Alkohol Masse-% = (SW − ER) / (2,0665 − 0,010665·SW)
+  const alkMass = (sw - reT) / (2.0665 - 0.010665 * sw);
+  // Vol-% = Masse-% · Dichte Bier / Dichte Ethanol
+  const alkVol  = alkMass * platoToSG(re) / 0.7894;
+
+  set('a_alkohol', alkVol, 1);
+  set('a_evg_s', evgS, 1);
+  set('a_evg_t', evgT, 1);
+  set('a_re_t', reT, 2);
+
+  const el = document.getElementById('a_alkohol');
+  el.className = 'result-value ' + (alkVol < 2 ? '' : alkVol < 6 ? 'good' : alkVol < 9 ? 'warn' : 'bad');
+}
+
+// ── 3. STAMMWÜRZE KORREKTUR ──────────────────────────────
+// Übliche Spindel-Temperaturkorrektur (Polynom in °F, gültig ca. 0–70 °C).
+// Heiß gemessen zeigt die Spindel zu wenig an → Korrektur nach oben.
+function spindelFaktor(tempC) {
+  const F = tempC * 9 / 5 + 32;
+  return 1.00130346 - 0.000134722124*F + 0.00000204052596*F*F - 0.00000000232820948*F*F*F;
+}
+
+function calcSwKorr() {
+  const te    = v('sw_eich');
+  const tm    = v('sw_mess');
+  const swGem = v('sw_wert');
+
+  const sgGem  = platoToSG(swGem);
+  const sgKorr = sgGem * spindelFaktor(tm) / spindelFaktor(te);
+  const swKorr = sgToPlato(sgKorr);
+
+  set('sw_out', swKorr, 2);
+  set('sw_diff', swKorr - swGem, 2);
+}
+
+// ── 4. EINHEITEN ─────────────────────────────────────────
+function calcEinheiten() {
+  const val   = v('eu_wert');
+  const plato = toPlato(val, s('eu_unit'));
+  const sg    = platoToSG(plato);
+  const brix  = plato * WCF;
+
+  set('eu_plato', plato, 2);
+  set('eu_brix',  brix,  2);
+  set('eu_sg',    sg,    4);
+}
+
+// ── 5. SUDHAUSAUSBEUTE ───────────────────────────────────
+function calcSHA() {
+  const sw     = v('sha_sw');
+  const vol    = v('sha_vol');
+  const schuet = v('sha_schuet');
+  const temp   = s('sha_temp');
+
+  const rho     = platoToSG(sw);                       // kg/L bei 20 °C
+  const volKorr = temp === '100' ? vol * 0.96 : vol;   // heißes Volumen → 20 °C
+
+  // Extrakt [kg] = Volumen · Dichte · °Plato/100
+  const extraktKg = volKorr * rho * sw / 100;
+  const sha = extraktKg / schuet * 100;
+
+  set('sha_out', sha, 1);
+  set('sha_extrakt', extraktKg, 2);
+
+  const el = document.getElementById('sha_out');
+  el.className = 'result-value ' + (sha >= 65 ? 'good' : sha >= 55 ? 'warn' : 'bad');
+}
+
+// ── 6a. IBU-RECHNER (TINSETH, MEHRERE GABEN) ─────────────
+let _hopCounter = 0;
+let _hopIds     = [];
+
+function addHopfenGabe(menge=20, alpha=8, kochzeit=60, form='pellet', name='') {
+  _hopCounter++;
+  const id = _hopCounter;
+  _hopIds.push(id);
+
+  const container = document.getElementById('ibu_gaben');
+  const div = document.createElement('div');
+  div.className = 'hopfen-gabe';
+  div.id = `hg_${id}`;
+  div.innerHTML = `
+    <div class="hopfen-gabe-header">
+      <span class="hopfen-gabe-nr" id="hg_nr_${id}">Gabe ${_hopIds.length}</span>
+      <span>
+        <span class="hopfen-gabe-ibu-val" id="hg_ibu_${id}">—</span>
+        <span class="hopfen-gabe-ibu-unit">IBU</span>
+      </span>
+      <button class="btn-remove" onclick="removeHopfenGabe(${id})">✕ Entfernen</button>
+    </div>
+    <div class="fields">
+      <div class="field">
+        <label>Bezeichnung</label>
+        <input type="text" id="hg_name_${id}" placeholder="z.B. Hallertau Magnum" oninput="calcIBU()">
+      </div>
+      <div class="field">
+        <label>Menge (g)</label>
+        <input type="number" id="hg_menge_${id}" value="${menge}" step="1" min="0" oninput="calcIBU()">
+      </div>
+      <div class="field">
+        <label>Alphasäure (%)</label>
+        <input type="number" id="hg_alpha_${id}" value="${alpha}" step="0.1" min="0" oninput="calcIBU()">
+      </div>
+      <div class="field">
+        <label>Kochzeit (min)</label>
+        <input type="number" id="hg_kochzeit_${id}" value="${kochzeit}" step="1" min="0" oninput="calcIBU()">
+      </div>
+      <div class="field">
+        <label>Form</label>
+        <select id="hg_form_${id}" onchange="calcIBU()">
+          <option value="pellet" ${form==='pellet'?'selected':''}>Pellets (×1,10)</option>
+          <option value="dolden" ${form==='dolden'?'selected':''}>Dolden (×1,00)</option>
+        </select>
+      </div>
+    </div>`;
+  container.appendChild(div);
+  document.getElementById(`hg_name_${id}`).value = name; // ohne HTML-Interpolation
+  div.style.animation = 'fadeIn 0.2s ease';
+  calcIBU();
+}
+
+function removeHopfenGabe(id) {
+  const idx = _hopIds.indexOf(id);
+  if (idx !== -1) _hopIds.splice(idx, 1);
+  const el = document.getElementById(`hg_${id}`);
+  if (el) el.remove();
+  _hopIds.forEach((hid, i) => {
+    const nr = document.getElementById(`hg_nr_${hid}`);
+    if (nr) nr.textContent = `Gabe ${i + 1}`;
+  });
+  calcIBU();
+}
+
+function calcIBU() {
+  const vol     = v('ibu_vol');
+  const sw      = v('ibu_sw');
+  const nachiso = v('ibu_nachiso');
+
+  // Tinseth
+  const sg       = sw > 0 ? platoToSG(sw) : 1.040;
+  const bigness  = 1.65 * Math.pow(0.000125, sg - 1);
+  const timeFunc = t => t > 0 ? (1 - Math.exp(-0.04 * t)) / 4.15 : 0;
+
+  let totalIBU = 0;
+
+  _hopIds.forEach(id => {
+    const menge    = v(`hg_menge_${id}`);
+    const alpha    = v(`hg_alpha_${id}`);
+    const kochzeit = v(`hg_kochzeit_${id}`);
+    const form     = s(`hg_form_${id}`) || 'pellet';
+
+    const util         = bigness * timeFunc(kochzeit + nachiso);
+    const pelletFaktor = form === 'pellet' ? 1.10 : 1.00;
+    const ibu = vol > 0 ? (alpha / 100) * menge * util * pelletFaktor * 1000 / vol : 0;
+
+    set(`hg_ibu_${id}`, ibu, 1);
+    totalIBU += ibu;
+  });
+
+  const noGaben = _hopIds.length === 0;
+  const totalEl = document.getElementById('ibu_total');
+  totalEl.textContent = noGaben ? '—' : totalIBU.toFixed(1);
+  totalEl.className   = 'result-value ' +
+    (totalIBU < 10 ? '' : totalIBU < 50 ? 'good' : totalIBU < 80 ? 'warn' : 'bad');
+  document.getElementById('ibu_bu').textContent = noGaben ? '—' : (totalIBU * vol).toFixed(0);
+}
+
+// ── 6b. HOPFEN (EINFACH) ─────────────────────────────────
+function calcHopfen() {
+  const alpha      = v('h_alpha');
+  const ibu        = v('h_ibu');
+  const ausnutzung = v('h_ausnutzung');
+  const vol        = v('h_vol');
+
+  // Menge g/L = IBU · 10 / (Alpha% · Ausnutzung%)
+  const mengeGL = ibu * 10 / (alpha * ausnutzung);
+  set('h_out_gl', mengeGL, 2);
+  set('h_out_g', mengeGL * vol, 0);
+}
+
+function calcHopfenAlt() {
+  const mengeEig = v('h_alt_menge_rezept') * v('h_alt_alpha_rezept') / v('h_alt_alpha_eigen');
+  set('h_alt_out', mengeEig, 0);
+}
+
+// ── 7. MISCHKREUZ ────────────────────────────────────────
+function calcMisch() {
+  const vol = v('mx_vol');
+  const t1  = v('mx_t1');
+  const t2  = v('mx_t2');
+  const tz  = v('mx_tz');
+
+  // Zielwert muss zwischen Hauptmasse und Zulauf liegen
+  const zwischen = (tz - t1) * (t2 - tz) >= 0;
+  if (Math.abs(t2 - tz) < 0.001 || !zwischen) { dash('mx_out','mx_gesamt'); return; }
+
+  // V2 · (t2 − tz) = V1 · (tz − t1)
+  const v2 = vol * (tz - t1) / (t2 - tz);
+  set('mx_out', v2, 2);
+  set('mx_gesamt', vol + v2, 2);
+}
+
+// ── 8. WASSER ────────────────────────────────────────────
+const WASSER_PRESETS = {
+  // Stadtwerke Schwabach, Trinkwasseranalyse Mitte und Süd, 10/2025
+  // (HCO3 / Säurekapazität nicht angegeben → Ionenbilanz)
+  schwabach: { ca: 64, mg: 25, na: 8, k: 8, cl: 25, so4: 32, no3: 33, gh: 14.5, quelle: 'bilanz' }
+};
+
+const W_QUELLE_LABEL = {
+  bilanz: 'Säurekapazität geschätzt (mmol/L)',
+  sk:     'Säurekapazität KS4,3 (mmol/L)',
+  kh:     'Carbonathärte (°dH)',
+  hco3:   'Hydrogencarbonat HCO₃ (mg/L)'
+};
+
+function applyWasserPreset() {
+  const p = WASSER_PRESETS[s('w_preset')];
+  if (!p) { calcWasser(); return; }
+  const map = { w_ca: p.ca, w_mg: p.mg, w_na: p.na, w_k: p.k, w_cl: p.cl, w_so4: p.so4, w_no3: p.no3, w_gh_bericht: p.gh };
+  for (const id in map) document.getElementById(id).value = map[id];
+  document.getElementById('w_sk_quelle').value = p.quelle;
+  wasserQuelle(true);
+}
+
+function wasserManuell() {
+  document.getElementById('w_preset').value = 'eigen';
+  calcWasser();
+}
+
+function wasserQuelle(keepPreset) {
+  const q  = s('w_sk_quelle');
+  const el = document.getElementById('w_sk');
+  document.getElementById('w_sk_label').textContent = W_QUELLE_LABEL[q];
+  el.disabled = (q === 'bilanz');
+  if (q === 'hco3') el.step = '1'; else el.step = '0.1';
+  if (keepPreset !== true && q !== 'bilanz') document.getElementById('w_preset').value = 'eigen';
+  calcWasser();
+}
+
+function wasserStil() {
+  const st = s('w_stil');
+  if (st !== 'frei') document.getElementById('w_ra_ziel').value = st;
+  calcWasser();
+}
+
+function calcWasser() {
+  const ca = v('w_ca'), mg = v('w_mg'), na = v('w_na'), k = v('w_k');
+  const cl = v('w_cl'), so4 = v('w_so4'), no3 = v('w_no3');
+  const q  = s('w_sk_quelle');
+
+  // Äquivalente [mval/L]
+  const eqCa = ca / 20.04, eqMg = mg / 12.155, eqNa = na / 22.99, eqK = k / 39.10;
+  const eqCl = cl / 35.45, eqSO4 = so4 / 48.03, eqNO3 = no3 / 62.00;
+  const kationen     = eqCa + eqMg + eqNa + eqK;
+  const anionenOhneC = eqCl + eqSO4 + eqNO3;
+
+  // Säurekapazität KS4,3 [mmol/L] ≈ HCO3 [mval/L] im Trinkwasser-pH-Bereich
+  let sk;
+  const eingabe = v('w_sk');
+  if      (q === 'sk')   sk = eingabe;
+  else if (q === 'kh')   sk = eingabe / 2.8;
+  else if (q === 'hco3') sk = eingabe / 61.02;
+  else {
+    sk = Math.max(0, kationen - anionenOhneC);
+    document.getElementById('w_sk').value = sk.toFixed(2);
+  }
+
+  // 1 mmol/L Erdalkali = 5,608 °dH
+  const caHaerte = ca / 40.08 * 5.608;
+  const mgHaerte = mg / 24.31 * 5.608;
+  const gh       = caHaerte + mgHaerte;
+  const kh       = sk * 2.8;
+  const hco3     = sk * 61.02;
+
+  // Kolbach
+  const ra = kh - (caHaerte + 0.5 * mgHaerte) / 3.5;
+
+  set('w_ca_haerte', caHaerte, 1);
+  set('w_mg_haerte', mgHaerte, 1);
+  set('w_gh',        gh,       1);
+  set('w_kh',        kh,       1);
+  set('w_ra',        ra,       1);
+  set('w_hco3',      hco3,     0);
+  document.getElementById('w_ra').className =
+    'result-value ' + (ra < 1 ? 'good' : ra < 5 ? 'warn' : 'bad');
+
+  // Gesamthärte-Kontrolle
+  const ghBericht = v('w_gh_bericht');
+  const ghEl = document.getElementById('w_gh');
+  ghEl.className = 'result-value' + (ghBericht > 0 ? (Math.abs(gh - ghBericht) <= 1 ? ' good' : ' warn') : '');
+
+  // Sulfat : Chlorid
+  const ratio = cl > 0 ? so4 / cl : NaN;
+  set('w_ratio', ratio, 2);
+  document.getElementById('w_ratio_txt').textContent =
+    isNaN(ratio) ? '—' : ratio < 0.8 ? 'malzbetont' : ratio <= 1.5 ? 'ausgewogen' : ratio <= 3 ? 'herb' : 'sehr herb';
+
+  // Ionenbilanz (nur aussagekräftig bei gemessenem Carbonat)
+  const bilEl = document.getElementById('w_bilanz');
+  const bilTx = document.getElementById('w_bilanz_txt');
+  if (q === 'bilanz') {
+    bilEl.textContent = '—'; bilEl.className = 'result-value';
+    bilTx.textContent = 'zum Schätzen verwendet';
+  } else {
+    const anionen = anionenOhneC + sk;
+    const abw = (kationen + anionen) > 0 ? (kationen - anionen) / (kationen + anionen) * 100 : NaN;
+    set('w_bilanz', abw, 1);
+    bilEl.className = 'result-value ' + (Math.abs(abw) <= 5 ? 'good' : Math.abs(abw) <= 10 ? 'warn' : 'bad');
+    bilTx.textContent = Math.abs(abw) <= 5 ? '% – Analyse stimmig' : '% – Werte prüfen';
+  }
+
+  // Bewertung der Einzelwerte fürs Brauen
+  const items = [];
+  const add = (cls, txt) => items.push(`<li class="${cls}">${txt}</li>`);
+  if (ca < 30)       add('bad',  `Calcium ${ca} mg/L: zu wenig für Enzyme, Eiweißfällung und Klärung. Mit CaCl₂ oder CaSO₄ auf ≥ 50 mg/L anheben.`);
+  else if (ca < 50)  add('warn', `Calcium ${ca} mg/L: etwas knapp, 50–150 mg/L sind ideal.`);
+  else if (ca <= 150) add('good', `Calcium ${ca} mg/L: gut (50–150 mg/L).`);
+  else               add('warn', `Calcium ${ca} mg/L: hoch, kann Phosphat ausfällen und den Geschmack mineralisch machen.`);
+
+  if (mg <= 30)      add('good', `Magnesium ${mg} mg/L: unkritisch (≤ 30 mg/L).`);
+  else if (mg <= 50) add('warn', `Magnesium ${mg} mg/L: erhöht, kann bitter-adstringierend wirken.`);
+  else               add('bad',  `Magnesium ${mg} mg/L: zu hoch, deutlich bitter/abführend – verschneiden.`);
+
+  if (na <= 50)       add('good', `Natrium ${na} mg/L: unkritisch.`);
+  else if (na <= 150) add('warn', `Natrium ${na} mg/L: erhöht, rundet ab, wirkt mit viel Sulfat aber kratzig.`);
+  else                add('bad',  `Natrium ${na} mg/L: zu hoch, salzig – verschneiden.`);
+
+  if (cl <= 100)      add('good', `Chlorid ${cl} mg/L: unkritisch, betont Malz und Vollmundigkeit.`);
+  else if (cl <= 250) add('warn', `Chlorid ${cl} mg/L: hoch, nur für sehr malzige Biere sinnvoll.`);
+  else                add('bad',  `Chlorid ${cl} mg/L: zu hoch.`);
+
+  if (so4 <= 150)     add('good', `Sulfat ${so4} mg/L: unkritisch, für betont herbe Biere kann CaSO₄ ergänzt werden.`);
+  else if (so4 <= 400) add('warn', `Sulfat ${so4} mg/L: hoch, gut für herbe/hopfige Biere, für Helles zu viel.`);
+  else                add('bad',  `Sulfat ${so4} mg/L: sehr hoch, trockene, kratzige Bittere.`);
+
+  if (no3 <= 25)      add('good', `Nitrat ${no3} mg/L: unkritisch.`);
+  else if (no3 <= 50) add('warn', `Nitrat ${no3} mg/L: unter dem Grenzwert (50) und für die Hefe ok; problematisch nur, wenn Bakterien daraus Nitrit bilden – auf saubere Gärung achten.`);
+  else                add('bad',  `Nitrat ${no3} mg/L: über dem Trinkwassergrenzwert – verschneiden.`);
+
+  if (q === 'bilanz')
+    add('warn', `Carbonat geschätzt aus der Ionenbilanz (${sk.toFixed(2)} mmol/L). Für genaue Werte KS4,3 beim Versorger erfragen oder die KH mit einem Tropftest messen.`);
+  if (ghBericht > 0 && Math.abs(gh - ghBericht) > 1)
+    add('warn', `Gesamthärte aus Ca/Mg (${gh.toFixed(1)} °dH) weicht vom Bericht (${ghBericht} °dH) ab – Eingaben prüfen.`);
+  document.getElementById('w_bewertung').innerHTML = items.join('');
+
+  // Aufbereitung: Verschnitt mit Osmosewasser (ionenfrei angenommen), dann Milchsäure
+  const f      = Math.min(100, Math.max(0, v('w_osmo'))) / 100;
+  const raMix  = ra * (1 - f);
+  const caMix  = ca * (1 - f);
+  const ziel   = v('w_ra_ziel');
+  const vol    = v('w_vol');
+
+  set('w_ra_misch', raMix, 1);
+  set('w_ca_misch', caMix, 0);
+  document.getElementById('w_ca_misch').className = 'result-value ' + (caMix >= 50 ? 'good' : caMix >= 30 ? 'warn' : 'bad');
+
+  // Milchsäure 80 %: 1 ml auf 10 L senkt die RA um ~3 °dH
+  const absenken = raMix - ziel;
+  const ms = absenken > 0 ? absenken * vol / 10 / 3 : 0;
+  set('w_ms', ms, 1);
+  // 1 ml MS 80 % ≈ 0,96 g Milchsäure; Sauermalz mit ~2,5 % Milchsäure → ≈ 38 g Sauermalz je ml
+  set('w_sm', ms * 0.96 / 0.025, 0);
+  // Konzentration im Brauwasser; Geschmacksschwelle im Bier ~0,3–0,4 g/L
+  // (Haupt- + Nachguss ≈ 1,3–1,5 × Ausschlag → im Bier etwas höher)
+  const konz = vol > 0 ? ms * 0.96 / vol : NaN;
+  set('w_ms_konz', konz, 2);
+  document.getElementById('w_ms_konz').className =
+    'result-value ' + (konz <= 0.2 ? 'good' : konz <= 0.3 ? 'warn' : 'bad');
+
+  const osmoEl = document.getElementById('w_osmo_noetig');
+  if (ra <= ziel) { osmoEl.textContent = '0'; }
+  else if (ziel <= 0) { osmoEl.textContent = '—'; }
+  else { set('w_osmo_noetig', (1 - ziel / ra) * 100, 0); }
+
+  // Hinweise
+  const h = [];
+  if (absenken <= 0) h.push('Ziel-RA ist ohne Säure erreicht.');
+  if (ziel <= 0 && ra > 0) h.push('Eine RA ≤ 0 lässt sich durch Verschneiden allein nicht erreichen – Säure ist nötig.');
+  if (ms > vol * 0.3) h.push('Viel Milchsäure: ab ca. 3 ml je 10 L Brauwasser (≈ 0,3 g/L) kann sie schmeckbar werden. Teilweise mit Osmosewasser verschneiden.');
+  else if (ms > vol * 0.2) h.push('Milchsäure nahe der Geschmacksschwelle – bei sehr feinen Bieren (Pils) lieber teilweise verschneiden.');
+  if (caMix < 50 && f > 0) h.push('Nach dem Verschnitt ist wenig Calcium übrig – etwas CaCl₂ oder CaSO₄ zugeben.');
+  h.push('Maische-pH zur Kontrolle messen, Ziel 5,4–5,6.');
+  document.getElementById('w_hinweis').textContent = h.join(' ');
+
+  calcZusaetze({ ca: caMix, mg: mg * (1 - f), na: na * (1 - f), cl: cl * (1 - f),
+                 so4: so4 * (1 - f), sk: sk * (1 - f), vol, ziel });
+}
+
+// Brauzusätze: Anteile je g Salz (Massenbruch) bzw. mmol je ml/g Säure
+const ZUSATZ = {
+  gips:   { ca: 40.08 / 172.17, so4: 96.06 / 172.17 },            // CaSO4·2H2O
+  cacl:   { ca: 40.08 / 110.98, cl: 70.90 / 110.98 },             // je g CaCl2 (wasserfrei gerechnet)
+  mgso4:  { mg: 24.31 / 246.47, so4: 96.06 / 246.47 },            // MgSO4·7H2O
+  nacl:   { na: 22.99 / 58.44,  cl: 35.45 / 58.44 },              // NaCl
+  natron: { na: 22.99 / 84.01,  hco3: 61.02 / 84.01 },            // NaHCO3
+  msMmolProMl: 1.20 * 0.80 / 90.08 * 1000,   // Milchsäure 80 %: ~10,7 mmol/ml
+  smMmolProG:  0.025 / 90.08 * 1000,         // Sauermalz ~2,5 % Milchsäure: ~0,28 mmol/g
+  psMmolProMl: 1.58 * 0.75 / 98.00 * 1000    // Phosphorsäure 75 %: ~12,1 mmol/ml (1 H+ wirksam)
+};
+
+// Dichte wässriger CaCl2-Lösungen bei 20 °C [g/ml] je Massenanteil (%)
+const CACL_DICHTE = [[0, 0.998], [10, 1.085], [20, 1.178], [30, 1.282], [35, 1.337], [40, 1.396], [45, 1.455]];
+function caclDichte(w) {
+  for (let i = 1; i < CACL_DICHTE.length; i++) {
+    const [w0, d0] = CACL_DICHTE[i - 1], [w1, d1] = CACL_DICHTE[i];
+    if (w <= w1) return d0 + (d1 - d0) * (w - w0) / (w1 - w0);
+  }
+  return CACL_DICHTE[CACL_DICHTE.length - 1][1];
+}
+// Menge der gewählten Form → g CaCl2 (wasserfrei)
+function caclGramm() {
+  const x = Math.max(0, v('z_cacl'));
+  const form = s('z_cacl_form');
+  if (form === 'dihydrat') return x * 110.98 / 147.01;
+  if (form === 'wasserfrei') return x;
+  const w = Math.min(45, Math.max(0, v('z_cacl_konz')));
+  return x * caclDichte(w) * w / 100;
+}
+function caclForm() {
+  const form = s('z_cacl_form');
+  document.getElementById('z_cacl_label').textContent =
+    form === 'loesung' ? 'Calciumchlorid-Lösung (ml)' : form === 'dihydrat' ? 'CaCl₂·2H₂O (g)' : 'CaCl₂ wasserfrei (g)';
+  document.getElementById('z_cacl_konz_feld').style.display = form === 'loesung' ? '' : 'none';
+  calcWasser();
+}
+
+function calcZusaetze(b) {
+  const vol = b.vol > 0 ? b.vol : NaN;
+  const g = id => Math.max(0, v(id)) * 1000 / vol;   // mg je L Brauwasser
+
+  const gips = g('z_gips'), cacl = caclGramm() * 1000 / vol, mgso4 = g('z_mgso4'), nacl = g('z_nacl'), natron = g('z_natron');
+  const mmolMS = (Math.max(0, v('z_ms')) * ZUSATZ.msMmolProMl + Math.max(0, v('z_sm')) * ZUSATZ.smMmolProG) / vol;
+  const mmolPS = Math.max(0, v('z_ps')) * ZUSATZ.psMmolProMl / vol;
+
+  const n = {
+    ca:  b.ca  + gips * ZUSATZ.gips.ca  + cacl * ZUSATZ.cacl.ca,
+    mg:  b.mg  + mgso4 * ZUSATZ.mgso4.mg,
+    na:  b.na  + nacl * ZUSATZ.nacl.na + natron * ZUSATZ.natron.na,
+    cl:  b.cl  + cacl * ZUSATZ.cacl.cl + nacl * ZUSATZ.nacl.cl,
+    so4: b.so4 + gips * ZUSATZ.gips.so4 + mgso4 * ZUSATZ.mgso4.so4
+  };
+  // Alkalität [mmol/L]: Natron erhöht, Säuren bauen ab (Überschuss → negativ = freie Säure)
+  const alkAlt = b.sk;
+  const alkNeu = b.sk + natron * ZUSATZ.natron.hco3 / 61.02 - mmolMS - mmolPS;
+  const lactat = mmolMS * 89.07;     // mg/L
+  const phosphat = mmolPS * 96.99;   // mg/L als H2PO4-
+
+  const haerte = (ca, mg) => ca / 40.08 * 5.608 + mg / 24.31 * 5.608;
+  const raVon  = (alk, ca, mg) => alk * 2.8 - (ca / 40.08 * 5.608 + 0.5 * mg / 24.31 * 5.608) / 3.5;
+  const raAlt = raVon(alkAlt, b.ca, b.mg);
+  const raNeu = raVon(alkNeu, n.ca, n.mg);
+
+  // Ampel-Grenzen fürs Brauen
+  const ampel = {
+    ca:  x => x < 30 ? 'bad' : x < 50 ? 'warn' : x <= 150 ? 'good' : 'warn',
+    mg:  x => x <= 30 ? 'good' : x <= 50 ? 'warn' : 'bad',
+    na:  x => x <= 50 ? 'good' : x <= 150 ? 'warn' : 'bad',
+    cl:  x => x <= 100 ? 'good' : x <= 250 ? 'warn' : 'bad',
+    so4: x => x <= 150 ? 'good' : x <= 400 ? 'warn' : 'bad',
+    ra:  x => x < 1 ? 'good' : x < 5 ? 'warn' : 'bad'
+  };
+  const fmt = (x, d) => isFinite(x) ? x.toFixed(d) : '—';
+  const diff = (a, c, d) => { if (!isFinite(a) || !isFinite(c)) return '—'; const x = c - a;
+    return Math.abs(x) < Math.pow(10, -d) / 2 ? '±0' : (x > 0 ? '+' : '−') + Math.abs(x).toFixed(d); };
+  const zeile = (name, a, c, d, cls) =>
+    `<tr><td>${name}</td><td>${fmt(a, d)}</td><td class="${cls || ''}">${fmt(c, d)}</td><td>${diff(a, c, d)}</td></tr>`;
+
+  const ratioA = b.cl > 0 ? b.so4 / b.cl : NaN, ratioN = n.cl > 0 ? n.so4 / n.cl : NaN;
+  const rows = [
+    zeile('Calcium (mg/L)',   b.ca,  n.ca,  0, ampel.ca(n.ca)),
+    zeile('Magnesium (mg/L)', b.mg,  n.mg,  0, ampel.mg(n.mg)),
+    zeile('Natrium (mg/L)',   b.na,  n.na,  0, ampel.na(n.na)),
+    zeile('Chlorid (mg/L)',   b.cl,  n.cl,  0, ampel.cl(n.cl)),
+    zeile('Sulfat (mg/L)',    b.so4, n.so4, 0, ampel.so4(n.so4)),
+    zeile('Hydrogencarbonat (mg/L)', Math.max(0, alkAlt) * 61.02, Math.max(0, alkNeu) * 61.02, 0),
+    zeile('Lactat (mg/L)',    0, lactat, 0),
+    zeile('Phosphat H₂PO₄ (mg/L)', 0, phosphat, 0),
+    zeile('Gesamthärte (°dH)',     haerte(b.ca, b.mg), haerte(n.ca, n.mg), 1),
+    zeile('Carbonathärte (°dH)',   Math.max(0, alkAlt) * 2.8, Math.max(0, alkNeu) * 2.8, 1),
+    zeile('Restalkalität (°dH)',   raAlt, raNeu, 1, ampel.ra(raNeu)),
+    zeile('Sulfat : Chlorid',      ratioA, ratioN, 2)
+  ];
+  document.getElementById('z_tabelle').innerHTML = rows.join('');
+
+  set('z_ra', raNeu, 1);
+  document.getElementById('z_ra').className = 'result-value ' + ampel.ra(raNeu);
+
+  // Gesamte Säure als Milchsäure-Äquivalent [g/L]
+  const konz = (mmolMS + mmolPS) * 90.08 / 1000;
+  set('z_ms_konz', konz, 2);
+  document.getElementById('z_ms_konz').className =
+    'result-value ' + (konz <= 0.2 ? 'good' : konz <= 0.3 ? 'warn' : 'bad');
+
+  const rest = raNeu > b.ziel ? (raNeu - b.ziel) * b.vol / 10 / 3 : 0;
+  set('z_ms_rest', rest, 1);
+
+  const h = [];
+  if (alkNeu < 0) h.push('Mehr Säure als Hydrogencarbonat vorhanden – der Überschuss liegt als freie Säure vor und senkt den Maische-pH direkt.');
+  if (raNeu <= b.ziel) h.push('Ziel-Restalkalität ist erreicht.');
+  if (lactat / 1000 * 90.08 / 89.07 > 0.3) h.push('Milchsäure-/Sauermalzanteil nahe oder über der Geschmacksschwelle.');
+  if (n.so4 > 300 && n.cl < 50) h.push('Sehr sulfatlastig – passt zu hopfenbetonten Bieren.');
+  if (n.mg > 30) h.push('Magnesium über 30 mg/L kann bitter-adstringierend wirken.');
+  if (n.na > 100) h.push('Natrium über 100 mg/L – Bier kann salzig/kratzig werden.');
+  if (v('z_natron') > 0) h.push('Natron erhöht die Alkalität – nur für sehr dunkle Biere mit viel Röstmalz sinnvoll.');
+  h.push('Sauermalz wirkt erst in der Maische; die Rechnung behandelt es wie Milchsäure im Wasser.');
+  document.getElementById('z_hinweis').textContent = h.join(' ');
+}
+
+// ── 9. ZAPFDRUCK ─────────────────────────────────────────
+function calcZapf() {
+  const co2  = v('zd_co2');
+  const temp = v('zd_temp');
+  const len  = v('zd_laenge');
+  const dm   = v('zd_dm');
+  const hoe  = v('zd_hoehe');
+  const r6   = v('zd_reib6'); // Leitungswiderstand 6-mm-Schlauch [bar/m]
+
+  const pSpund = Math.max(0, spundP(co2, temp));
+
+  // Reibungsverlust: Referenzwert für 6 mm, skaliert mit (6/d)^4
+  const reib = r6 * len * Math.pow(6 / dm, 4);
+
+  // Höhendruck: ~0,1 bar/m
+  const hoeDruck = hoe * 0.098;
+
+  const gesamt = pSpund + reib + hoeDruck;
+
+  set('zd_spund', pSpund, 2);
+  set('zd_reib',  reib,   2);
+  set('zd_out',   gesamt, 2);
+
+  const el = document.getElementById('zd_out');
+  el.className = 'result-value ' + (gesamt > 3 ? 'bad' : gesamt > 2 ? 'warn' : 'good');
+}
+
+// ── 10. SPUNDUNGSDRUCK ───────────────────────────────────
+function calcSpund() {
+  set('sp_out', Math.max(0, spundP(v('sp_co2'), v('sp_temp'))), 2);
+}
+
+// ── 11. VERDÜNNUNG ───────────────────────────────────────
+function calcVerd() {
+  const vol    = v('vd_vol');
+  const swIst  = v('vd_sw_ist');
+  const swZiel = v('vd_sw_ziel');
+
+  if (swZiel <= 0 || swZiel >= swIst) { dash('vd_out','vd_gesamt'); return; }
+
+  // Massenbilanz (°Plato ist Massenanteil)
+  const masseIst  = vol * platoToSG(swIst);         // kg Würze
+  const extrakt   = masseIst * swIst / 100;         // kg Extrakt
+  const masseZiel = extrakt / (swZiel / 100);       // kg Würze nach Verdünnung
+  const wZugabe   = masseZiel - masseIst;           // kg ≈ L Wasser
+  const vGes      = masseZiel / platoToSG(swZiel);  // L
+
+  set('vd_out', wZugabe, 2);
+  set('vd_gesamt', vGes, 2);
+}
+
+// ── 12. TOPFVOLUMEN ──────────────────────────────────────
+function calcTopf() {
+  const dm = v('tv_dm');
+  const h  = v('tv_h');
+  set('tv_out', Math.PI * Math.pow(dm/2, 2) * h / 1000, 2);
+}
+
+// ── INIT ─────────────────────────────────────────────────
+addHopfenGabe(20, 8, 60, 'pellet', '');
+toggleSpeise();
+calcKarbo();
+calcAlkohol();
+calcSwKorr();
+calcEinheiten();
+calcSHA();
+calcHopfen();
+calcHopfenAlt();
+calcMisch();
+calcWasser();
+calcZapf();
+calcSpund();
+calcVerd();
+calcTopf();
+</script>
+</body>
+</html>
