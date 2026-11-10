@@ -1,0 +1,2319 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prolog-Werkbank</title>
+<style>
+:root{
+ --bg:#0b0d0a; --panel:#11140f; --panel2:#161a13; --line:#2d3524; --fg:#ffb847; --dim:#a8803f; --faint:#5e4c2c;
+ --ok:#8dff7a; --bad:#ff6a55; --cut:#6fd6ff; --sel:#2a2416; --hi:#ffe2a8; --var:#d9a6ff;
+ --mono:"Cascadia Mono","DejaVu Sans Mono","Menlo","Consolas","Liberation Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.45 var(--mono)}
+body::after{content:"";position:fixed;inset:0;pointer-events:none;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.18) 2px 3px);z-index:50}
+a{color:var(--cut)}
+header{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;padding:10px 16px;border-bottom:1px solid var(--line);background:linear-gradient(#141810,#0e110c)}
+header h1{margin:0;font-size:20px;letter-spacing:.18em;text-shadow:0 0 6px rgba(255,184,71,.55)}
+header .jp{color:var(--dim);letter-spacing:.3em}
+header .sub{color:var(--dim);font-size:12px;flex:1 1 280px}
+header nav{font-size:12px}
+main{display:grid;grid-template-columns:minmax(320px,42%) 1fr;gap:10px;padding:10px;min-height:calc(100vh - 110px)}
+@media (max-width:900px){main{grid-template-columns:1fr}#right{order:-1}.edwrap{flex:none;height:46vh;min-height:220px}}
+#exSel{max-width:100%;min-width:0}
+.panel{background:var(--panel);border:1px solid var(--line);display:flex;flex-direction:column;min-width:0}
+.ptitle{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:6px 8px;border-bottom:1px solid var(--line);background:var(--panel2);font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em}
+.ptitle b{color:var(--fg);font-weight:normal}
+button,select,input[type=text],input[type=number]{font:inherit;font-size:13px;color:var(--fg);background:#0c0f0a;border:1px solid var(--line);padding:4px 8px;border-radius:0}
+button{cursor:pointer;text-transform:uppercase;letter-spacing:.06em;font-size:12px}
+button:hover{background:var(--sel);border-color:var(--dim)}
+button.pri{border-color:var(--fg);color:var(--hi)}
+button:disabled{opacity:.4;cursor:default}
+input:focus,select:focus,textarea:focus,button:focus-visible{outline:1px solid var(--fg);outline-offset:0}
+label.ck{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--dim);white-space:nowrap}
+label.ck input{accent-color:#ffb847}
+.edwrap{position:relative;display:flex;flex:1;min-height:320px;overflow:hidden}
+.gutter{width:42px;flex:none;text-align:right;padding:8px 6px 8px 0;color:var(--faint);background:#0d100b;border-right:1px solid var(--line);overflow:hidden;white-space:pre;user-select:none;font:13px/1.5 var(--mono)}
+textarea#ed{flex:1;resize:none;border:0;background:transparent;color:var(--fg);font:13px/1.5 var(--mono);padding:8px;white-space:pre;overflow:auto;tab-size:4;caret-color:var(--hi)}
+.dirty{color:var(--bad)}
+.chips{padding:6px 8px;border-top:1px solid var(--line);max-height:180px;overflow:auto}
+.chips .lbl{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.12em;margin-bottom:4px}
+.chip{display:inline-block;margin:2px 4px 2px 0;padding:2px 6px;border:1px dashed var(--faint);cursor:pointer;font-size:12px;color:var(--hi);text-transform:none;letter-spacing:0;background:transparent}
+.chip:hover{border-style:solid;border-color:var(--fg)}
+.tabs{display:flex;overflow-x:auto;border-bottom:1px solid var(--line);background:var(--panel2)}
+.tabs button{border:0;border-right:1px solid var(--line);background:transparent;color:var(--dim);padding:8px 12px;white-space:nowrap}
+.tabs button.on{color:var(--hi);background:var(--panel);box-shadow:inset 0 -2px 0 var(--fg)}
+.ctrl{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:6px 8px;border-bottom:1px solid var(--line);font-size:12px}
+.ctrl input[type=number]{width:96px}
+.ctrl input.spy{width:130px}
+.view{display:none;flex:1;min-height:0;overflow:auto;padding:8px}
+.view.on{display:block}
+#v-console.on{display:flex;flex-direction:column;padding:0}
+#out{flex:1;margin:0;padding:8px;overflow:auto;white-space:pre-wrap;word-break:break-word;min-height:300px;max-height:70vh}
+#out .q{color:var(--hi)} #out .ans{color:var(--ok)} #out .no{color:var(--bad)} #out .err{color:var(--bad)} #out .sys{color:var(--dim)} #out .warn{color:#ffd36b}
+.inrow{display:flex;align-items:center;gap:6px;border-top:1px solid var(--line);padding:6px 8px;background:#0d100b}
+.inrow .pr{color:var(--hi);text-shadow:0 0 4px rgba(255,184,71,.6)}
+.inrow input{flex:1;min-width:0;border:0;background:transparent;font-size:15px;padding:4px 0;color:var(--hi)}
+.nextbar{display:none;background:var(--panel2);gap:6px;padding:6px 8px;border-top:1px solid var(--line);align-items:center;flex-wrap:wrap}
+.nextbar.on{display:flex}
+.status{font-size:12px;color:var(--dim);padding:4px 8px;border-top:1px solid var(--line);min-height:24px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.blink{animation:bl 1s steps(1) infinite}@keyframes bl{50%{opacity:0}}
+/* Suchbaum */
+ul.tree,ul.tree ul{list-style:none;margin:0;padding-left:16px}
+ul.tree{padding-left:0}
+ul.tree li{position:relative;padding-left:12px;white-space:nowrap}
+ul.tree li::before{content:"";position:absolute;left:0;top:0;bottom:0;border-left:1px solid var(--faint)}
+ul.tree li:last-child::before{bottom:auto;height:.75em}
+ul.tree li::after{content:"";position:absolute;left:0;top:.75em;width:9px;border-top:1px solid var(--faint)}
+.tn{display:inline-block;padding:0 4px;font-size:12.5px}
+.tn.succ{color:var(--ok)} .tn.fail{color:var(--bad)} .tn.cutn{color:var(--cut);font-style:italic} .tn.act{color:var(--fg)} .tn.solv{color:#111;background:var(--ok)}
+.tn.root{color:var(--hi)}
+.tn.cur{outline:1px solid var(--hi);background:var(--sel)}
+.tn .cp{color:#ffd36b;font-weight:normal}
+.legend{font-size:12px;color:var(--dim);margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px 14px}
+.legend span b{font-weight:normal}
+/* Trace */
+#traceOut{margin:0;white-space:pre;font-size:12.5px}
+.p-Call{color:var(--fg)} .p-Exit{color:var(--ok)} .p-Redo{color:#ffd36b} .p-Fail{color:var(--bad)} .p-Exception{color:var(--cut)}
+.p-b{opacity:.75}
+/* Unifikation */
+.unirow{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px}
+.unirow input{flex:1 1 220px;font-size:14px}
+.unigrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media (max-width:640px){.unigrid{grid-template-columns:1fr}}
+.box{border:1px solid var(--line);background:#0d100b;padding:6px;overflow:auto}
+.box h4{margin:0 0 4px;font-weight:normal;color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.12em}
+svg text{font-family:var(--mono)}
+table{border-collapse:collapse;font-size:12.5px;width:100%}
+th,td{border:1px solid var(--line);padding:3px 6px;text-align:left;vertical-align:top}
+th{color:var(--dim);font-weight:normal;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+td.n{text-align:right}
+.stepmsg{color:var(--hi);margin:6px 0}
+/* Datenbank */
+.pred{margin:0 0 10px;border:1px solid var(--line)}
+.pred h4{margin:0;padding:4px 6px;background:var(--panel2);font-weight:normal;color:var(--hi);font-size:13px}
+.pred h4 small{color:var(--dim)}
+.pred pre{margin:0;padding:2px 6px;white-space:pre-wrap;font-size:12.5px}
+.pred pre.added{background:rgba(141,255,122,.09);color:var(--ok)}
+.pred pre.added::before{content:"+ "}
+.pred pre.gone{color:var(--bad);text-decoration:line-through;opacity:.8}
+.pred pre.gone::before{content:"− "}
+.help h3{color:var(--hi);font-weight:normal;letter-spacing:.1em;border-bottom:1px solid var(--line);padding-bottom:2px;margin:16px 0 6px}
+.help p,.help li{color:#e8c98f}
+.help code{color:var(--hi)}
+.dim{color:var(--dim)}
+footer{padding:10px 16px;border-top:1px solid var(--line);font-size:12px;color:var(--dim);display:flex;flex-wrap:wrap;gap:6px 18px}
+.bars rect.inf{fill:#ffb847} .bars rect.bt{fill:#6fd6ff} .bars text{fill:#e8c98f;font-size:11px}
+@media (max-width:640px){
+ body{font-size:13px} header h1{font-size:17px}
+ .inrow input,input[type=text],input[type=number],select{font-size:16px}
+ #out{max-height:55vh;min-height:220px}
+ .edwrap{min-height:240px}
+}
+</style>
+</head>
+<body>
+<header>
+ <h1>PROLOG-WERKBANK</h1><span class="jp">第五世代</span>
+ <span class="sub">Logische Programmierung im Browser · Edinburgh-Syntax, Kern nach ISO 13211-1 · Suchbaum, Box-Modell-Trace, Unifikation</span>
+ <nav><a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a></nav>
+</header>
+<main>
+ <section class="panel" id="left">
+  <div class="ptitle">Wissensbasis <b id="fname">programm.pl</b> <span id="dirty" class="dirty"></span>
+   <span style="flex:1"></span>
+   <select id="exSel" aria-label="Beispielprogramm"><option value="">— Beispiel laden —</option></select>
+  </div>
+  <div class="ctrl">
+   <button class="pri" id="bConsult" title="Strg+Enter">Konsultieren</button>
+   <button id="bLoad">Laden…</button><input type="file" id="fileIn" accept=".pl,.pro,.P,.txt" hidden>
+   <button id="bSave">Speichern</button>
+   <button id="bNew">Neu</button>
+  </div>
+  <div class="edwrap"><div class="gutter" id="gut">1</div><textarea id="ed" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off" aria-label="Programmtext"></textarea></div>
+  <div class="chips" id="chips"></div>
+ </section>
+ <section class="panel" id="right">
+  <div class="tabs" id="tabs">
+   <button data-v="console" class="on">Konsole</button><button data-v="tree">Suchbaum</button><button data-v="trace">Trace</button>
+   <button data-v="unify">Unifikation</button><button data-v="db">Datenbank</button><button data-v="stats">Statistik</button><button data-v="help">Hilfe</button>
+  </div>
+  <div class="ctrl">
+   <label class="ck"><input type="checkbox" id="oTree" checked> Suchbaum</label>
+   <label class="ck"><input type="checkbox" id="oTrace"> Trace</label>
+   <label class="ck"><input type="checkbox" id="oStep"> Einzelschritt</label>
+   <label class="ck"><input type="checkbox" id="oOcc"> Occurs-Check</label>
+   <label class="ck">Spy <input type="text" class="spy" id="oSpy" placeholder="p/1, q/2"></label>
+   <label class="ck">Tiefe <input type="number" id="oDepth" value="100000" min="10"></label>
+   <label class="ck">Inferenzen <input type="number" id="oInf" value="20000000" min="100"></label>
+  </div>
+   <div class="nextbar" id="stepbar"><span class="dim">Einzelschritt:</span><span id="stepGoal" class="dim" style="flex:1 1 200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+    <button class="pri" id="bStep">Schritt ▸</button><button id="bCont">Weiter ▸▸</button><button id="bAbort2">Abbruch</button></div>
+  <div class="view on" id="v-console">
+   <pre id="out"></pre>
+   <div class="nextbar" id="nextbar"><span class="dim">Weitere Lösungen?</span>
+    <button class="pri" id="bNext">; nächste</button><button id="bStop">. fertig</button></div>
+   <div class="inrow"><span class="pr" id="prompt">?-</span><input id="qin" type="text" autocapitalize="off" autocomplete="off" spellcheck="false" placeholder="Anfrage, z. B. append(X, Y, [1,2,3])." aria-label="Anfrage">
+    <button id="bRun" class="pri">▸</button><button id="bAbort" disabled>■</button></div>
+   <div class="status" id="status">Bereit.</div>
+  </div>
+  <div class="view" id="v-tree"><div class="legend"><span class="tn root">?- Anfrage</span><span class="tn act">aktiver Ast</span><span class="tn succ">führt zur Lösung</span><span class="tn solv">□ Lösung</span><span class="tn fail">Fehlschlag / verworfen</span><span class="tn cutn">✂ durch Cut abgeschnitten</span><span><b class="cp" style="color:#ffd36b">◆ n</b> offene Wahlpunkte</span></div><div id="treeOut"></div></div>
+  <div class="view" id="v-trace"><div class="legend"><span class="p-Call">Call</span><span class="p-Exit">Exit</span><span class="p-Redo">Redo</span><span class="p-Fail">Fail</span><span class="dim">Einrückung = Rekursionstiefe · eingebaute Prädikate blasser · Trace einschalten oder Spy-Punkte setzen</span></div><pre id="traceOut"></pre></div>
+  <div class="view" id="v-unify">
+   <div class="unirow"><input id="u1" type="text" value="f(X, g(Y, a), Z)" aria-label="Term 1"><span style="align-self:center">=</span><input id="u2" type="text" value="f(h(Z), g(b, W), c)" aria-label="Term 2"></div>
+   <div class="unirow"><button class="pri" id="uStart">Start</button><button id="uBack">◂ Zurück</button><button id="uStep">Schritt ▸</button><button id="uAll">Alle ▸▸</button>
+    <label class="ck"><input type="checkbox" id="uOcc"> Occurs-Check</label>
+    <select id="uEx"><option value="">Beispiele…</option>
+     <option>f(X, g(Y, a), Z) = f(h(Z), g(b, W), c)</option><option>p(X, X) = p(a, Y)</option><option>[H|T] = [1, 2, 3]</option>
+     <option>datum(T, M, 2026) = datum(10, nov, J)</option><option>f(X, a) = g(X, a)</option><option>X = f(X)</option><option>p(X, f(X)) = p(Y, Y)</option><option>[X, Y | _] = [a | Z]</option></select></div>
+   <div class="stepmsg" id="uMsg">Zwei Terme eingeben und »Start« drücken.</div>
+   <div class="unigrid"><div class="box"><h4>Term 1</h4><div id="uT1"></div></div><div class="box"><h4>Term 2</h4><div id="uT2"></div></div></div>
+   <div class="unigrid" style="margin-top:8px"><div class="box"><h4>Offene Gleichungen</h4><div id="uStack"></div></div><div class="box"><h4>Variablenbindungen</h4><div id="uBind"></div></div></div>
+  </div>
+  <div class="view" id="v-db"><div class="legend"><label class="ck"><input type="checkbox" id="dbLib"> Bibliotheksprädikate zeigen</label><span class="tn succ">+ durch assert hinzugekommen</span><span class="tn fail">− durch retract entfernt</span></div><div id="dbOut"></div></div>
+  <div class="view" id="v-stats">
+   <h4 class="dim" style="margin:0 0 4px;font-weight:normal">Anfragen dieser Sitzung</h4>
+   <div style="overflow:auto"><table id="stTab"><thead><tr><th>#</th><th>Anfrage</th><th>Lösungen</th><th>Inferenzen</th><th>Backtracking</th><th>max. Tiefe</th><th>max. Wahlpunkte</th><th>ms</th><th>LIPS</th></tr></thead><tbody></tbody></table></div>
+   <h4 class="dim" style="margin:16px 0 4px;font-weight:normal">Messreihe: Wie wächst der Suchraum?</h4>
+   <div class="unirow"><input id="mTpl" type="text" value="damen(N, _)" aria-label="Vorlage mit N"><label class="ck">N von <input type="number" id="mFrom" value="4" style="width:64px"></label><label class="ck">bis <input type="number" id="mTo" value="8" style="width:64px"></label>
+    <select id="mMode"><option value="first">erste Lösung</option><option value="all">alle Lösungen</option></select><button class="pri" id="mRun">Messen</button></div>
+   <div class="dim" style="font-size:12px">Vorlage mit der Variablen <code>N</code>; vorher das passende Programm konsultieren (z. B. Beispiel 08 N-Damen: <code>damen(N,_)</code> gegen <code>damen2(N,_)</code>).</div>
+   <div id="mOut"></div>
+  </div>
+  <div class="view help" id="v-help"></div>
+ </section>
+</main>
+<footer>
+ <span>Prolog-Werkbank · Teil der Reihe zu alten Programmiersprachen auf <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a></span>
+ <a href="lisp.html">Lisp-Werkbank</a>
+ <a href="https://sky4walk.github.io/SmallCircuits/SmallHtml/lambda-kalkuel.html">Lambda-Kalkül</a>
+ <span>Keine Daten verlassen den Browser · nichts wird gespeichert</span>
+</footer>
+<script>
+// ===== Prolog-Werkbank: Interpreter-Kern =====
+var Prolog = (function(){
+'use strict';
+let VID=0;
+class Var{constructor(){this.ref=null;this.id=VID++;}}
+class Atom{constructor(n){this.name=n;}}
+class Int{constructor(v){this.val=v;}}
+class Flt{constructor(v){this.val=v;}}
+class Str{constructor(n,a){this.name=n;this.args=a;}}
+class VRef{constructor(i){this.i=i;}}
+class CStr{constructor(n,a){this.name=n;this.args=a;}}
+const ATOMS=new Map();
+function A(n){let a=ATOMS.get(n);if(!a){a=new Atom(n);ATOMS.set(n,a);}return a;}
+const NIL=A('[]'),TRUE=A('true'),EOFA=A('end_of_file'),EMPTYARR=[];
+function S(n,...a){return new Str(n,a);}
+function I(n){return new Int(typeof n==='bigint'?n:BigInt(n));}
+function F(x){return new Flt(x);}
+function deref(t){while(t instanceof Var){const r=t.ref;if(r===null)return t;t=r;}return t;}
+function mklist(arr,tail){let r=tail||NIL;for(let i=arr.length-1;i>=0;i--)r=new Str('.',[arr[i],r]);return r;}
+function isCons(t){return t instanceof Str&&t.name==='.'&&t.args.length===2;}
+function toArray(t){const o=[];t=deref(t);while(isCons(t)){o.push(t.args[0]);t=deref(t.args[1]);}return t===NIL?o:null;}
+function PI(n,a){return S('/',A(n),I(a));}
+function isCallable(t){return t instanceof Atom||t instanceof Str;}
+function isNum(t){return t instanceof Int||t instanceof Flt;}
+function isAtomic(t){return t instanceof Atom||isNum(t);}
+
+// ---------- Fehler ----------
+class PErr{constructor(t){this.term=t;}}
+class Limit{constructor(m){this.msg=m;}}
+class Halt{}
+class NeedInput{constructor(n){this.node=n;}}
+function err(f){return new PErr(S('error',f,new Var()));}
+const ERR={
+ inst:()=>err(A('instantiation_error')),
+ type:(t,c)=>err(S('type_error',A(t),c)),
+ dom:(d,c)=>err(S('domain_error',A(d),c)),
+ exist:(k,c)=>err(S('existence_error',A(k),c)),
+ perm:(a,t,c)=>err(S('permission_error',A(a),A(t),c)),
+ repr:r=>err(S('representation_error',A(r))),
+ eval:e=>err(S('evaluation_error',A(e))),
+ syntax:m=>err(S('syntax_error',A(m))),
+ res:r=>err(S('resource_error',A(r))),
+};
+
+// ---------- Lexer ----------
+const SYMCH='+-*/\\^<>=~:.?@#&$';
+const reLower=/\p{Ll}/u, reUpper=/[\p{Lu}_]/u, reAlnum=/[\p{L}\p{N}_]/u, reDigit=/[0-9]/;
+class Lexer{
+ constructor(s){this.s=s;this.i=0;}
+ line(p){return this.s.slice(0,p).split('\n').length;}
+ err(msg,pos,eof){const e=new PErr(S('error',S('syntax_error',A(msg)),S('line',I(this.line(pos??this.i)))));e.line=this.line(pos??this.i);e.syn=msg;e.eof=!!eof;throw e;}
+ skip(){let pre=false;const s=this.s;
+  for(;;){const c=s[this.i];
+   if(c===undefined)return pre;
+   if(c===' '||c==='\t'||c==='\n'||c==='\r'||c==='\f'||c==='\v'||c==='\u00a0'){this.i++;pre=true;continue;}
+   if(c==='%'){while(this.i<s.length&&s[this.i]!=='\n')this.i++;pre=true;continue;}
+   if(c==='/'&&s[this.i+1]==='*'){const j=s.indexOf('*/',this.i+2);if(j<0){const p=this.i;this.i=s.length;this.err('Blockkommentar nicht geschlossen',p,true);}this.i=j+2;pre=true;continue;}
+   return pre;}}
+ next(){
+  const pre=this.skip();const s=this.s;const st=this.i;const c=s[this.i];
+  const nm=(v,q)=>{const t={k:'name',v,pre,pos:st,quoted:!!q};if(s[this.i]==='(')t.funct=true;return t;};
+  if(c===undefined)return{k:'eof',pre,pos:st};
+  if(reDigit.test(c))return this.number(pre,st);
+  if(c==='_'||reUpper.test(c)){let j=this.i+1;while(j<s.length&&reAlnum.test(s[j]))j++;const v=s.slice(this.i,j);this.i=j;return{k:'var',v,pre,pos:st};}
+  if(reLower.test(c)){let j=this.i+1;while(j<s.length&&reAlnum.test(s[j]))j++;const v=s.slice(this.i,j);this.i=j;return nm(v);}
+  if(c==="'"){this.i++;return nm(this.quoted("'"),true);}
+  if(c==='"'){this.i++;return{k:'str',v:this.quoted('"'),pre,pos:st};}
+  if(c==='`'){this.i++;return{k:'bq',v:this.quoted('`'),pre,pos:st};}
+  if('()[]{},|'.includes(c)){this.i++;
+   if(c==='|'&&s[this.i]==='|'){this.i++;return nm('||');}
+   return{k:'punct',v:c,pre,pos:st};}
+  if(c==='!'||c===';'){this.i++;return nm(c);}
+  if(SYMCH.includes(c)){
+   if(c==='.'){const d=s[this.i+1];if(d===undefined||/\s/.test(d)||d==='%'){this.i++;return{k:'end',pre,pos:st};}}
+   let j=this.i;while(j<s.length&&SYMCH.includes(s[j]))j++;const v=s.slice(this.i,j);this.i=j;return nm(v);}
+  this.i++;this.err('Unzulässiges Zeichen '+JSON.stringify(c),st);
+ }
+ quoted(q){const s=this.s;let out='';const st=this.i-1;
+  for(;;){if(this.i>=s.length)this.err('Zeichenkette nicht geschlossen',st,true);
+   const c=s[this.i++];
+   if(c===q){if(s[this.i]===q){out+=q;this.i++;continue;}return out;}
+   if(c==='\\'){out+=this.escape();continue;}
+   out+=c;}}
+ escape(){const s=this.s;const c=s[this.i++];
+  switch(c){case 'n':return'\n';case 't':return'\t';case 'r':return'\r';case 'a':return'\x07';case 'b':return'\b';case 'f':return'\f';case 'v':return'\v';
+   case 'e':return'\x1b';case 's':return' ';case 'z':return'';case '\n':return'';
+   case '\\':case "'":case '"':case '`':return c;
+   case 'x':{let j=this.i;while(/[0-9a-fA-F]/.test(s[j]||''))j++;const h=s.slice(this.i,j);this.i=j;if(s[this.i]==='\\')this.i++;return String.fromCodePoint(parseInt(h,16));}
+   default:
+    if(/[0-7]/.test(c)){let j=this.i;while(/[0-7]/.test(s[j]||''))j++;const o=c+s.slice(this.i,j);this.i=j;if(s[this.i]==='\\')this.i++;return String.fromCodePoint(parseInt(o,8));}
+    this.err('Unbekannte Escape-Sequenz \\'+c);}}
+ number(pre,st){const s=this.s;let i=this.i;
+  if(s[i]==='0'&&s[i+1]==="'"){
+   this.i=i+2;let ch;
+   if(s[this.i]==='\\'){this.i++;ch=this.escape();}
+   else if(s[this.i]==="'"&&s[this.i+1]==="'"){ch="'";this.i+=2;}
+   else{const cp=s.codePointAt(this.i);if(cp===undefined)this.err('Zeichen erwartet',st,true);ch=String.fromCodePoint(cp);this.i+=ch.length;}
+   return{k:'int',v:BigInt(ch.codePointAt(0)),pre,pos:st};}
+  if(s[i]==='0'&&'xob'.includes(s[i+1]||'#')){const b=s[i+1];const re=b==='x'?/[0-9a-fA-F]/:b==='o'?/[0-7]/:/[01]/;let j=i+2;while(j<s.length&&re.test(s[j]))j++;
+   if(j>i+2){this.i=j;return{k:'int',v:BigInt(s.slice(i,j)),pre,pos:st};}}
+  let j=i;while(j<s.length&&(reDigit.test(s[j])||(s[j]==='_'&&reDigit.test(s[j+1]||''))))j++;
+  let isF=false;
+  if(s[j]==='.'&&reDigit.test(s[j+1]||'')){isF=true;j++;while(j<s.length&&reDigit.test(s[j]))j++;}
+  if((s[j]==='e'||s[j]==='E')&&(reDigit.test(s[j+1]||'')||((s[j+1]==='+'||s[j+1]==='-')&&reDigit.test(s[j+2]||'')))){isF=true;j+=2;while(j<s.length&&reDigit.test(s[j]))j++;}
+  const txt=s.slice(i,j).replace(/_/g,'');this.i=j;
+  return isF?{k:'flt',v:parseFloat(txt),pre,pos:st}:{k:'int',v:BigInt(txt),pre,pos:st};}
+}
+
+// ---------- Parser ----------
+class Parser{
+ constructor(eng,text){this.e=eng;this.lx=new Lexer(text);this.pk=null;}
+ peek(){return this.pk||(this.pk=this.lx.next());}
+ adv(){const t=this.peek();this.pk=null;return t;}
+ fail(msg,t){this.lx.err(msg,t.pos,t.k==='eof');}
+ expect(v){const t=this.adv();if(!(t.k==='punct'&&t.v===v))this.fail(`»${v}« erwartet`,t);}
+ read(){
+  this.vars=new Map();this.varList=[];this.cnt=new Map();
+  const t=this.peek();if(t.k==='eof')return null;
+  const r=this.parse(1200);
+  const e=this.adv();if(e.k!=='end')this.fail(e.k==='eof'?'Punkt am Klauselende fehlt':'Operator erwartet',e);
+  const single=this.varList.filter(([n])=>this.cnt.get(n)===1&&!n.startsWith('_')).map(x=>x[0]);
+  return{term:r.t,vars:this.varList,single};}
+ skipToEnd(){this.pk=null;for(;;){let t;try{t=this.lx.next();}catch(e){continue;}if(t.k==='end'||t.k==='eof')return;}}
+ mkVar(n){if(n==='_')return new Var();this.cnt.set(n,(this.cnt.get(n)||0)+1);let v=this.vars.get(n);if(!v){v=new Var();this.vars.set(n,v);this.varList.push([n,v]);}return v;}
+ dq(s,mode){if(mode==='atom')return A(s);if(mode==='chars')return mklist([...s].map(c=>A(c)));return mklist([...s].map(c=>I(c.codePointAt(0))));}
+ isStart(t){if(t.k==='int'||t.k==='flt'||t.k==='var'||t.k==='str'||t.k==='bq'||t.k==='name')return true;return t.k==='punct'&&'([{'.includes(t.v);}
+ parse(max){const p=this.primary(max);return this.infix(p.t,p.p,max);}
+ primary(max){
+  const tk=this.adv();
+  switch(tk.k){
+   case 'int':return{t:new Int(tk.v),p:0};
+   case 'flt':return{t:new Flt(tk.v),p:0};
+   case 'var':return{t:this.mkVar(tk.v),p:0};
+   case 'str':return{t:this.dq(tk.v,this.e.flags.double_quotes),p:0};
+   case 'bq':return{t:this.dq(tk.v,'codes'),p:0};
+   case 'punct':
+    if(tk.v==='('){const r=this.parse(1200);this.expect(')');return{t:r.t,p:0};}
+    if(tk.v==='['){
+     const n=this.peek();if(n.k==='punct'&&n.v===']'){this.adv();return this.atomOrCompound('[]',tk,max);}
+     const items=[this.parse(999).t];let tail=NIL;
+     for(;;){const x=this.peek();
+      if(x.k==='punct'&&x.v===','){this.adv();items.push(this.parse(999).t);continue;}
+      if(x.k==='punct'&&x.v==='|'){this.adv();tail=this.parse(999).t;}
+      break;}
+     this.expect(']');return{t:mklist(items,tail),p:0};}
+    if(tk.v==='{'){const n=this.peek();if(n.k==='punct'&&n.v==='}'){this.adv();return this.atomOrCompound('{}',tk,max);}
+     const r=this.parse(1200);this.expect('}');return{t:S('{}',r.t),p:0};}
+    this.fail(`Unerwartetes »${tk.v}«`,tk);
+   case 'end':this.fail('Unerwartetes Klauselende',tk);
+   case 'eof':this.fail('Unerwartetes Textende',tk);
+   case 'name':return this.name(tk,max);
+  }}
+ atomOrCompound(n,tk,max){const nx=this.peek();if(nx.k==='punct'&&nx.v==='('&&!nx.pre){return this.args(n);}return{t:A(n),p:0};}
+ args(name){this.expect('(');const a=[this.parse(999).t];
+  for(;;){const x=this.peek();if(x.k==='punct'&&x.v===','){this.adv();a.push(this.parse(999).t);continue;}break;}
+  this.expect(')');return{t:new Str(name,a),p:0};}
+ name(tk,max){
+  const name=tk.v;
+  if(tk.funct)return this.args(name);
+  if(name==='-'&&!tk.quoted){const nx=this.peek();if((nx.k==='int'||nx.k==='flt')&&!nx.pre){this.adv();return{t:nx.k==='int'?new Int(-nx.v):new Flt(-nx.v),p:0};}}
+  const ops=this.e.ops;
+  const pre=!tk.quoted&&ops.prefix.get(name);
+  if(pre){const nx=this.peek();
+   let infixOnly=nx.k==='name'&&!nx.funct&&ops.infix.has(nx.v)&&!ops.prefix.has(nx.v);
+   if(this.isStart(nx)&&!infixOnly){
+    let p=pre.p,am=pre.type==='fy'?p:p-1;if(p>max){p=999;am=999;}
+    const a=this.parse(am);return{t:new Str(name,[a.t]),p};}
+   return{t:A(name),p:0};}
+  return{t:A(name),p:0};}
+ infix(left,lp,max){
+  const ops=this.e.ops;
+  for(;;){
+   const tk=this.peek();let name=null;
+   if(tk.k==='name')name=tk.v;else if(tk.k==='punct'&&(tk.v===','||tk.v==='|'))name=tk.v;
+   if(name===null)break;
+   const inf=ops.infix.get(name);
+   if(inf){const p=name==='|'?1100:inf.p;const la=inf.type==='yfx'?p:p-1,ra=inf.type==='xfy'?p:p-1;
+    if(p<=max&&lp<=la){this.adv();const r=this.parse(ra);left=new Str(name==='|'?';':name,[left,r.t]);lp=p;continue;}}
+   const po=ops.postfix.get(name);
+   if(po&&po.p<=max){this.adv();left=new Str(name,[left]);lp=po.p;continue;}
+   break;}
+  return{t:left,p:lp};}
+}
+
+// ---------- Ausgabe ----------
+function fmtFloat(x){if(x===Infinity)return'inf';if(x===-Infinity)return'-inf';if(x!==x)return'nan';
+ let s=String(x);if(/e/.test(s)){let[m,e]=s.split('e');if(!m.includes('.'))m+='.0';return m+'e'+(e[0]==='+'?e.slice(1):e);}
+ if(!s.includes('.'))s+='.0';return s;}
+function qatom(n){
+ if(n==='[]'||n==='!'||n===';'||n==='{}')return n;
+ if(n===',')return"','";if(n==='|')return"'|'";
+ if(/^\p{Ll}[\p{L}\p{N}_]*$/u.test(n))return n;
+ if(n.length&&[...n].every(c=>SYMCH.includes(c))&&n!=='.')return n;
+ return"'"+n.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n').replace(/\t/g,'\\t')+"'";}
+const wordch=/[\p{L}\p{N}_]/u;
+function needSpace(l,r){if(!l||!r)return false;const a=l[l.length-1],b=r[0];
+ if(SYMCH.includes(a)&&SYMCH.includes(b))return true;if(wordch.test(a)&&wordch.test(b))return true;if(a===','&&b==="'")return false;return false;}
+
+// ---------- Standardordnung ----------
+function ord(t){return t instanceof Var?0:isNum(t)?1:t instanceof Atom?3:4;}
+function numval(t){return t instanceof Int?t.val:t.val;}
+function cmpNum(a,b){if(a instanceof Int&&b instanceof Int)return a.val<b.val?-1:a.val>b.val?1:0;
+ const x=Number(numval(a)),y=Number(numval(b));if(x<y)return-1;if(x>y)return 1;
+ if(a instanceof Int&&b instanceof Flt)return 1;if(a instanceof Flt&&b instanceof Int)return-1;return 0;}
+function compare(a,b){
+ const st=[a,b];
+ while(st.length){const y=deref(st.pop()),x=deref(st.pop());if(x===y)continue;
+  const ox=ord(x),oy=ord(y);if(ox!==oy)return ox<oy?-1:1;
+  if(x instanceof Var){return x.id<y.id?-1:1;}
+  if(ox===1){const c=cmpNum(x,y);if(c)return c;continue;}
+  if(x instanceof Atom){return x.name<y.name?-1:x.name>y.name?1:0;}
+  if(x.args.length!==y.args.length)return x.args.length<y.args.length?-1:1;
+  if(x.name!==y.name)return x.name<y.name?-1:1;
+  for(let i=x.args.length-1;i>=0;i--)st.push(x.args[i],y.args[i]);}
+ return 0;}
+function variant(a,b){const m1=new Map(),m2=new Map();const st=[a,b];
+ while(st.length){const y=deref(st.pop()),x=deref(st.pop());
+  if(x instanceof Var||y instanceof Var){if(!(x instanceof Var&&y instanceof Var))return false;
+   const p=m1.get(x),q=m2.get(y);if(p===undefined&&q===undefined){m1.set(x,y);m2.set(y,x);continue;}if(p!==y||q!==x)return false;continue;}
+  if(x instanceof Str){if(!(y instanceof Str)||x.name!==y.name||x.args.length!==y.args.length)return false;for(let i=x.args.length-1;i>=0;i--)st.push(x.args[i],y.args[i]);continue;}
+  if(compare(x,y)!==0)return false;}
+ return true;}
+function occurs(v,t){const st=[t];while(st.length){const x=deref(st.pop());if(x===v)return true;if(x instanceof Str)for(const a of x.args)st.push(a);}return false;}
+function termVars(t,acc,seen){acc=acc||[];seen=seen||new Set();const st=[t];while(st.length){const x=deref(st.pop());if(x instanceof Var){if(!seen.has(x)){seen.add(x);acc.push(x);}}else if(x instanceof Str)for(let i=x.args.length-1;i>=0;i--)st.push(x.args[i]);}return acc;}
+function isGround(t){const st=[t];while(st.length){const x=deref(st.pop());if(x instanceof Var)return false;if(x instanceof Str)for(const a of x.args)st.push(a);}return true;}
+function inst(t,v){if(t instanceof VRef)return v[t.i]||(v[t.i]=new Var());if(t instanceof CStr){const a=t.args,n=a.length,b=new Array(n);for(let i=0;i<n;i++)b[i]=inst(a[i],v);return new Str(t.name,b);}return t;}
+function keyOf(t){t=deref(t);if(t instanceof Var)return null;if(t instanceof Atom)return'a'+t.name;if(t instanceof Int)return'i'+t.val;if(t instanceof Flt)return'f'+t.val;return's'+t.name+'/'+t.args.length;}
+function ckey(t){if(t instanceof VRef)return null;if(t instanceof CStr)return's'+t.name+'/'+t.args.length;return keyOf(t);}
+function nextCand(c,i,k){if(k===null)return i;while(i<c.length&&c[i].k0!==null&&c[i].k0!==k)i++;return i;}
+function addArgs(g,extra){g=deref(g);if(g instanceof Var)throw ERR.inst();if(g instanceof Atom)return extra.length?new Str(g.name,extra.slice()):g;if(g instanceof Str)return new Str(g.name,g.args.concat(extra));throw ERR.type('callable',g);}
+
+class GNode{constructor(g,next,cb,d){this.g=g;this.next=next;this.cb=cb;this.d=d;}}
+class Mark{constructor(k,a){this.k=k;this.a=a;}}
+const CL=1,ALT=2,GEN=3,CATCH=4,FA=5;
+const now=()=>(typeof performance!=='undefined'?performance.now():Date.now());
+
+const CONTROL=new Map(),BUILTINS=new Map(),OVERRIDABLE=new Set();
+function def(k,f,over){BUILTINS.set(k,f);if(over)OVERRIDABLE.add(k);}
+
+// ---------- Engine ----------
+class Engine{
+ constructor(){
+  this.flags={occurs_check:false,double_quotes:'codes',unknown:'error'};
+  this.out=s=>{};this.onTrace=null;this.globals=new Map();this.inputBuf='';this.interactive=false;
+  this.qno=0;this.clid=0;this.trail=[];this.cps=[];this.goals=null;this.treeOn=false;this.tnode=null;this.useFrames=false;this.trace=false;this.spy=new Set();
+  this.resetOps();this.db=new Map();this.consulting=false;this.loadingLib=true;
+  this.consultText(LIB,{quiet:true});this.loadingLib=false;
+  this.libDB=new Map();for(const[k,p]of this.db){p.lib=true;this.libDB.set(k,p);}
+  this.maxDepth=1e5;this.maxInf=5e7;
+ }
+ resetOps(){
+  const o={prefix:new Map(),infix:new Map(),postfix:new Map()};this.ops=o;
+  const add=(p,t,names)=>{for(const n of names.split(' '))this.addOp(p,t,n);};
+  add(1200,'xfx',':- -->');add(1200,'fx',':- ?-');add(1100,'xfy','; |');add(1105,'xfy','|');add(1050,'xfy','-> *->');add(1000,'xfy',',');
+  add(900,'fy','\\+');add(700,'xfx','= \\= == \\== @< @> @=< @>= =.. is =:= =\\= < > =< >= =@= \\=@= >:< :<');
+  add(600,'xfy',':');add(500,'yfx','+ - /\\ \\/ xor');add(400,'yfx','* / // rem mod div << >> divmod rdiv');
+  add(200,'xfx','**');add(200,'xfy','^');add(200,'fy','- + \\');add(100,'yfx','.');add(1,'fx','$');
+  add(1150,'fx','dynamic discontiguous initialization multifile public table');
+ }
+ addOp(p,type,name){const m=type[0]==='x'&&type.length===3||type==='yfx'?this.ops.infix:type.length===2&&type[0]==='f'?this.ops.prefix:this.ops.postfix;
+  if(p===0)m.delete(name);else m.set(name,{p,type});}
+ isOp(n){return this.ops.infix.has(n)||this.ops.prefix.has(n)||this.ops.postfix.has(n);}
+ isProtected(k){return(BUILTINS.has(k)&&!OVERRIDABLE.has(k))||CONTROL.has(k);}
+
+ // ----- Terme -----
+ bind(v,t){v.ref=t;this.trail.push(v);}
+ undoTo(m){const tr=this.trail;while(tr.length>m)tr.pop().ref=null;}
+ unify(a,b){
+  const st=[a,b];const occ=this.flags.occurs_check;let guard=0;const tr=this.trail;
+  while(st.length){
+   const y=deref(st.pop()),x=deref(st.pop());
+   if(x===y)continue;
+   if(x instanceof Var){
+    if(y instanceof Var){if(x.id<y.id){y.ref=x;tr.push(y);}else{x.ref=y;tr.push(x);}continue;}
+    if(occ&&occurs(x,y))return false;x.ref=y;tr.push(x);continue;}
+   if(y instanceof Var){if(occ&&occurs(y,x))return false;y.ref=x;tr.push(y);continue;}
+   if(x instanceof Str){if(!(y instanceof Str)||x.name!==y.name||x.args.length!==y.args.length)return false;
+    for(let i=x.args.length-1;i>=0;i--)st.push(x.args[i],y.args[i]);
+    if(++guard>5e6)throw ERR.res('memory');continue;}
+   if(x instanceof Int){if(!(y instanceof Int)||x.val!==y.val)return false;continue;}
+   if(x instanceof Flt){if(!(y instanceof Flt)||!(x.val===y.val||(x.val!==x.val&&y.val!==y.val)))return false;continue;}
+   return false;}
+  return true;}
+ unifyOcc(a,b){const o=this.flags.occurs_check;this.flags.occurs_check=true;try{return this.unify(a,b);}finally{this.flags.occurs_check=o;}}
+ copy(t,m){m=m||new Map();t=deref(t);
+  if(t instanceof Var){let v=m.get(t);if(!v){v=new Var();m.set(t,v);}return v;}
+  if(!(t instanceof Str))return t;
+  const root=new Str(t.name,new Array(t.args.length));let cur=root,src=t;
+  for(;;){const n=src.args.length;for(let i=0;i<n-1;i++)cur.args[i]=this.copy(src.args[i],m);
+   const last=deref(src.args[n-1]);
+   if(last instanceof Str){const nx=new Str(last.name,new Array(last.args.length));cur.args[n-1]=nx;cur=nx;src=last;}
+   else{cur.args[n-1]=last instanceof Var?this.copy(last,m):last;break;}}
+  return root;}
+ compileTerm(t,map){t=deref(t);
+  if(t instanceof Var){let r=map.get(t);if(!r){r=new VRef(map.size);map.set(t,r);}return r;}
+  if(t instanceof Str){const n=t.args.length,a=new Array(n);let g=true;
+   for(let i=0;i<n;i++){a[i]=this.compileTerm(t.args[i],map);if(a[i] instanceof VRef||a[i] instanceof CStr)g=false;}
+   return g?new Str(t.name,a):new CStr(t.name,a);}
+  return t;}
+ bodyConv(b){b=deref(b);
+  if(b instanceof Var)return S('call',b);
+  if(b instanceof Str&&b.args.length===2&&(b.name===','||b.name===';'||b.name==='->'||b.name==='*->'))return S(b.name,this.bodyConv(b.args[0]),this.bodyConv(b.args[1]));
+  if(b instanceof Str&&b.name==='\\+'&&b.args.length===1)return S('\\+',this.bodyConv(b.args[0]));
+  if(isNum(b))throw ERR.type('callable',b);
+  return b;}
+
+ // ----- Ausgabe -----
+ show(t,o){o=o||{};const self=this,q=!!o.quoted,nv=o.numbervars!==false,vn=o.varNames,ops=this.ops,io=!!o.ignoreOps;
+  const at=n=>q?qatom(n):n;
+  function opnd(x,max,dep){const d=deref(x);if(d instanceof Atom&&self.isOp(d.name)&&d.name!=='[]'&&d.name!=='{}')return'('+at(d.name)+')';return w(x,max,dep+1);}
+  const path=new Set();
+  function w(t,max,dep){
+   t=deref(t);
+   if(dep>500)return'...';
+   if(t instanceof Str){if(path.has(t))return'...';path.add(t);try{return w2(t,max,dep);}finally{path.delete(t);}}
+   return w2(t,max,dep);}
+  function w2(t,max,dep){
+   if(t instanceof Var){const n=vn&&vn.get(t);return n||('_G'+t.id);}
+   if(t instanceof Int)return t.val.toString();
+   if(t instanceof Flt)return fmtFloat(t.val);
+   if(t instanceof Atom)return at(t.name);
+   const n=t.name,a=t.args,k=a.length;
+   if(n==='.'&&k===2&&!io){let s='[',x=t,first=true,cnt=0;
+    const seen=new Set();while(isCons(x)){if(seen.has(x)||(x!==t&&path.has(x))){s+='|...';x=NIL;break;}seen.add(x);if(!first)s+=',';s+=w(x.args[0],999,dep+1);first=false;x=deref(x.args[1]);if(++cnt>100000){s+='|...';break;}}
+    if(x!==NIL&&cnt<=100000)s+='|'+w(x,999,dep+1);return s+']';}
+   if(n==='{}'&&k===1&&!io)return'{'+w(a[0],1200,dep+1)+'}';
+   if(nv&&n==='$VAR'&&k===1){const x=deref(a[0]);if(x instanceof Int){const i=Number(x.val);return String.fromCharCode(65+i%26)+(i>=26?Math.floor(i/26):'');}}
+   if(!io){
+    if(k===2){const op=ops.infix.get(n);if(op){
+     const p=op.p,lp=op.type==='yfx'?p:p-1,rp=op.type==='xfy'?p:p-1;
+     const ls=opnd(a[0],lp,dep),rs=opnd(a[1],rp,dep);let s;
+     if(n===',')s=ls+','+rs;
+     else if(/^\p{L}/u.test(n)||n==='->'||n===':-'||n==='-->'||n===';')s=ls+' '+at(n)+' '+rs;
+     else{const on=at(n);s=ls+(needSpace(ls,on)?' ':'')+on+(needSpace(on,rs)?' ':'')+rs;}
+     return p>max?'('+s+')':s;}}
+    if(k===1){const op=ops.prefix.get(n);if(op&&n!=='-'||op&&n==='-'){
+      const p=op.p,ap=op.type==='fy'?p:p-1;const x=deref(a[0]);
+      const as=opnd(a[0],ap,dep);const on=at(n);
+      const sp=/^\p{L}/u.test(n)||needSpace(on,as)||((n==='-'||n==='+')&&isNum(x));
+      const s=on+(sp?' ':'')+as;return p>max?'('+s+')':s;}
+     const po=ops.postfix.get(n);if(po){const as=opnd(a[0],po.type==='yf'?po.p:po.p-1,dep);const s=as+at(n);return po.p>max?'('+s+')':s;}}}
+   return at(n)+'('+a.map(x=>w(x,999,dep+1)).join(',')+')';}
+  return w(t,o.prec||1200,0);}
+ fmtGoal(g,max){let s=this.show(g,{quoted:true,varNames:this.qnames});max=max||160;return s.length>max?s.slice(0,max-1)+'…':s;}
+ errMsg(t){
+  t=deref(t);
+  if(t instanceof Str&&t.name==='error'&&t.args.length===2){
+   const f=deref(t.args[0]),c=deref(t.args[1]);let ctx='';
+   if(c instanceof Str&&c.name==='context'){const p=deref(c.args[0]);if(!(p instanceof Var))ctx=' in '+this.show(p,{quoted:true});}
+   const sh=x=>this.show(x,{quoted:true});let m;
+   const fn=f instanceof Str?f.name:f instanceof Atom?f.name:'';const fa=f instanceof Str?f.args:[];
+   switch(fn){
+    case'instantiation_error':m='Argumente sind nicht hinreichend instanziiert (ungebundene Variable)';break;
+    case'type_error':m=`Typfehler: ${sh(fa[0])} erwartet, gefunden: ${sh(fa[1])}`;break;
+    case'domain_error':m=`Domänenfehler: ${sh(fa[0])} erwartet, gefunden: ${sh(fa[1])}`;break;
+    case'existence_error':m=deref(fa[0])===A('procedure')?`Unbekanntes Prädikat: ${sh(fa[1])}`:`Existiert nicht: ${sh(fa[0])} ${sh(fa[1])}`;break;
+    case'permission_error':m=`Keine Berechtigung: ${sh(fa[0])} ${sh(fa[1])} ${sh(fa[2])}`;break;
+    case'evaluation_error':m=deref(fa[0])===A('zero_divisor')?'Rechenfehler: Division durch null':`Rechenfehler: ${sh(fa[0])}`;break;
+    case'representation_error':m=`Darstellungsfehler: ${sh(fa[0])}`;break;
+    case'resource_error':m=`Ressourcen erschöpft: ${sh(fa[0])}`;break;
+    case'syntax_error':m=`Syntaxfehler: ${this.show(fa[0])}`;break;
+    default:m='Fehler: '+sh(f);}
+   return m+ctx+'\n   ISO-Term: '+sh(t);}
+  return'Unbehandelte Ausnahme: '+this.show(t,{quoted:true});}
+
+ // ----- Wissensbasis -----
+ addClause(term,atEnd){
+  term=deref(term);let head=term,body=TRUE;
+  if(term instanceof Str&&term.name===':-'&&term.args.length===2){head=deref(term.args[0]);body=term.args[1];}
+  if(head instanceof Var)throw ERR.inst();
+  if(!isCallable(head))throw ERR.type('callable',head);
+  const name=head.name,ar=head instanceof Str?head.args.length:0,key=name+'/'+ar;
+  if(!this.loadingLib&&this.isProtected(key))throw ERR.perm('modify','static_procedure',PI(name,ar));
+  body=this.bodyConv(body);
+  const map=new Map();const ch=this.compileTerm(head,map),cb=this.compileTerm(body,map);
+  const cl={head:ch,body:cb,nv:map.size,k0:head instanceof Str?ckey(ch.args[0]):null,born:this.consulting?0:this.qno,id:++this.clid};
+  let p=this.db.get(key);
+  if(p&&p.lib&&this.consulting&&!this.loadingLib){p=null;}
+  if(!p){p={name,ar,key,clauses:[],dynamic:false,lib:false,gone:[]};this.db.set(key,p);}
+  cl.pred=p;
+  if(this.consulting)p.clauses.push(cl);
+  else p.clauses=atEnd?p.clauses.concat([cl]):[cl].concat(p.clauses);
+  if(!this.consulting)p.dynamic=true;
+  return p;}
+ declDynamic(spec){
+  spec=deref(spec);
+  if(spec instanceof Var)throw ERR.inst();
+  if(spec instanceof Str&&(spec.name===','||spec.name==='/'&&false)&&spec.args.length===2){this.declDynamic(spec.args[0]);this.declDynamic(spec.args[1]);return;}
+  const l=toArray(spec);if(l&&spec!==NIL){l.forEach(x=>this.declDynamic(x));return;}
+  if(!(spec instanceof Str&&spec.name==='/'&&spec.args.length===2))throw ERR.type('predicate_indicator',spec);
+  const n=deref(spec.args[0]),a=deref(spec.args[1]);if(!(n instanceof Atom)||!(a instanceof Int))throw ERR.type('predicate_indicator',spec);
+  const key=n.name+'/'+a.val;if(this.isProtected(key))throw ERR.perm('modify','static_procedure',spec);
+  let p=this.db.get(key);if(!p||p.lib&&this.consulting){p={name:n.name,ar:Number(a.val),key,clauses:[],dynamic:true,lib:false,gone:[]};this.db.set(key,p);}p.dynamic=true;}
+ portray(cl){
+  const vars=new Array(cl.nv);const h=inst(cl.head,vars),b=inst(cl.body,vars);
+  const m=this.trail.length;const vs=termVars(S('x',h,b));vs.forEach((v,i)=>this.bind(v,S('$VAR',I(i))));
+  const sh=x=>this.show(x,{quoted:true,prec:999});
+  let s=this.show(h,{quoted:true});
+  const bd=deref(b);
+  if(bd!==TRUE){const goals=[];let x=bd;while(x instanceof Str&&x.name===','&&x.args.length===2){goals.push(x.args[0]);x=deref(x.args[1]);}goals.push(x);
+   s+=' :-\n'+goals.map(g=>{const d=deref(g);if(d instanceof Str&&(d.name===';'||d.name==='->')&&d.args.length===2)return'    (   '+this.show(d,{quoted:true})+'\n    )';return'    '+sh(g);}).join(',\n');}
+  this.undoTo(m);return s+'.';}
+ consultText(text,o){
+  o=o||{};const msgs=[];const out=s=>{if(!o.quiet)this.out(s);};
+  if(!this.loadingLib){this.db=new Map();for(const[k,p]of this.libDB)this.db.set(k,Object.assign({},p,{gone:[]}));this.resetOps();}
+  this.consulting=true;const p=new Parser(this,text);let n=0,errs=0;const inits=[];const defined=new Set();
+  try{
+   for(;;){
+    let r;try{r=p.read();}catch(e){if(e instanceof PErr&&e.syn){out(`! Syntaxfehler Zeile ${e.line}: ${e.syn}\n`);errs++;p.skipToEnd();continue;}throw e;}
+    if(!r)break;
+    let t=deref(r.term);
+    try{
+     if(t instanceof Str&&(t.name===':-'||t.name==='?-')&&t.args.length===1){
+      const d=deref(t.args[0]);
+      if(d instanceof Str&&d.name==='initialization'){inits.push(d.args[0]);continue;}
+      this.runDirective(d,r.vars,out);continue;}
+     if(t instanceof Str&&t.name==='-->'&&t.args.length===2)t=this.dcgRule(t);
+     if(r.single.length&&!o.quiet)out(`% Warnung Zeile ${p.lx.line(p.lx.i)}: Einzelgänger-Variable(n) ${r.single.join(', ')}\n`);
+     const pr=this.addClause(t,true);defined.add(pr.key);n++;
+    }catch(e){if(e instanceof PErr){out('! '+this.errMsg(e.term)+'\n');errs++;}else throw e;}
+   }
+  }finally{this.consulting=false;}
+  for(const g of inits)this.runDirective(g,[],out);
+  if(!o.quiet)out(`% ${n} Klauseln in ${defined.size} Prädikaten geladen${errs?`, ${errs} Fehler`:''}.\n`);
+  return{n,errs,preds:defined.size};}
+ runDirective(d,vars,out){
+  const saved=this.saveState();
+  try{this.start(d,vars,{});let r;let guard=0;
+   do{r=this.run(1e6);}while(r.status==='more'&&++guard<20);
+   if(r.status==='no')out('% Warnung: Direktive fehlgeschlagen: '+this.show(d,{quoted:true})+'\n');
+   else if(r.status==='error')out('! '+r.msg+'\n');
+   else if(r.status==='more'||r.status==='limit')out('% Warnung: Direktive abgebrochen\n');
+  }finally{this.restoreState(saved);}}
+ saveState(){return{goals:this.goals,cps:this.cps,trail:this.trail,st:this.st,tree:this.treeOn,tn:this.tnode,uf:this.useFrames,tr:this.trace,spy:this.spy,qn:this.qnames,qv:this.qvars,open:this.open,int:this.interactive};}
+ restoreState(s){this.goals=s.goals;this.cps=s.cps;this.trail=s.trail;this.st=s.st;this.treeOn=s.tree;this.tnode=s.tn;this.useFrames=s.uf;this.trace=s.tr;this.spy=s.spy;this.qnames=s.qn;this.qvars=s.qv;this.open=s.open;this.interactive=s.int;}
+
+ // ----- DCG -----
+ dcgRule(t){let H=deref(t.args[0]);
+  if(H instanceof Str&&H.name===','&&H.args.length===2)throw ERR.perm('create','pushback_rule',H);
+  if(!isCallable(H))throw ERR.type('callable',H);
+  const S0=new Var(),S1=new Var();return S(':-',addArgs(H,[S0,S1]),this.dcgBody(t.args[1],S0,S1));}
+ dcgBody(b,S0,S1){b=deref(b);
+  if(b instanceof Var)return S('phrase',b,S0,S1);
+  if(b instanceof Str&&b.args.length===2&&b.name===','){const M=new Var();return S(',',this.dcgBody(b.args[0],S0,M),this.dcgBody(b.args[1],M,S1));}
+  if(b instanceof Str&&b.args.length===2&&(b.name===';'||b.name==='|'))return S(';',this.dcgBody(b.args[0],S0,S1),this.dcgBody(b.args[1],S0,S1));
+  if(b instanceof Str&&b.args.length===2&&b.name==='->'){const M=new Var();return S('->',this.dcgBody(b.args[0],S0,M),this.dcgBody(b.args[1],M,S1));}
+  if(b instanceof Str&&b.args.length===1&&b.name==='\\+')return S(',',S('\\+',this.dcgBody(b.args[0],S0,new Var())),S('=',S0,S1));
+  if(b===A('!'))return S(',',A('!'),S('=',S0,S1));
+  if(b===NIL)return S('=',S0,S1);
+  if(b instanceof Str&&b.name==='{}'&&b.args.length===1)return S(',',b.args[0],S('=',S0,S1));
+  if(isCons(b)){const arr=toArray(b);if(!arr)throw ERR.type('list',b);return S('=',S0,mklist(arr,S1));}
+  if(isCallable(b))return addArgs(b,[S0,S1]);
+  throw ERR.type('callable',b);}
+
+ // ----- Anfrage -----
+ start(goal,vars,o){
+  o=o||{};this.qno++;this.qvars=vars||[];this.qnames=new Map();for(const[n,v]of this.qvars)this.qnames.set(v,n);
+  this.trace=!!o.trace;this.spy=o.spy||new Set();this.useFrames=this.trace||this.spy.size>0;
+  this.treeOn=!!o.tree;this.treeCap=o.treeCap||1500;
+  if(o.maxDepth)this.maxDepth=o.maxDepth;if(o.maxInf)this.maxInf=o.maxInf;
+  this.trail=[];this.cps=[];this.open=null;this.fid=0;this.needBt=false;this.done=false;
+  this.st={inf:0,bt:0,maxD:0,maxCp:0,sol:0,ms:0};
+  this.tree=null;this.tnode=null;this.tcount=0;this.ttrunc=false;
+  if(this.treeOn){this.tree={id:0,label:'?- '+this.fmtGoal(goal,200),s:'root',kids:[],cp:0};this.tnode=this.tree;}
+  try{goal=this.bodyConv(goal);}catch(e){goal=S('throw',e.term.args?e.term:A('error'));}
+  this.goals=new GNode(goal,null,0,0);
+ }
+ redo(){this.needBt=true;}
+ run(budget){const t0=now();try{return this._run(budget);}finally{this.st.ms+=now()-t0;}}
+ _run(budget){
+  let steps=0;
+  for(;;){
+   try{
+    if(this.needBt){this.needBt=false;if(!this.backtrack())return this.onFail();}
+    for(;;){
+     const node=this.goals;
+     if(node===null)return this.onSuccess();
+     const g=node.g;
+     if(g instanceof Mark){this.goals=node.next;if(!this.doMark(g)){if(!this.backtrack())return this.onFail();}continue;}
+     const t=deref(g);
+     if(t instanceof Str&&t.name===','&&t.args.length===2){this.goals=new GNode(t.args[0],new GNode(t.args[1],node.next,node.cb,node.d),node.cb,node.d);continue;}
+     if(t===TRUE){this.goals=node.next;continue;}
+     if(steps>=budget)return{status:'more'};
+     steps++;this.goals=node.next;
+     if(!this.solve(t,node)){if(!this.backtrack())return this.onFail();}
+     if(this.cps.length>this.st.maxCp)this.st.maxCp=this.cps.length;
+    }
+   }catch(e){
+    if(e instanceof PErr){if(this.handleThrow(e.term))continue;return this.onError(e.term);}
+    if(e instanceof NeedInput){this.goals=e.node;return{status:'input'};}
+    if(e instanceof Limit){this.done=true;this.tmark('fail','⛔ '+e.msg);return{status:'limit',msg:e.msg};}
+    if(e instanceof Halt){this.done=true;return{status:'halt'};}
+    if(e instanceof RangeError){const t=S('error',S('resource_error',A('memory')),A('js_stack'));if(this.handleThrow(t))continue;return this.onError(t);}
+    throw e;}
+  }}
+ hasMore(){for(const c of this.cps)if(c.t!==CATCH&&!c.dead)return true;return false;}
+ onSuccess(){this.st.sol++;const b=this.answer();
+  if(this.treeOn&&this.tnode)this.tleaf(this.tnode,'□ Lösung'+(b.length?': '+b.map(x=>x.name+' = '+x.val).join(', '):''),'sol');
+  const more=this.hasMore();if(!more)this.done=true;return{status:'yes',more,bindings:b};}
+ onFail(){this.done=true;if(this.useFrames)this.failOpen(null);return{status:'no'};}
+ onError(t){this.done=true;return{status:'error',term:t,msg:this.errMsg(t)};}
+ answer(){const res=[];
+  for(const[n,v]of this.qvars){if(n.startsWith('_'))continue;const d=deref(v);
+   if(d instanceof Var&&this.qnames.get(d)===n)continue;
+   res.push({name:n,val:this.show(d,{quoted:true,varNames:this.qnames})});}
+  return res;}
+ handleThrow(term){
+  const ball=this.copy(term);
+  while(this.cps.length){const cp=this.cps.pop();if(cp.tn&&cp.tn.cp)cp.tn.cp--;
+   if(cp.t===CATCH){this.undoTo(cp.tr);const m=this.trail.length;
+    if(this.unify(cp.catcher,ball)){this.goals=new GNode(cp.rec,cp.cont,this.cps.length,cp.d);this.open=cp.open;if(cp.tnode)this.tnode=cp.tnode;
+     if(this.trace&&this.onTrace)this.onTrace({port:'Exception',d:cp.d,text:'Ausnahme gefangen: '+this.fmtGoal(ball)});return true;}
+    this.undoTo(m);}}
+  this.undoTo(0);if(this.treeOn)this.tmark('fail','⚡ '+this.fmtGoal(ball,100));return false;}
+
+ // ----- Suchbaum -----
+ tnew(parent,label,s){if(!parent||parent.dummy)return parent;
+  if(this.tcount>=this.treeCap){this.ttrunc=true;return{dummy:true,kids:[],cp:0};}
+  const n={id:++this.tcount,label,s:s||'act',kids:[],cp:0,parent};parent.kids.push(n);return n;}
+ tleaf(parent,label,s){return this.tnew(parent,label,s);}
+ tmark(s,label){if(this.treeOn&&this.tnode)this.tnew(this.tnode,label,s);}
+ resolvent(next){const out=[];let n=next;while(n&&out.length<3){if(!(n.g instanceof Mark)){const g=deref(n.g);if(g!==TRUE)out.push(this.fmtGoal(g,60));}n=n.next;}return out.join(', ')+(n?', …':'');}
+
+ // ----- Trace -----
+ port(kind,fr){if(this.onTrace)this.onTrace({port:kind,d:fr.d,text:`${kind}: (${fr.d}) ${this.fmtGoal(fr.g)}`,key:fr.key});}
+ portB(kind,g,d){if(this.onTrace)this.onTrace({port:kind,d,text:`${kind}: (${d}) ${this.fmtGoal(g)}`,builtin:true});}
+ popOpen(fr){if(this.open&&this.open.fr===fr){this.open=this.open.next;return;}
+  const arr=[];let a=this.open;while(a){if(a.fr!==fr)arr.push(a.fr);a=a.next;}this.open=null;for(let i=arr.length-1;i>=0;i--)this.pushOpen(arr[i]);}
+ pushOpen(fr){this.open={fr,next:this.open,len:(this.open?this.open.len:0)+1};}
+ failOpen(target){let a=this.open;const tl=target?target.len:0;
+  while(a&&a.len>tl){this.port('Fail',a.fr);a=a.next;}
+  let b=target;while(b&&b.len>(a?a.len:0))b=b.next;
+  while(a&&a!==b){this.port('Fail',a.fr);a=a.next;b=b&&b.next;}
+  this.open=target;}
+
+ // ----- Ausführung -----
+ solve(t,node){
+  let name,args;
+  if(t instanceof Atom){name=t.name;args=EMPTYARR;}
+  else if(t instanceof Str){name=t.name;args=t.args;}
+  else if(t instanceof Var)throw ERR.inst();
+  else throw ERR.type('callable',t);
+  const key=name+'/'+args.length;
+  const ctl=CONTROL.get(key);
+  if(ctl)return ctl.call(this,args,node,t);
+  const st=this.st;
+  if(++st.inf>this.maxInf)throw new Limit(`Inferenzgrenze von ${this.maxInf} erreicht – Abbruch`);
+  if(node.d>st.maxD){st.maxD=node.d;if(node.d>this.maxDepth)throw new Limit(`Tiefengrenze von ${this.maxDepth} erreicht – Endlosrekursion?`);}
+  const p=this.db.get(key);
+  if(p)return this.callPred(p,t,args,node);
+  const b=BUILTINS.get(key);
+  if(b)return this.callBuiltin(b,t,args,node,key,name);
+  if(this.flags.unknown==='fail'){this.tmark('fail','✗ '+this.fmtGoal(t,80)+' (unbekannt)');return false;}
+  throw ERR.exist('procedure',PI(name,args.length));}
+ callPred(p,g,args,node){
+  let fr=null;
+  if(this.useFrames&&(this.trace||this.spy.has(p.key))){fr={id:++this.fid,g,d:node.d,key:p.key};this.port('Call',fr);this.pushOpen(fr);}
+  const k0=args.length?keyOf(args[0]):null;
+  return this.tryClauses(g,args,p.clauses,0,k0,node,fr,this.tnode);}
+ tryClauses(g,args,cls,i,k0,node,fr,tn){
+  const mark=this.trail.length,h=this.cps.length,n=cls.length;
+  i=nextCand(cls,i,k0);let tried=false;
+  while(i<n){
+   const cl=cls[i];const j=nextCand(cls,i+1,k0);
+   const vars=cl.nv?new Array(cl.nv):EMPTYARR;
+   const head=inst(cl.head,vars);
+   let tc=null;if(tn){tc=this.tnew(tn,this.fmtGoal(g,90)+'  ⟵ Kl. '+(i+1),'act');if(tc&&!tc.dummy)tc.res=this.resolvent(node.next);}
+   tried=true;
+   if(this.unify(head,g)){
+    if(j<n){this.cps.push({t:CL,g,args,cls,i:j,k0,node,fr,tr:mark,open:this.open,tn});if(tn)tn.cp++;}
+    let cont=node.next;
+    if(fr)cont=new GNode(new Mark('exit',fr),cont,0,node.d);
+    this.goals=cl.body===TRUE?cont:new GNode(inst(cl.body,vars),cont,h,node.d+1);
+    if(tc)this.tnode=tc;
+    return true;}
+   this.undoTo(mark);if(tc)tc.s='fail';
+   i=j;}
+  if(fr){this.port('Fail',fr);this.popOpen(fr);}
+  if(tn&&!tried)this.tleaf(tn,'✗ '+this.fmtGoal(g,90)+'  (keine passende Klausel)','fail');
+  return false;}
+ callBuiltin(b,g,args,node,key,name){
+  const tr=this.trace||(this.spy.size>0&&this.spy.has(key));
+  if(tr)this.portB('Call',g,node.d);
+  const tn=this.tnode;let r;
+  this.curTrace=tr;this.curD=node.d;
+  try{r=b.call(this,args,node,g);}
+  catch(e){if(e instanceof PErr){const t=e.term;if(t instanceof Str&&t.name==='error'){const c=deref(t.args[1]);if(c instanceof Var)c.ref=S('context',PI(name,args.length),new Var());}}throw e;}
+  if(tr)this.portB(r?'Exit':'Fail',g,node.d);
+  if(this.treeOn&&tn&&this.tnode===tn){const c=this.tnew(tn,this.fmtGoal(g,90)+'  (eingebaut)',r?'ok':'fail');if(r&&c)this.tnode=c;}
+  return r;}
+ gen(node,g,fn){
+  const mark=this.trail.length;const it=fn.call(this);const r=it.next();
+  if(r.done){this.undoTo(mark);return false;}
+  if(!r.value){this.cps.push({t:GEN,it,cont:node.next,tr:mark,g,d:node.d,trc:this.curTrace,open:this.open,tn:this.tnode});if(this.tnode)this.tnode.cp++;}
+  return true;}
+ pushAlt(goals,label){const cp={t:ALT,goals,tr:this.trail.length,open:this.open,tn:this.tnode,label};this.cps.push(cp);if(this.tnode)this.tnode.cp++;return cp;}
+ cutTo(h){const cps=this.cps;
+  while(cps.length>h){const cp=cps.pop();
+   if(cp.tn){cp.tn.cp--;if(this.treeOn&&(cp.t===CL||cp.t===ALT||cp.t===GEN)){const k=cp.t===CL?cp.cls.length-cp.i:1;this.tnew(cp.tn,'✂ abgeschnitten'+(cp.t===CL?` (${k} Klausel${k>1?'n':''} ab Kl. ${cp.i+1})`:cp.t===ALT?' ('+cp.label+')':''),'cut');}}}}
+ doMark(m){
+  switch(m.k){
+   case'exit':{const fr=m.a;this.port('Exit',fr);this.popOpen(fr);return true;}
+   case'cut':this.cutTo(m.a);return true;
+   case'cutfail':this.cutTo(m.a);return false;
+   case'popcatch':{const cp=m.a;if(this.cps[this.cps.length-1]===cp)this.cps.pop();return true;}
+   case'facollect':{m.a.res.push(this.copy(m.a.tmpl));return false;}
+   case'softcut':{m.a.dead=true;if(m.a.tn)m.a.tn.cp--;return true;}}
+  return true;}
+ backtrack(){
+  const cps=this.cps;
+  while(cps.length){
+   const cp=cps[cps.length-1];
+   this.undoTo(cp.tr);
+   if(this.useFrames)this.failOpen(cp.open);
+   switch(cp.t){
+    case CL:
+     cps.pop();this.st.bt++;if(cp.tn)cp.tn.cp--;this.open=cp.open;
+     if(cp.fr)this.port('Redo',cp.fr);
+     this.tnode=cp.tn;
+     if(this.tryClauses(cp.g,cp.args,cp.cls,cp.i,cp.k0,cp.node,cp.fr,cp.tn))return true;
+     continue;
+    case ALT:
+     cps.pop();if(cp.dead)continue;this.st.bt++;if(cp.tn)cp.tn.cp--;
+     this.open=cp.open;this.goals=cp.goals;
+     if(cp.tn){this.tnode=this.tnew(cp.tn,'↪ '+cp.label,'act');}
+     return true;
+    case GEN:{
+     this.st.bt++;this.open=cp.open;this.tnode=cp.tn;
+     if(cp.trc)this.portB('Redo',cp.g,cp.d);
+     this.curTrace=cp.trc;
+     const r=cp.it.next();
+     if(r.done){cps.pop();if(cp.tn)cp.tn.cp--;if(cp.trc)this.portB('Fail',cp.g,cp.d);if(cp.tn)this.tnew(cp.tn,'✗ '+this.fmtGoal(cp.g,90)+' (keine weitere Lösung)','fail');continue;}
+     if(r.value){cps.pop();if(cp.tn)cp.tn.cp--;}
+     if(cp.trc)this.portB('Exit',cp.g,cp.d);
+     if(cp.tn){const c=this.tnew(cp.tn,this.fmtGoal(cp.g,90)+'  (eingebaut, Redo)','ok');if(c)this.tnode=c;}
+     this.goals=cp.cont;return true;}
+    case CATCH:cps.pop();continue;
+    case FA:{
+     cps.pop();
+     const l=mklist(cp.res,cp.tail);
+     if(this.unify(cp.out,l)){this.goals=cp.cont;this.open=cp.open;this.tnode=cp.tn2;
+      if(cp.tn2&&this.treeOn){const c=this.tnew(cp.tn2,'∑ gesammelt: '+cp.res.length+' Lösung(en)','ok');if(c)this.tnode=c;}
+      return true;}
+     this.undoTo(cp.tr);continue;}
+   }}
+  return false;}
+
+ // ----- Arithmetik -----
+ eval(t){
+  t=deref(t);
+  if(t instanceof Int||t instanceof Flt)return t;
+  if(t instanceof Var)throw ERR.inst();
+  if(t instanceof Atom){const f=ARITH0[t.name];if(f)return f();throw ERR.type('evaluable',PI(t.name,0));}
+  if(t instanceof Str){
+   if(t.name==='.'&&t.args.length===2&&deref(t.args[1])===NIL)return this.eval(t.args[0]);
+   const f=ARITH[t.name+'/'+t.args.length];if(!f)throw ERR.type('evaluable',PI(t.name,t.args.length));
+   if(t.args.length===1)return f(this.eval(t.args[0]));
+   return f(this.eval(t.args[0]),this.eval(t.args[1]));}
+  throw ERR.type('evaluable',t);}
+
+ // ----- Text -----
+ textOf(t,what){t=deref(t);
+  if(t instanceof Var)throw ERR.inst();
+  if(t instanceof Atom)return t.name;
+  if(t instanceof Int)return t.val.toString();
+  if(t instanceof Flt)return fmtFloat(t.val);
+  const arr=toArray(t);
+  if(arr){let s='';for(const x of arr){const d=deref(x);
+    if(d instanceof Int)s+=String.fromCodePoint(Number(d.val));else if(d instanceof Atom&&[...d.name].length===1)s+=d.name;else if(d instanceof Var)throw ERR.inst();else throw ERR.type(what||'text',t);}return s;}
+  throw ERR.type(what||'atomic',t);}
+ listText(t){t=deref(t);if(t===NIL)return'';return this.textOf(t,'list');}
+ parseNumber(s){
+  const tx=s.trim();let neg=false,body=tx;
+  if(body[0]==='-'){neg=true;body=body.slice(1);}else if(body[0]==='+')body=body.slice(1);
+  try{const lx=new Lexer(body);const t=lx.next();const e=lx.next();
+   if(e.k!=='eof'||(t.k!=='int'&&t.k!=='flt')||t.pre)return null;
+   return t.k==='int'?new Int(neg?-t.v:t.v):new Flt(neg?-t.v:t.v);}catch(e){return null;}}
+ parseTerm(text){const p=new Parser(this,text.trim().endsWith('.')?text:text+' .');const r=p.read();if(!r)return{term:EOFA,vars:[]};return r;}
+
+ // ----- format/2 -----
+ format(fs,args){
+  const f=this.textOf(fs);let al=toArray(args);if(al===null)al=[args];
+  let out='',lineStart=0,segStart=0,fills=[];let ai=0;
+  const next=()=>{if(ai>=al.length)throw err(S('format',A('zu wenige Argumente')));return al[ai++];};
+  const col=()=>out.length-lineStart;
+  for(let i=0;i<f.length;i++){
+   const c=f[i];
+   if(c!=='~'){out+=c;if(c==='\n'){lineStart=out.length;segStart=out.length;fills=[];}continue;}
+   i++;let num=null;let fillch=' ';
+   if(f[i]==='*'){num=Number(this.eval(next()).val);i++;}
+   else if(f[i]==='`'){fillch=f[i+1];i+=2;}
+   else{let j=i;while(/[0-9]/.test(f[j]||''))j++;if(j>i){num=parseInt(f.slice(i,j));i=j;}}
+   const d=f[i];
+   switch(d){
+    case'w':out+=this.show(next());break;
+    case'p':case'q':out+=this.show(next(),{quoted:true});break;
+    case'a':out+=this.textOf(next());break;
+    case'd':case'D':{const v=this.eval(next());if(!(v instanceof Int))throw ERR.type('integer',v);let s=(v.val<0n?-v.val:v.val).toString();let frac='';
+     if(num){s=s.padStart(num+1,'0');frac=s.slice(s.length-num);s=s.slice(0,s.length-num);}
+     if(d==='D')s=s.replace(/\B(?=(\d{3})+(?!\d))/g,',');out+=(v.val<0n?'-':'')+s+(frac?'.'+frac:'');break;}
+    case'f':case'e':case'g':{const v=this.eval(next());const x=Number(v.val);const n=num===null?6:num;out+=d==='f'?x.toFixed(n):d==='e'?x.toExponential(n).replace(/e([+-])(\d)$/,'e$10$2'):String(x);break;}
+    case'n':out+='\n'.repeat(num||1);lineStart=out.length;segStart=out.length;fills=[];break;
+    case'c':{const v=deref(next());out+=String.fromCodePoint(Number(v.val)).repeat(num||1);break;}
+    case'r':case'R':{const v=this.eval(next());let s=v.val.toString(num||8);out+=d==='R'?s.toUpperCase():s;break;}
+    case's':out+=this.listText(next());break;
+    case'~':out+='~';break;
+    case'i':next();break;
+    case't':fills.push({pos:out.length,ch:fillch});break;
+    case'|':case'+':{const lineCol=segStart-lineStart;const target=d==='+'?lineCol+(num===null?8:num):(num===null?col():num);
+     const pad=target-col();
+     if(pad>0){const ch=fills.length?fills[0].ch:' ';const pos=fills.length?fills[0].pos:out.length;out=out.slice(0,pos)+ch.repeat(pad)+out.slice(pos);}
+     segStart=out.length;fills=[];break;}
+    default:throw err(S('format',A('unbekannte Direktive ~'+d)));}
+  }
+  if(ai<al.length)throw err(S('format',A('zu viele Argumente')));
+  return out;}
+
+ // ----- Eingabe -----
+ readTerm(node){
+  const buf=this.inputBuf;
+  if(!/\S/.test(buf)){if(this.interactive)throw new NeedInput(node);return{term:EOFA,vars:[]};}
+  const p=new Parser(this,buf);
+  try{const r=p.read();if(!r){this.inputBuf='';if(this.interactive)throw new NeedInput(node);return{term:EOFA,vars:[]};}
+   this.inputBuf=buf.slice(p.lx.i);return r;}
+  catch(e){if(e instanceof PErr&&e.eof){if(this.interactive)throw new NeedInput(node);this.inputBuf='';return{term:EOFA,vars:[]};}
+   if(e instanceof PErr){p.skipToEnd();this.inputBuf=buf.slice(p.lx.i);}throw e;}}
+
+ // ----- Komfort für Tests -----
+ query(text,o){o=o||{};const r=this.parseTerm(text);this.start(r.term,r.vars,o);const sols=[];let res;
+  for(;;){res=this.run(o.budget||1e9);
+   if(res.status==='yes'){sols.push(res.bindings);if(!res.more||(o.max&&sols.length>=o.max))break;this.redo();continue;}
+   break;}
+  return{sols,last:res,stats:this.st};}
+}
+
+// ---------- Arithmetik-Tabelle ----------
+const isI=x=>x instanceof Int;
+const num=x=>isI(x)?Number(x.val):x.val;
+function chkF(x){if(x!==x)throw ERR.eval('undefined');if(!isFinite(x))throw ERR.eval('float_overflow');return new Flt(x);}
+function needI(x){if(!isI(x))throw ERR.type('integer',x);return x.val;}
+function toInt(x){if(!isFinite(x))throw ERR.eval('undefined');return new Int(BigInt(x));}
+const ARITH0={pi:()=>F(Math.PI),e:()=>F(Math.E),inf:()=>F(Infinity),infinite:()=>F(Infinity),nan:()=>F(NaN),epsilon:()=>F(Number.EPSILON),
+ max_tagged_integer:()=>I((1n<<60n)-1n),random:()=>F(Math.random()),random_float:()=>F(Math.random()),cputime:()=>F(now()/1000),realtime:()=>I(Math.floor(Date.now()/1000))};
+const ARITH={
+ '+/2':(a,b)=>isI(a)&&isI(b)?I(a.val+b.val):chkF(num(a)+num(b)),
+ '-/2':(a,b)=>isI(a)&&isI(b)?I(a.val-b.val):chkF(num(a)-num(b)),
+ '*/2':(a,b)=>isI(a)&&isI(b)?I(a.val*b.val):chkF(num(a)*num(b)),
+ '//2':(a,b)=>{if(isI(a)&&isI(b)){if(b.val===0n)throw ERR.eval('zero_divisor');if(a.val%b.val===0n)return I(a.val/b.val);return chkF(Number(a.val)/Number(b.val));}if(num(b)===0)throw ERR.eval('zero_divisor');return chkF(num(a)/num(b));},
+ '///2':(a,b)=>{const x=needI(a),y=needI(b);if(y===0n)throw ERR.eval('zero_divisor');return I(x/y);},
+ 'mod/2':(a,b)=>{const x=needI(a),y=needI(b);if(y===0n)throw ERR.eval('zero_divisor');let r=x%y;if(r!==0n&&(r<0n)!==(y<0n))r+=y;return I(r);},
+ 'rem/2':(a,b)=>{const x=needI(a),y=needI(b);if(y===0n)throw ERR.eval('zero_divisor');return I(x%y);},
+ 'div/2':(a,b)=>{const x=needI(a),y=needI(b);if(y===0n)throw ERR.eval('zero_divisor');let r=x%y;if(r!==0n&&(r<0n)!==(y<0n))r+=y;return I((x-r)/y);},
+ '-/1':a=>isI(a)?I(-a.val):F(-a.val),'+/1':a=>a,
+ 'abs/1':a=>isI(a)?I(a.val<0n?-a.val:a.val):F(Math.abs(a.val)),
+ 'sign/1':a=>isI(a)?I(a.val>0n?1:a.val<0n?-1:0):F(Math.sign(a.val)),
+ 'min/2':(a,b)=>cmpNum(a,b)<=0?a:b,'max/2':(a,b)=>cmpNum(a,b)>=0?a:b,
+ 'sqrt/1':a=>chkF(Math.sqrt(num(a))),'sin/1':a=>F(Math.sin(num(a))),'cos/1':a=>F(Math.cos(num(a))),'tan/1':a=>F(Math.tan(num(a))),
+ 'asin/1':a=>chkF(Math.asin(num(a))),'acos/1':a=>chkF(Math.acos(num(a))),'atan/1':a=>F(Math.atan(num(a))),
+ 'atan/2':(a,b)=>F(Math.atan2(num(a),num(b))),'atan2/2':(a,b)=>F(Math.atan2(num(a),num(b))),
+ 'sinh/1':a=>chkF(Math.sinh(num(a))),'cosh/1':a=>chkF(Math.cosh(num(a))),'tanh/1':a=>F(Math.tanh(num(a))),
+ 'exp/1':a=>chkF(Math.exp(num(a))),'log/1':a=>{if(num(a)<=0)throw ERR.eval('undefined');return chkF(Math.log(num(a)));},
+ 'log2/1':a=>{if(num(a)<=0)throw ERR.eval('undefined');return chkF(Math.log2(num(a)));},
+ 'log/2':(b,x)=>{if(num(x)<=0||num(b)<=0)throw ERR.eval('undefined');return chkF(Math.log(num(x))/Math.log(num(b)));},
+ '**/2':(a,b)=>{if(isI(a)&&isI(b)&&b.val>=0n){if(b.val>200000n)throw ERR.res('memory');return I(a.val**b.val);}return chkF(Math.pow(num(a),num(b)));},
+ '^/2':(a,b)=>{if(isI(a)&&isI(b)){if(b.val<0n){if(a.val===1n)return I(1);if(a.val===-1n)return I(b.val%2n===0n?1:-1);throw ERR.type('float',a);}if(b.val>200000n)throw ERR.res('memory');return I(a.val**b.val);}return chkF(Math.pow(num(a),num(b)));},
+ 'float/1':a=>F(num(a)),'integer/1':a=>isI(a)?a:toInt(Math.sign(a.val)*Math.round(Math.abs(a.val))),
+ 'float_integer_part/1':a=>F(Math.trunc(num(a))),'float_fractional_part/1':a=>F(num(a)-Math.trunc(num(a))),
+ 'truncate/1':a=>isI(a)?a:toInt(Math.trunc(a.val)),'round/1':a=>isI(a)?a:toInt(Math.sign(a.val)*Math.round(Math.abs(a.val))),
+ 'ceiling/1':a=>isI(a)?a:toInt(Math.ceil(a.val)),'floor/1':a=>isI(a)?a:toInt(Math.floor(a.val)),
+ '>>/2':(a,b)=>I(needI(a)>>needI(b)),'<</2':(a,b)=>I(needI(a)<<needI(b)),'/\\/2':(a,b)=>I(needI(a)&needI(b)),'\\//2':(a,b)=>I(needI(a)|needI(b)),
+ 'xor/2':(a,b)=>I(needI(a)^needI(b)),'\\/1':a=>I(~needI(a)),'msb/1':a=>I(needI(a).toString(2).length-1),
+ 'gcd/2':(a,b)=>{let x=needI(a),y=needI(b);if(x<0n)x=-x;if(y<0n)y=-y;while(y){[x,y]=[y,x%y];}return I(x);},
+ 'random/1':a=>I(Math.floor(Math.random()*Number(needI(a)))),'random_float/0':()=>F(Math.random()),'cot/1':a=>chkF(1/Math.tan(num(a))),
+ 'truncate/2':null,'succ/1':a=>I(needI(a)+1n),'plus/2':(a,b)=>ARITH['+/2'](a,b),'copysign/2':(a,b)=>F(Math.sign(num(b))*Math.abs(num(a)))};
+delete ARITH['truncate/2'];
+
+// ---------- Steuerkonstrukte ----------
+CONTROL.set('!/0',function(a,node){this.cutTo(node.cb);return true;});
+CONTROL.set('fail/0',function(){this.tmark('fail','✗ fail');return false;});
+CONTROL.set('false/0',function(){this.tmark('fail','✗ false');return false;});
+CONTROL.set('true/0',function(){return true;});
+CONTROL.set(';/2',function(a,node){
+ const L=deref(a[0]);
+ if(L instanceof Str&&L.name==='->'&&L.args.length===2){const h=this.cps.length;
+  this.pushAlt(new GNode(a[1],node.next,node.cb,node.d),'sonst-Zweig');
+  this.goals=new GNode(L.args[0],new GNode(new Mark('cut',h),new GNode(L.args[1],node.next,node.cb,node.d),0,node.d),h+1,node.d);return true;}
+ if(L instanceof Str&&L.name==='*->'&&L.args.length===2){const alt=this.pushAlt(new GNode(a[1],node.next,node.cb,node.d),'sonst-Zweig');
+  this.goals=new GNode(L.args[0],new GNode(new Mark('softcut',alt),new GNode(L.args[1],node.next,node.cb,node.d),0,node.d),this.cps.length,node.d);return true;}
+ this.pushAlt(new GNode(a[1],node.next,node.cb,node.d),'2. Zweig von ;');
+ this.goals=new GNode(L,node.next,node.cb,node.d);return true;});
+CONTROL.set('->/2',function(a,node){const h=this.cps.length;
+ this.goals=new GNode(a[0],new GNode(new Mark('cut',h),new GNode(a[1],node.next,node.cb,node.d),0,node.d),h,node.d);return true;});
+CONTROL.set('*->/2',function(a,node){this.goals=new GNode(a[0],new GNode(a[1],node.next,node.cb,node.d),this.cps.length,node.d);return true;});
+const naf=function(a,node){const h=this.cps.length;this.pushAlt(node.next,'\\+ : Ziel gescheitert');
+ this.goals=new GNode(a[0],new GNode(new Mark('cutfail',h),null,0,node.d),h+1,node.d);return true;};
+CONTROL.set('\\+/1',naf);CONTROL.set('not/1',naf);
+for(let n=1;n<=8;n++)CONTROL.set('call/'+n,function(a,node){let g=deref(a[0]);if(a.length>1)g=addArgs(g,a.slice(1));
+ if(g instanceof Var)throw ERR.inst();if(!isCallable(g))throw ERR.type('callable',g);
+ this.goals=new GNode(this.bodyConv(g),node.next,this.cps.length,node.d+1);return true;});
+CONTROL.set('catch/3',function(a,node){
+ const cp={t:CATCH,catcher:a[1],rec:a[2],cont:node.next,d:node.d,tr:this.trail.length,open:this.open,tn:null,tnSave:this.tnode};cp.tn=null;
+ this.cps.push(cp);cp.tnode=this.tnode;
+ this.goals=new GNode(a[0],new GNode(new Mark('popcatch',cp),node.next,0,node.d),this.cps.length,node.d+1);return true;});
+const fa=function(a,node){
+ let tn2=this.tnode;if(this.treeOn&&this.tnode){const c=this.tnew(this.tnode,this.fmtGoal(S(a.length>3?'findall':'findall',...a),90),'act');if(c){tn2=c;this.tnode=c;}}
+ const cp={t:FA,res:[],tmpl:a[0],out:a[2],tail:a.length>3?a[3]:NIL,cont:node.next,tr:this.trail.length,open:this.open,tn2};this.cps.push(cp);
+ this.goals=new GNode(a[1],new GNode(new Mark('facollect',cp),null,0,node.d),this.cps.length,node.d+1);return true;};
+CONTROL.set('findall/3',fa);CONTROL.set('findall/4',fa);
+CONTROL.set('throw/1',function(a){const b=deref(a[0]);if(b instanceof Var)throw ERR.inst();throw new PErr(this.copy(b));});
+
+// ---------- Eingebaute Prädikate ----------
+const D=deref;
+function typeChk(name,f){def(name,function(a){return f(D(a[0]));});}
+typeChk('var/1',x=>x instanceof Var);typeChk('nonvar/1',x=>!(x instanceof Var));
+typeChk('atom/1',x=>x instanceof Atom);typeChk('number/1',isNum);typeChk('integer/1',x=>x instanceof Int);
+typeChk('float/1',x=>x instanceof Flt);typeChk('atomic/1',isAtomic);typeChk('compound/1',x=>x instanceof Str);
+typeChk('callable/1',isCallable);typeChk('is_list/1',x=>toArray(x)!==null);typeChk('ground/1',isGround);
+def('=/2',function(a){return this.unify(a[0],a[1]);});
+def('\\=/2',function(a){const m=this.trail.length;const r=this.unify(a[0],a[1]);this.undoTo(m);return!r;});
+def('unify_with_occurs_check/2',function(a){return this.unifyOcc(a[0],a[1]);});
+def('==/2',a=>compare(a[0],a[1])===0);def('\\==/2',a=>compare(a[0],a[1])!==0);
+def('@</2',a=>compare(a[0],a[1])<0);def('@>/2',a=>compare(a[0],a[1])>0);
+def('@=</2',a=>compare(a[0],a[1])<=0);def('@>=/2',a=>compare(a[0],a[1])>=0);
+def('=@=/2',a=>variant(a[0],a[1]));def('\\=@=/2',a=>!variant(a[0],a[1]));
+def('compare/3',function(a){const o=D(a[0]);if(!(o instanceof Var)&&!(o instanceof Atom))throw ERR.type('atom',o);const c=compare(a[1],a[2]);return this.unify(a[0],A(c<0?'<':c>0?'>':'='));});
+def('is/2',function(a){return this.unify(a[0],this.eval(a[1]));});
+const cmpA=(f)=>function(a){return f(cmpNum(this.eval(a[0]),this.eval(a[1])));};
+def('=:=/2',cmpA(c=>c===0||false));
+BUILTINS.set('=:=/2',function(a){const x=this.eval(a[0]),y=this.eval(a[1]);return Number(numval(x))===Number(numval(y))&&(isI(x)&&isI(y)?x.val===y.val:true);});
+def('=\\=/2',function(a){const x=this.eval(a[0]),y=this.eval(a[1]);return!(isI(x)&&isI(y)?x.val===y.val:Number(numval(x))===Number(numval(y)));});
+def('</2',function(a){const x=this.eval(a[0]),y=this.eval(a[1]);return isI(x)&&isI(y)?x.val<y.val:Number(numval(x))<Number(numval(y));});
+def('>/2',function(a){const x=this.eval(a[0]),y=this.eval(a[1]);return isI(x)&&isI(y)?x.val>y.val:Number(numval(x))>Number(numval(y));});
+def('=</2',function(a){const x=this.eval(a[0]),y=this.eval(a[1]);return isI(x)&&isI(y)?x.val<=y.val:Number(numval(x))<=Number(numval(y));});
+def('>=/2',function(a){const x=this.eval(a[0]),y=this.eval(a[1]);return isI(x)&&isI(y)?x.val>=y.val:Number(numval(x))>=Number(numval(y));});
+def('succ/2',function(a){const x=D(a[0]),y=D(a[1]);
+ if(x instanceof Int){if(x.val<0n)throw ERR.type('not_less_than_zero',x);return this.unify(y,I(x.val+1n));}
+ if(y instanceof Int){if(y.val<=0n){if(y.val<0n)throw ERR.type('not_less_than_zero',y);return false;}return this.unify(x,I(y.val-1n));}
+ if(x instanceof Var&&y instanceof Var)throw ERR.inst();throw ERR.type('integer',x instanceof Var?y:x);},true);
+def('plus/3',function(a){const x=D(a[0]),y=D(a[1]),z=D(a[2]);
+ if(x instanceof Int&&y instanceof Int)return this.unify(z,I(x.val+y.val));
+ if(x instanceof Int&&z instanceof Int)return this.unify(y,I(z.val-x.val));
+ if(y instanceof Int&&z instanceof Int)return this.unify(x,I(z.val-y.val));throw ERR.inst();},true);
+def('between/3',function(a,node,g){const lo=D(a[0]),hi=D(a[1]),x=D(a[2]);
+ const L=needI(lo instanceof Var?(()=>{throw ERR.inst();})():lo);
+ let H;if(hi instanceof Atom&&(hi.name==='inf'||hi.name==='infinite'))H=null;else{if(hi instanceof Var)throw ERR.inst();H=needI(hi);}
+ if(x instanceof Int)return x.val>=L&&(H===null||x.val<=H);
+ if(!(x instanceof Var))throw ERR.type('integer',x);
+ return this.gen(node,g,function*(){for(let i=L;H===null||i<=H;i++){this.bind(x,I(i));yield H!==null&&i===H;}});},true);
+def('length/2',function(a,node,g){let n=0;let t=D(a[0]);while(isCons(t)){n++;t=D(t.args[1]);}
+ const N=D(a[1]);
+ if(!(N instanceof Var)&&!(N instanceof Int))throw ERR.type('integer',N);
+ if(N instanceof Int&&N.val<0n)throw ERR.dom('not_less_than_zero',N);
+ if(t===NIL)return this.unify(N,I(n));
+ if(!(t instanceof Var))return false;
+ const tail=t;
+ if(N instanceof Int){const k=Number(N.val)-n;if(k<0)return false;const vs=[];for(let i=0;i<k;i++)vs.push(new Var());return this.unify(tail,mklist(vs));}
+ return this.gen(node,g,function*(){for(let k=0;;k++){const m=this.trail.length;const vs=[];for(let i=0;i<k;i++)vs.push(new Var());
+  if(this.unify(tail,mklist(vs))&&this.unify(N,I(n+k)))yield false;this.undoTo(m);}});},true);
+function sortBy(eng,list,cmp,dedup){const arr=toArray(list);if(arr===null){if(D(list) instanceof Var)throw ERR.inst();throw ERR.type('list',list);}
+ const r=arr.slice().sort(cmp);if(!dedup)return r;const o=[];for(const x of r)if(!o.length||cmp(o[o.length-1],x)!==0)o.push(x);return o;}
+def('msort/2',function(a){return this.unify(a[1],mklist(sortBy(this,a[0],compare,false)));},true);
+def('sort/2',function(a){return this.unify(a[1],mklist(sortBy(this,a[0],compare,true)));},true);
+def('keysort/2',function(a){const arr=toArray(a[0]);if(!arr)throw ERR.inst();
+ for(const p of arr){const d=D(p);if(!(d instanceof Str&&d.name==='-'&&d.args.length===2)){if(d instanceof Var)throw ERR.inst();throw ERR.type('pair',d);}}
+ return this.unify(a[1],mklist(arr.slice().sort((x,y)=>compare(D(x).args[0],D(y).args[0]))));},true);
+def('sort/4',function(a){const k=Number(needI(D(a[0])));const o=D(a[1]).name;
+ const key=x=>k===0?x:D(x).args[k-1];let c=(x,y)=>compare(key(x),key(y));if(o==='@>'||o==='@>=')c=(x,y)=>compare(key(y),key(x));
+ return this.unify(a[3],mklist(sortBy(this,a[2],c,o==='@<'||o==='@>')));},true);
+// Atome & Texte
+def('atom_codes/2',function(a){const x=D(a[0]);if(!(x instanceof Var))return this.unify(a[1],mklist([...this.textOf(x)].map(c=>I(c.codePointAt(0)))));return this.unify(x,A(this.listText(a[1])));});
+def('atom_chars/2',function(a){const x=D(a[0]);if(!(x instanceof Var))return this.unify(a[1],mklist([...this.textOf(x)].map(c=>A(c))));return this.unify(x,A(this.listText(a[1])));});
+def('char_code/2',function(a){const x=D(a[0]);if(x instanceof Atom)return this.unify(a[1],I(x.name.codePointAt(0)));const c=D(a[1]);if(c instanceof Var)throw ERR.inst();return this.unify(x,A(String.fromCodePoint(Number(needI(c)))));});
+def('atom_length/2',function(a){const x=D(a[0]);if(x instanceof Var)throw ERR.inst();if(x instanceof Str)throw ERR.type('atom',x);
+ const l=D(a[1]);if(!(l instanceof Var)&&!(l instanceof Int))throw ERR.type('integer',l);return this.unify(l,I([...this.textOf(x)].length));});
+def('atom_number/2',function(a){const x=D(a[0]);if(x instanceof Var){const n=D(a[1]);if(n instanceof Var)throw ERR.inst();return this.unify(x,A(this.textOf(n)));}
+ const n=this.parseNumber(this.textOf(x));return n?this.unify(a[1],n):false;});
+const numText=(mk)=>function(a){const x=D(a[0]);const l=D(a[1]);
+ if(!(l instanceof Var)&&toArray(l)&&termVars(l).length===0){const s=this.listText(l);const n=this.parseNumber(s);if(!n)throw ERR.syntax('illegal_number');return this.unify(x,n);}
+ if(x instanceof Var)throw ERR.inst();if(!isNum(x))throw ERR.type('number',x);return this.unify(l,mklist([...this.textOf(x)].map(mk)));};
+def('number_codes/2',numText(c=>I(c.codePointAt(0))));def('number_chars/2',numText(c=>A(c)));
+def('upcase_atom/2',function(a){return this.unify(a[1],A(this.textOf(a[0]).toUpperCase()));});
+def('downcase_atom/2',function(a){return this.unify(a[1],A(this.textOf(a[0]).toLowerCase()));});
+def('atom_concat/3',function(a,node,g){const x=D(a[0]),y=D(a[1]);
+ if(!(x instanceof Var)&&!(y instanceof Var))return this.unify(a[2],A(this.textOf(x)+this.textOf(y)));
+ const z=D(a[2]);if(z instanceof Var)throw ERR.inst();const s=[...this.textOf(z)];
+ return this.gen(node,g,function*(){for(let i=0;i<=s.length;i++){const m=this.trail.length;if(this.unify(x,A(s.slice(0,i).join('')))&&this.unify(y,A(s.slice(i).join(''))))yield i===s.length;this.undoTo(m);}});});
+def('sub_atom/5',function(a,node,g){const at=D(a[0]);if(at instanceof Var)throw ERR.inst();const s=[...this.textOf(at)];const n=s.length;
+ const Sub=D(a[4]);
+ return this.gen(node,g,function*(){
+  if(Sub instanceof Atom){const t=[...Sub.name],k=t.length;for(let b=0;b+k<=n;b++){if(s.slice(b,b+k).join('')!==Sub.name)continue;const m=this.trail.length;
+    if(this.unify(a[1],I(b))&&this.unify(a[2],I(k))&&this.unify(a[3],I(n-b-k)))yield false;this.undoTo(m);}return;}
+  const B=D(a[1]),L=D(a[2]),Af=D(a[3]);
+  for(let b=0;b<=n;b++){if(B instanceof Int&&Number(B.val)!==b)continue;
+   for(let l=0;b+l<=n;l++){if(L instanceof Int&&Number(L.val)!==l)continue;if(Af instanceof Int&&Number(Af.val)!==n-b-l)continue;
+    const m=this.trail.length;if(this.unify(a[1],I(b))&&this.unify(a[2],I(l))&&this.unify(a[3],I(n-b-l))&&this.unify(a[4],A(s.slice(b,b+l).join(''))))yield false;this.undoTo(m);}}});});
+def('atomic_list_concat/2',function(a){const l=toArray(a[0]);if(!l)throw ERR.inst();return this.unify(a[1],A(l.map(x=>this.textOf(x)).join('')));});
+def('atomic_list_concat/3',function(a){const sep=this.textOf(a[1]);const l=toArray(a[0]);
+ if(l&&l.every(x=>!(D(x) instanceof Var)))return this.unify(a[2],A(l.map(x=>this.textOf(x)).join(sep)));
+ const full=D(a[2]);if(full instanceof Var||sep==='')throw ERR.inst();
+ return this.unify(a[0],mklist(this.textOf(full).split(sep).map(x=>{const n=this.parseNumber(x);return n&&x.trim()===x&&x!==''?n:A(x);})));});
+def('term_to_atom/2',function(a){const t=D(a[0]);if(t instanceof Var||!(D(a[1]) instanceof Var)&&termVars(t).length){const r=this.parseTerm(this.textOf(a[1]));return this.unify(t,r.term);}
+ return this.unify(a[1],A(this.show(t,{quoted:true})));});
+def('atom_to_term/3',function(a){const r=this.parseTerm(this.textOf(a[0]));return this.unify(a[1],r.term)&&this.unify(a[2],mklist(r.vars.map(([n,v])=>S('=',A(n),v))));});
+def('char_type/2',function(a){const c=D(a[0]);if(c instanceof Var)throw ERR.inst();const ch=this.textOf(c);const t=D(a[1]);
+ const tn=t instanceof Atom?t.name:t instanceof Str?t.name:'';
+ switch(tn){case'alpha':return /[\p{L}\p{N}_]/u.test(ch);case'alnum':return /[\p{L}\p{N}]/u.test(ch);case'csym':return /[\p{L}\p{N}_]/u.test(ch);case'csymf':return /[\p{L}_]/u.test(ch);
+  case'space':case'white':return /\s/.test(ch);case'punct':return /[!-\/:-@\[-`{-~]/.test(ch);case'end_of_line':return ch==='\n'||ch==='\r';
+  case'digit':if(t instanceof Str){if(!/[0-9]/.test(ch))return false;return this.unify(t.args[0],I(ch.charCodeAt(0)-48));}return /[0-9]/.test(ch);
+  case'upper':if(t instanceof Str){if(ch.toLowerCase()===ch||ch.toUpperCase()!==ch)return false;return this.unify(t.args[0],A(ch.toLowerCase()));}return /\p{Lu}/u.test(ch);
+  case'lower':if(t instanceof Str){if(ch.toUpperCase()===ch||ch.toLowerCase()!==ch)return false;return this.unify(t.args[0],A(ch.toUpperCase()));}return /\p{Ll}/u.test(ch);
+  case'to_lower':return this.unify(t.args[0],A(ch.toLowerCase()));case'to_upper':return this.unify(t.args[0],A(ch.toUpperCase()));}
+ throw ERR.dom('char_type',t);});
+// Terme
+def('functor/3',function(a){const t=D(a[0]);
+ if(!(t instanceof Var)){if(t instanceof Str)return this.unify(a[1],A(t.name))&&this.unify(a[2],I(t.args.length));return this.unify(a[1],t)&&this.unify(a[2],I(0));}
+ const n=D(a[1]),ar=D(a[2]);if(n instanceof Var||ar instanceof Var)throw ERR.inst();const k=Number(needI(ar));
+ if(k===0)return this.unify(t,n);if(n instanceof Str)throw ERR.type('atomic',n);if(!(n instanceof Atom))throw ERR.type('atom',n);
+ const vs=[];for(let i=0;i<k;i++)vs.push(new Var());return this.unify(t,new Str(n.name,vs));});
+def('arg/3',function(a,node,g){const n=D(a[0]),t=D(a[1]);if(t instanceof Var)throw ERR.inst();if(!(t instanceof Str))throw ERR.type('compound',t);
+ if(n instanceof Int){const i=Number(n.val);if(i<1||i>t.args.length)return false;return this.unify(a[2],t.args[i-1]);}
+ if(!(n instanceof Var))throw ERR.type('integer',n);
+ return this.gen(node,g,function*(){for(let i=0;i<t.args.length;i++){const m=this.trail.length;if(this.unify(n,I(i+1))&&this.unify(a[2],t.args[i]))yield i===t.args.length-1;this.undoTo(m);}});});
+def('=../2',function(a){const t=D(a[0]);
+ if(!(t instanceof Var)){if(t instanceof Str)return this.unify(a[1],mklist([A(t.name),...t.args]));return this.unify(a[1],mklist([t]));}
+ const l=toArray(a[1]);if(!l)throw ERR.inst();if(!l.length)throw ERR.dom('non_empty_list',NIL);
+ const h=D(l[0]);if(h instanceof Var)throw ERR.inst();
+ if(l.length===1)return this.unify(t,h);if(!(h instanceof Atom))throw ERR.type('atom',h);return this.unify(t,new Str(h.name,l.slice(1)));});
+def('copy_term/2',function(a){return this.unify(a[1],this.copy(a[0]));});
+def('term_variables/2',function(a){return this.unify(a[1],mklist(termVars(a[0])));});
+def('numbervars/3',function(a){let n=Number(needI(D(a[1])));for(const v of termVars(a[0]))this.bind(v,S('$VAR',I(n++)));return this.unify(a[2],I(n));});
+def('setarg/3',function(a){const t=D(a[1]);const i=Number(needI(D(a[0])));if(!(t instanceof Str)||i<1||i>t.args.length)return false;t.args[i-1]=this.copy(a[2]);return true;});
+// Ausgabe
+const outTerm=o=>function(a){this.out(this.show(a[a.length-1],o));return true;};
+def('write/1',outTerm({}));def('print/1',outTerm({quoted:true}));def('writeq/1',outTerm({quoted:true}));
+def('write_canonical/1',outTerm({quoted:true,ignoreOps:true,numbervars:false}));
+def('write/2',outTerm({}));def('writeq/2',outTerm({quoted:true}));def('print/2',outTerm({quoted:true}));
+def('writeln/1',function(a){this.out(this.show(a[0])+'\n');return true;});def('writeln/2',function(a){this.out(this.show(a[1])+'\n');return true;});
+def('write_term/2',function(a){const o={};for(const x of toArray(a[1])||[]){const d=D(x);if(d instanceof Str&&d.args.length===1){const v=D(d.args[0])===TRUE;if(d.name==='quoted')o.quoted=v;if(d.name==='ignore_ops')o.ignoreOps=v;}}this.out(this.show(a[0],o));return true;});
+def('nl/0',function(){this.out('\n');return true;});def('nl/1',function(){this.out('\n');return true;});
+def('tab/1',function(a){this.out(' '.repeat(Number(this.eval(a[0]).val)));return true;});
+def('put_char/1',function(a){this.out(this.textOf(a[0]));return true;});
+def('format/1',function(a){this.out(this.format(a[0],NIL));return true;});
+def('format/2',function(a){this.out(this.format(a[0],a[1]));return true;});
+def('format/3',function(a){const s=D(a[0]);const txt=this.format(a[1],a[2]);
+ if(s instanceof Str&&s.args.length===1){if(s.name==='atom')return this.unify(s.args[0],A(txt));if(s.name==='codes'||s.name==='string')return this.unify(s.args[0],mklist([...txt].map(c=>I(c.codePointAt(0)))));if(s.name==='chars')return this.unify(s.args[0],mklist([...txt].map(c=>A(c))));}
+ this.out(txt);return true;});
+def('read/1',function(a,node){const r=this.readTerm(node);return this.unify(a[0],r.term);});
+def('read_term/2',function(a,node){const r=this.readTerm(node);
+ for(const x of toArray(a[1])||[]){const d=D(x);if(d instanceof Str&&d.name==='variable_names')this.unify(d.args[0],mklist(r.vars.map(([n,v])=>S('=',A(n),v))));}
+ return this.unify(a[0],r.term);});
+def('halt/0',function(){throw new Halt();});def('halt/1',function(){throw new Halt();});
+// Wissensbasis
+def('assert/1',function(a){this.addClause(this.copy(a[0]),true);return true;});
+def('assertz/1',function(a){this.addClause(this.copy(a[0]),true);return true;});
+def('asserta/1',function(a){this.addClause(this.copy(a[0]),false);return true;});
+function splitClause(t){t=D(t);if(t instanceof Str&&t.name===':-'&&t.args.length===2)return[D(t.args[0]),t.args[1]];return[t,TRUE];}
+function predOf(eng,h,forAccess){if(h instanceof Var)throw ERR.inst();if(!isCallable(h))throw ERR.type('callable',h);
+ const key=h.name+'/'+(h instanceof Str?h.args.length:0);
+ if(eng.isProtected(key)&&!eng.db.has(key))throw ERR.perm(forAccess?'access':'modify',forAccess?'private_procedure':'static_procedure',PI(h.name,h instanceof Str?h.args.length:0));
+ return eng.db.get(key);}
+def('retract/1',function(a,node,g){const[h,b]=splitClause(a[0]);const p=predOf(this,h);if(!p)return false;const cls=p.clauses;const qn=this.qno;
+ return this.gen(node,g,function*(){for(const cl of cls){if(cl.erased)continue;const m=this.trail.length;const vars=new Array(cl.nv);
+  if(this.unify(h,inst(cl.head,vars))&&this.unify(b,inst(cl.body,vars))){cl.erased=true;p.clauses=p.clauses.filter(c=>c!==cl);p.gone.push({cl,q:qn});p.dynamic=true;yield false;}else this.undoTo(m);}});});
+def('retractall/1',function(a){const h=D(a[0]);const p=predOf(this,h);
+ if(!p){this.declDynamic(PI(h.name,h instanceof Str?h.args.length:0));return true;}
+ for(const cl of p.clauses.slice()){const m=this.trail.length;if(this.unify(h,inst(cl.head,new Array(cl.nv)))){cl.erased=true;p.clauses=p.clauses.filter(c=>c!==cl);p.gone.push({cl,q:this.qno});}this.undoTo(m);}
+ p.dynamic=true;return true;});
+def('abolish/1',function(a){const s=D(a[0]);if(!(s instanceof Str&&s.name==='/'))throw ERR.type('predicate_indicator',s);const key=D(s.args[0]).name+'/'+D(s.args[1]).val;if(this.isProtected(key))throw ERR.perm('modify','static_procedure',s);this.db.delete(key);return true;});
+def('clause/2',function(a,node,g){const h=D(a[0]);const p=predOf(this,h,true);if(!p)return false;const cls=p.clauses;
+ const b=D(a[1]);if(!(b instanceof Var)&&!isCallable(b))throw ERR.type('callable',b);
+ return this.gen(node,g,function*(){for(let i=0;i<cls.length;i++){const cl=cls[i];const m=this.trail.length;const vars=new Array(cl.nv);
+  if(this.unify(h,inst(cl.head,vars))&&this.unify(a[1],inst(cl.body,vars)))yield i===cls.length-1;this.undoTo(m);}});});
+def('dynamic/1',function(a){this.declDynamic(a[0]);return true;});
+def('discontiguous/1',()=>true);def('ensure_loaded/1',()=>true);def('use_module/1',()=>true);def('use_module/2',()=>true);def('style_check/1',()=>true);def('set_prolog_stack/2',()=>true);def('garbage_collect/0',()=>true);
+def('listing/0',function(){for(const p of this.db.values()){if(p.lib)continue;this.listPred(p);}return true;});
+def('listing/1',function(a){const s=D(a[0]);let n,ar=null;if(s instanceof Str&&s.name==='/'){n=D(s.args[0]).name;ar=Number(D(s.args[1]).val);}else n=s.name;
+ for(const p of this.db.values())if(p.name===n&&(ar===null||p.ar===ar))this.listPred(p);return true;});
+Engine.prototype.listPred=function(p){if(p.dynamic)this.out(`:- dynamic ${qatom(p.name)}/${p.ar}.\n\n`);for(const cl of p.clauses)this.out(this.portray(cl)+'\n');this.out('\n');};
+def('current_op/3',function(a,node,g){const L=[];for(const[k,m]of[['prefix',this.ops.prefix],['infix',this.ops.infix],['postfix',this.ops.postfix]])for(const[n,o]of m)L.push([o.p,o.type,n]);
+ return this.gen(node,g,function*(){for(let i=0;i<L.length;i++){const[p,t,n]=L[i];const m=this.trail.length;if(this.unify(a[0],I(p))&&this.unify(a[1],A(t))&&this.unify(a[2],A(n)))yield false;this.undoTo(m);}});});
+def('op/3',function(a){const p=D(a[0]),t=D(a[1]),n=D(a[2]);if(p instanceof Var||t instanceof Var||n instanceof Var)throw ERR.inst();
+ const pr=Number(needI(p));if(pr<0||pr>1200)throw ERR.dom('operator_priority',p);if(!(t instanceof Atom)||!['xfx','xfy','yfx','fy','fx','xf','yf'].includes(t.name))throw ERR.dom('operator_specifier',t);
+ const names=toArray(n)||[n];for(const x of names){const d=D(x);if(!(d instanceof Atom))throw ERR.type('atom',d);if(d.name===',')throw ERR.perm('modify','operator',d);this.addOp(pr,t.name,d.name);}return true;});
+def('current_predicate/1',function(a,node,g){const s=D(a[0]);const L=[...this.db.values()].filter(p=>!p.lib&&(p.clauses.length||p.dynamic));
+ return this.gen(node,g,function*(){for(const p of L){const m=this.trail.length;if(this.unify(s,PI(p.name,p.ar)))yield false;this.undoTo(m);}});});
+def('predicate_property/2',function(a,node,g){const h=D(a[0]);if(h instanceof Var)return false;if(!isCallable(h))throw ERR.type('callable',h);
+ const key=h.name+'/'+(h instanceof Str?h.args.length:0);const props=[];const p=this.db.get(key);
+ if(p){props.push(A('defined'));if(p.dynamic)props.push(A('dynamic'));else props.push(A('static'));props.push(S('number_of_clauses',I(p.clauses.length)));}
+ else if(BUILTINS.has(key)||CONTROL.has(key)){props.push(A('built_in'),A('defined'),A('static'));}
+ return this.gen(node,g,function*(){for(const x of props){const m=this.trail.length;if(this.unify(a[1],x))yield false;this.undoTo(m);}});});
+def('set_prolog_flag/2',function(a){const f=D(a[0]).name,v=D(a[1]);
+ if(f==='occurs_check')this.flags.occurs_check=v.name==='true';else if(f==='double_quotes')this.flags.double_quotes=v.name;else if(f==='unknown')this.flags.unknown=v.name;else throw ERR.dom('prolog_flag',a[0]);return true;});
+def('current_prolog_flag/2',function(a){const f=D(a[0]);if(!(f instanceof Atom))return false;
+ const v={occurs_check:this.flags.occurs_check?'true':'false',double_quotes:this.flags.double_quotes,unknown:this.flags.unknown,bounded:'false'}[f.name];
+ if(v===undefined){if(f.name==='max_integer'||f.name==='min_integer')return false;return false;}return this.unify(a[1],A(v));});
+def('nb_setval/2',function(a){this.globals.set(this.textOf(a[0]),this.copy(a[1]));return true;});def('b_setval/2',BUILTINS.get('nb_setval/2'));
+def('nb_getval/2',function(a){const k=this.textOf(a[0]);if(!this.globals.has(k))throw ERR.exist('variable',A(k));return this.unify(a[1],this.globals.get(k));});def('b_getval/2',BUILTINS.get('nb_getval/2'));
+def('statistics/2',function(a){const k=D(a[0]).name;const ms=Math.round(this.st.ms+0);
+ if(k==='runtime'||k==='cputime'||k==='walltime'||k==='process_cputime')return this.unify(a[1],k==='cputime'?F(ms/1000):mklist([I(ms),I(0)]));
+ if(k==='inferences')return this.unify(a[1],I(this.st.inf));throw ERR.dom('statistics_key',a[0]);});
+def('statistics/0',function(){this.out(`% ${this.st.inf} Inferenzen, ${this.st.bt} Backtracking-Schritte\n`);return true;});
+def('random_between/3',function(a){const l=needI(this.eval(a[0])),h=needI(this.eval(a[1]));return this.unify(a[2],I(l+BigInt(Math.floor(Math.random()*Number(h-l+1n)))));},true);
+def('random/1',function(a){return this.unify(a[0],F(Math.random()));},true);
+def('tab/2',function(a){this.out(' '.repeat(Number(this.eval(a[1]).val)));return true;});
+def('$bagof_prep'+'/4',function(a){let G=D(a[1]);const ex=new Set(termVars(a[0]));
+ while(G instanceof Str&&G.name==='^'&&G.args.length===2){termVars(G.args[0]).forEach(v=>ex.add(v));G=D(G.args[1]);}
+ const free=termVars(G).filter(v=>!ex.has(v));return this.unify(a[2],mklist(free))&&this.unify(a[3],G);});
+def('$dcg_body/4',function(a){return this.unify(a[3],this.dcgBody(a[0],a[1],a[2]));});
+def('dcg_translate_rule/2',function(a){return this.unify(a[1],this.dcgRule(D(a[0])));});
+def('expand_term/2',function(a){const t=D(a[0]);if(t instanceof Str&&t.name==='-->'&&t.args.length===2)return this.unify(a[1],this.dcgRule(t));return this.unify(a[1],t);});
+def('consult/1',function(a){throw ERR.perm('access','source_sink',a[0]);});
+def('tab/0',()=>true);
+
+// ---------- Bibliothek (in Prolog) ----------
+const LIB=`
+append([], L, L).
+append([H|T], L, [H|R]) :- append(T, L, R).
+append([], []).
+append([L|Ls], As) :- append(L, Ws, As), append(Ls, Ws).
+member(X, [X|_]).
+member(X, [_|T]) :- member(X, T).
+memberchk(X, L) :- member(X, L), !.
+reverse(L, R) :- '$rev'(L, [], R).
+'$rev'([], A, A).
+'$rev'([H|T], A, R) :- '$rev'(T, [H|A], R).
+nth0(I, L, E) :- integer(I), !, I >= 0, '$nth'(I, L, E).
+nth0(I, L, E) :- var(I), '$nth_gen'(L, E, 0, I).
+'$nth'(0, [E|_], E) :- !.
+'$nth'(I, [_|T], E) :- I1 is I-1, '$nth'(I1, T, E).
+'$nth_gen'([E|_], E, B, B).
+'$nth_gen'([_|T], E, B0, B) :- B1 is B0+1, '$nth_gen'(T, E, B1, B).
+nth1(I, L, E) :- integer(I), !, I0 is I-1, nth0(I0, L, E).
+nth1(I, L, E) :- nth0(I0, L, E), I is I0+1.
+last([X|Xs], L) :- '$last'(Xs, X, L).
+'$last'([], L, L).
+'$last'([X|Xs], _, L) :- '$last'(Xs, X, L).
+select(X, [X|T], T).
+select(X, [H|T], [H|R]) :- select(X, T, R).
+selectchk(X, L, R) :- select(X, L, R), !.
+select(X, Xs, Y, Ys) :- '$select4'(Xs, X, Y, Ys).
+'$select4'([X|T], X, Y, [Y|T]).
+'$select4'([H|T], X, Y, [H|T2]) :- '$select4'(T, X, Y, T2).
+exclude(_, [], []).
+exclude(P, [X|Xs], R) :- ( call(P, X) -> R = R1 ; R = [X|R1] ), exclude(P, Xs, R1).
+include(_, [], []).
+include(P, [X|Xs], R) :- ( call(P, X) -> R = [X|R1] ; R = R1 ), include(P, Xs, R1).
+partition(_, [], [], []).
+partition(P, [X|Xs], I, E) :- ( call(P, X) -> I = [X|I1], E = E1 ; I = I1, E = [X|E1] ), partition(P, Xs, I1, E1).
+maplist(_, []).
+maplist(P, [A|As]) :- call(P, A), maplist(P, As).
+maplist(_, [], []).
+maplist(P, [A|As], [B|Bs]) :- call(P, A, B), maplist(P, As, Bs).
+maplist(_, [], [], []).
+maplist(P, [A|As], [B|Bs], [C|Cs]) :- call(P, A, B, C), maplist(P, As, Bs, Cs).
+maplist(_, [], [], [], []).
+maplist(P, [A|As], [B|Bs], [C|Cs], [D|Ds]) :- call(P, A, B, C, D), maplist(P, As, Bs, Cs, Ds).
+foldl(G, L, V0, V) :- '$foldl'(L, G, V0, V).
+'$foldl'([], _, V, V).
+'$foldl'([X|Xs], G, V0, V) :- call(G, X, V0, V1), '$foldl'(Xs, G, V1, V).
+foldl(G, L1, L2, V0, V) :- '$foldl'(L1, L2, G, V0, V).
+'$foldl'([], [], _, V, V).
+'$foldl'([X|Xs], [Y|Ys], G, V0, V) :- call(G, X, Y, V0, V1), '$foldl'(Xs, Ys, G, V1, V).
+sum_list(L, S) :- '$sum'(L, 0, S).
+'$sum'([], S, S).
+'$sum'([X|Xs], S0, S) :- S1 is S0+X, '$sum'(Xs, S1, S).
+sumlist(L, S) :- sum_list(L, S).
+max_list([H|T], M) :- '$maxl'(T, H, M).
+'$maxl'([], M, M).
+'$maxl'([H|T], M0, M) :- M1 is max(M0, H), '$maxl'(T, M1, M).
+min_list([H|T], M) :- '$minl'(T, H, M).
+'$minl'([], M, M).
+'$minl'([H|T], M0, M) :- M1 is min(M0, H), '$minl'(T, M1, M).
+max_member(M, L) :- msort(L, S), last(S, M).
+min_member(M, [H|T]) :- msort([H|T], [M|_]).
+numlist(L, H, []) :- L > H, !.
+numlist(L, H, [L|T]) :- L1 is L+1, numlist(L1, H, T).
+list_to_set(L, S) :- '$lts'(L, [], S).
+'$lts'([], _, []).
+'$lts'([H|T], Seen, R) :- ( memberchk_eq(H, Seen) -> R = R1 ; R = [H|R1] ), '$lts'(T, [H|Seen], R1).
+memberchk_eq(X, [Y|Ys]) :- ( X == Y -> true ; memberchk_eq(X, Ys) ).
+delete([], _, []).
+delete([H|T], X, R) :- ( H \\= X -> R = [H|R1] ; R = R1 ), delete(T, X, R1).
+subtract([], _, []).
+subtract([H|T], L, R) :- ( memberchk(H, L) -> R = R1 ; R = [H|R1] ), subtract(T, L, R1).
+intersection([], _, []).
+intersection([H|T], L, R) :- ( memberchk(H, L) -> R = [H|R1] ; R = R1 ), intersection(T, L, R1).
+union([], L, L).
+union([H|T], L, R) :- ( memberchk(H, L) -> R = R1 ; R = [H|R1] ), union(T, L, R1).
+permutation([], []).
+permutation(L, [H|T]) :- select(H, L, R), permutation(R, T).
+flatten(L, F) :- '$flat'(L, [], F0), !, F = F0.
+'$flat'(V, T, [V|T]) :- var(V), !.
+'$flat'([], T, T) :- !.
+'$flat'([H|Rest], T, F) :- !, '$flat'(H, F1, F), '$flat'(Rest, T, F1).
+'$flat'(A, T, [A|T]).
+exclude_one_(_, _) :- fail.
+pairs_keys_values([], [], []).
+pairs_keys_values([K-V|T], [K|Ks], [V|Vs]) :- pairs_keys_values(T, Ks, Vs).
+pairs_keys([], []).
+pairs_keys([K-_|T], [K|Ks]) :- pairs_keys(T, Ks).
+pairs_values([], []).
+pairs_values([_-V|T], [V|Vs]) :- pairs_values(T, Vs).
+sumlist(_, _, _) :- fail.
+predsort(P, L, Sorted) :- length(L, N), ( N < 2 -> '$predsort_dedup'(P, L, Sorted) ; '$predsort'(P, N, L, _, Sorted1), Sorted = Sorted1 ).
+'$predsort_dedup'(_, L, L).
+'$predsort'(P, 2, [X1,X2|L], L, R) :- !, call(P, Delta, X1, X2), '$sort2'(Delta, X1, X2, R).
+'$predsort'(_, 1, [X|L], L, [X]) :- !.
+'$predsort'(_, 0, L, L, []) :- !.
+'$predsort'(P, N, L1, L3, R) :- N1 is N // 2, plus(N1, N2, N), '$predsort'(P, N1, L1, L2, R1), '$predsort'(P, N2, L2, L3, R2), '$predmerge'(P, R1, R2, R).
+'$sort2'(<, X1, X2, [X1,X2]).
+'$sort2'(=, X1, _, [X1]).
+'$sort2'(>, X1, X2, [X2,X1]).
+'$predmerge'(_, [], R, R) :- !.
+'$predmerge'(_, R, [], R) :- !.
+'$predmerge'(P, [H1|T1], [H2|T2], Result) :- call(P, Delta, H1, H2), !, '$predmerge_'(Delta, P, H1, H2, T1, T2, Result).
+'$predmerge_'(<, P, H1, H2, T1, T2, [H1|R]) :- '$predmerge'(P, T1, [H2|T2], R).
+'$predmerge_'(=, P, H1, _, T1, T2, [H1|R]) :- '$predmerge'(P, T1, T2, R).
+'$predmerge_'(>, P, H1, H2, T1, T2, [H2|R]) :- '$predmerge'(P, [H1|T1], T2, R).
+once(G) :- call(G), !.
+ignore(G) :- ( call(G) -> true ; true ).
+forall(C, A) :- \\+ ( call(C), \\+ call(A) ).
+_ ^ G :- call(G).
+bagof(T, G, L) :-
+    '$bagof_prep'(T, G, W, G1),
+    (   W == []
+    ->  findall(T, G1, L), L \\== []
+    ;   findall(W-T, G1, Pairs), Pairs \\== [],
+        '$bagof_groups'(Pairs, Groups),
+        member(W-L, Groups)
+    ).
+setof(T, G, S) :- bagof(T, G, L), sort(L, S).
+'$bagof_groups'(Pairs, Groups) :- keysort(Pairs, Sorted), '$bagof_pick'(Sorted, Groups).
+'$bagof_pick'([], []).
+'$bagof_pick'([K-V|T], [K-[V|Vs]|Gs]) :- '$bagof_same'(K, T, Vs, Rest), '$bagof_pick'(Rest, Gs).
+'$bagof_same'(K, [K1-V|T], [V|Vs], Rest) :- K1 =@= K, !, K1 = K, '$bagof_same'(K, T, Vs, Rest).
+'$bagof_same'(_, L, [], L).
+aggregate_all(count, G, C) :- !, findall(x, G, L), length(L, C).
+aggregate_all(sum(E), G, S) :- !, findall(E, G, L), sum_list(L, S).
+aggregate_all(max(E), G, M) :- !, findall(E, G, L), L \\== [], '$agg_max'(L, M).
+aggregate_all(min(E), G, M) :- !, findall(E, G, L), L \\== [], '$agg_min'(L, M).
+aggregate_all(bag(E), G, L) :- !, findall(E, G, L).
+aggregate_all(set(E), G, S) :- !, findall(E, G, L), sort(L, S).
+'$agg_max'(L, M) :- ( '$all_num'(L) -> max_list(L, M) ; msort(L, S), last(S, M) ).
+'$agg_min'(L, M) :- ( '$all_num'(L) -> min_list(L, M) ; msort(L, [M|_]) ).
+'$all_num'([]).
+'$all_num'([X|Xs]) :- number(X), '$all_num'(Xs).
+phrase(G, L) :- phrase(G, L, []).
+phrase(G, L, R) :- '$dcg_body'(G, S0, S, Goal), S0 = L, S = R, call(Goal).
+`;
+
+return{Engine,Parser,Lexer,Var,Atom,Int,Flt,Str,A,S,I,F,NIL,deref,mklist,toArray,isCons,PI,BUILTINS,CONTROL,OVERRIDABLE,fmtFloat,qatom,compare,occurs,variant,termVars,PErr,ERR,LIB};
+})();
+if(typeof module!=='undefined')module.exports=Prolog;
+
+</script>
+<script>
+var PL_EXAMPLES = [
+{id:'einstieg', title:'01 Einstieg: Hallo, Fakultät, Fehler', code:`% Einstieg: Fakten, Regeln, Arithmetik
+% Klicke unten auf eine Anfrage oder tippe sie hinter ?- ein.
+
+hallo :- write('Hallo, Welt!'), nl.
+
+% Fakultät: n! = n * (n-1)!
+fakultaet(0, 1) :- !.
+fakultaet(N, F) :-
+    N > 0,
+    N1 is N - 1,
+    fakultaet(N1, F1),
+    F is N * F1.
+
+% Fibonacci (naiv, exponentiell viele Aufrufe)
+fib(0, 0).
+fib(1, 1).
+fib(N, F) :-
+    N > 1,
+    A is N - 1, B is N - 2,
+    fib(A, FA), fib(B, FB),
+    F is FA + FB.
+
+% ?- hallo.
+% ?- fakultaet(5, F).
+% ?- fakultaet(30, F).
+% ?- fib(15, F).
+% ?- X = 1 + 2.
+% ?- X = 1 + 2, Y is X.
+% ?- X is 7 / 2, Y is 7 // 2, Z is 7 mod 2.
+% ?- X is 2 ** 100.
+% ?- 1 + 2 =:= 3.
+% ?- 1 + 2 == 3.
+% ?- X is Y + 1.
+% ?- X is foo + 1.
+% ?- unbekannt(42).
+`},
+{id:'stammbaum', title:'02 Stammbaum', code:`% Stammbaum: Fakten bilden die Wissensbasis, Regeln leiten neues Wissen ab.
+
+maennlich(otto).  maennlich(karl).  maennlich(hans).
+maennlich(paul).  maennlich(max).
+weiblich(erna).   weiblich(anna).   weiblich(grete).
+weiblich(lisa).   weiblich(sophie).
+
+% elternteil(Elternteil, Kind)
+elternteil(otto,  karl).   elternteil(erna, karl).
+elternteil(otto,  grete).  elternteil(erna, grete).
+elternteil(karl,  hans).   elternteil(anna, hans).
+elternteil(karl,  lisa).   elternteil(anna, lisa).
+elternteil(grete, paul).
+elternteil(hans,  max).    elternteil(hans, sophie).
+
+vater(V, K)  :- elternteil(V, K), maennlich(V).
+mutter(M, K) :- elternteil(M, K), weiblich(M).
+
+grosselternteil(G, E) :- elternteil(G, X), elternteil(X, E).
+
+geschwister(A, B) :-
+    elternteil(E, A), elternteil(E, B), A \\== B.
+
+bruder(B, X)    :- geschwister(B, X), maennlich(B).
+schwester(S, X) :- geschwister(S, X), weiblich(S).
+
+onkel(O, N) :- elternteil(E, N), bruder(O, E).
+tante(T, N) :- elternteil(E, N), schwester(T, E).
+
+cousin(C, X) :-
+    elternteil(E1, C), elternteil(E2, X), geschwister(E1, E2).
+
+% rekursiv: Vorfahren beliebiger Tiefe
+vorfahr(V, N) :- elternteil(V, N).
+vorfahr(V, N) :- elternteil(V, X), vorfahr(X, N).
+
+% ?- vater(V, hans).
+% ?- elternteil(karl, K).
+% ?- grosselternteil(G, max).
+% ?- geschwister(G, hans).
+% ?- setof(G, geschwister(G, hans), L).
+% ?- tante(T, hans).
+% ?- onkel(O, paul).
+% ?- setof(C, cousin(C, hans), L).
+% ?- vorfahr(V, sophie).
+% ?- setof(N, vorfahr(otto, N), L).
+% ?- bagof(K, elternteil(E, K), L).
+`},
+{id:'listen', title:'03 Listenprädikate', code:`% Eigene Listenprädikate. Präfix "mein_", damit die gleichnamigen
+% Bibliotheksprädikate (member/2, append/3 ...) unberührt bleiben.
+
+mein_member(X, [X|_]).
+mein_member(X, [_|R]) :- mein_member(X, R).
+
+mein_append([], L, L).
+mein_append([K|R], L, [K|E]) :- mein_append(R, L, E).
+
+% naive Umkehrung: quadratischer Aufwand
+naiv_reverse([], []).
+naiv_reverse([K|R], U) :- naiv_reverse(R, RU), mein_append(RU, [K], U).
+
+% Umkehrung mit Akkumulator: linearer Aufwand
+mein_reverse(L, U) :- rev_acc(L, [], U).
+rev_acc([], Acc, Acc).
+rev_acc([K|R], Acc, U) :- rev_acc(R, [K|Acc], U).
+
+mein_length([], 0).
+mein_length([_|R], N) :- mein_length(R, N0), N is N0 + 1.
+
+summe([], 0).
+summe([X|R], S) :- summe(R, S0), S is S0 + X.
+
+letztes([X], X).
+letztes([_|R], X) :- letztes(R, X).
+
+% ?- mein_append([1,2], [3,4], L).
+% ?- mein_append(X, Y, [1,2,3]).
+% ?- mein_append(X, [3], [1,2,3]).
+% ?- mein_member(b, [a,b,c]).
+% ?- mein_member(X, [a,b,c]).
+% ?- mein_reverse([1,2,3,4], R).
+% ?- naiv_reverse([1,2,3,4,5,6,7,8], R).
+% ?- mein_reverse([1,2,3,4,5,6,7,8], R).
+% ?- mein_length([a,b,c], N).
+% ?- summe([1,2,3,4], S).
+% ?- letztes([a,b,c], X).
+% ?- X = '.'(1, '.'(2, [])).
+% ?- [K|R] = [a,b,c].
+`},
+{id:'quicksort', title:'04 Quicksort', code:`% Quicksort: Pivot nehmen, Rest zerlegen, Teile sortieren.
+
+quicksort([], []).
+quicksort([P|R], S) :-
+    zerlege(R, P, Kleiner, Groesser),
+    quicksort(Kleiner, SK),
+    quicksort(Groesser, SG),
+    append(SK, [P|SG], S).
+
+zerlege([], _, [], []).
+zerlege([X|R], P, [X|K], G) :- X =< P, !, zerlege(R, P, K, G).
+zerlege([X|R], P, K, [X|G]) :- zerlege(R, P, K, G).
+
+% Variante mit Differenzlisten: ohne append/3
+qsort(L, S) :- qsort_dl(L, S, []).
+qsort_dl([], S, S).
+qsort_dl([P|R], S, Rest) :-
+    zerlege(R, P, K, G),
+    qsort_dl(K, S, [P|S1]),
+    qsort_dl(G, S1, Rest).
+
+% ?- quicksort([3,1,4,1,5,9,2,6], S).
+% ?- qsort([27,3,99,42,7], S).
+% ?- quicksort([b,a], S).
+`},
+{id:'hanoi', title:'05 Türme von Hanoi', code:`% Türme von Hanoi: N Scheiben von links nach rechts.
+
+hanoi(N) :- bewege(N, links, rechts, mitte).
+
+bewege(0, _, _, _) :- !.
+bewege(N, Von, Nach, Ueber) :-
+    N1 is N - 1,
+    bewege(N1, Von, Ueber, Nach),
+    format("Scheibe ~w: ~w -> ~w~n", [N, Von, Nach]),
+    bewege(N1, Ueber, Nach, Von).
+
+% Züge als Liste sammeln statt ausgeben
+zuege(0, _, _, _, []) :- !.
+zuege(N, A, B, C, Z) :-
+    N1 is N - 1,
+    zuege(N1, A, C, B, Z1),
+    zuege(N1, C, B, A, Z2),
+    append(Z1, [A-B|Z2], Z).
+
+% ?- hanoi(3).
+% ?- zuege(3, l, r, m, Z).
+% ?- zuege(10, l, r, m, Z), length(Z, Anzahl).
+`},
+{id:'graph', title:'06 Wege in einem Graphen', code:`% Bahnstrecken zwischen fränkischen Städten (vereinfacht)
+
+kante(nuernberg, fuerth).
+kante(fuerth,    erlangen).
+kante(nuernberg, erlangen).
+kante(erlangen,  bamberg).
+kante(nuernberg, schwabach).
+kante(schwabach, roth).
+kante(nuernberg, ansbach).
+kante(ansbach,   wuerzburg).
+kante(bamberg,   wuerzburg).
+kante(fuerth,    neustadt).
+kante(neustadt,  wuerzburg).
+
+% Strecken sind in beide Richtungen befahrbar
+verbunden(X, Y) :- kante(X, Y).
+verbunden(X, Y) :- kante(Y, X).
+
+% Weg ohne Kreis: besuchte Orte werden mitgeführt
+weg(Start, Ziel, Weg) :-
+    weg(Start, Ziel, [Start], W),
+    reverse(W, Weg).
+
+weg(Ziel, Ziel, Besucht, Besucht).
+weg(A, Ziel, Besucht, Weg) :-
+    verbunden(A, B),
+    \\+ member(B, Besucht),
+    weg(B, Ziel, [B|Besucht], Weg).
+
+% kürzester Weg (nach Zahl der Orte)
+kuerzester_weg(S, Z, W) :-
+    setof(N-Wg, (weg(S, Z, Wg), length(Wg, N)), [_-W|_]).
+
+% Vorsicht: naive transitive Hülle ohne Besucht-Liste
+erreichbar(X, Y) :- verbunden(X, Y).
+erreichbar(X, Y) :- verbunden(X, Z), erreichbar(Z, Y).
+
+% ?- weg(schwabach, bamberg, W).
+% ?- findall(W, weg(schwabach, wuerzburg, W), Ws), length(Ws, N).
+% ?- kuerzester_weg(roth, wuerzburg, W).
+% ?- erreichbar(roth, bamberg).
+% ?- erreichbar(roth, muenchen).
+`},
+{id:'landkarte', title:'07 Landkartenfärbung (Bayern)', code:`% Die sieben Regierungsbezirke Bayerns so färben,
+% dass Nachbarn nie dieselbe Farbe haben.
+
+farbe(rot).
+farbe(gruen).
+farbe(blau).
+
+nachbar(oberbayern,    niederbayern).
+nachbar(oberbayern,    oberpfalz).
+nachbar(oberbayern,    mittelfranken).
+nachbar(oberbayern,    schwaben).
+nachbar(niederbayern,  oberpfalz).
+nachbar(oberpfalz,     oberfranken).
+nachbar(oberpfalz,     mittelfranken).
+nachbar(oberfranken,   mittelfranken).
+nachbar(oberfranken,   unterfranken).
+nachbar(mittelfranken, unterfranken).
+nachbar(mittelfranken, schwaben).
+
+grenzt(A, B) :- nachbar(A, B).
+grenzt(A, B) :- nachbar(B, A).
+
+regionen([mittelfranken, oberbayern, oberpfalz, oberfranken,
+          unterfranken, niederbayern, schwaben]).
+
+% Region für Region färben und sofort gegen die schon gefärbten Nachbarn prüfen
+faerbe([], Belegt, Belegt).
+faerbe([R|Rs], Belegt, Ergebnis) :-
+    farbe(F),
+    \\+ ( member(N-F, Belegt), grenzt(R, N) ),
+    faerbe(Rs, [R-F|Belegt], Ergebnis).
+
+landkarte(L) :- regionen(Rs), faerbe(Rs, [], L).
+
+% ?- landkarte(L).
+% ?- aggregate_all(count, landkarte(_), Anzahl).
+% ?- retract(farbe(blau)), landkarte(L).
+`},
+{id:'damen', title:'08 N-Damen', code:`% N-Damen: N Damen auf ein NxN-Brett, keine schlägt eine andere.
+% Darstellung: Liste Qs, das i-te Element ist die Zeile der Dame in Spalte i.
+
+% 1) Erzeugen und Testen: alle Permutationen durchprobieren
+damen(N, Qs) :-
+    numlist(1, N, Ns),
+    permutation(Ns, Qs),
+    sicher(Qs).
+
+sicher([]).
+sicher([Q|Qs]) :- keine_diagonale(Q, Qs, 1), sicher(Qs).
+
+keine_diagonale(_, [], _).
+keine_diagonale(Q, [Q1|Qs], D) :-
+    Q =\\= Q1 + D,
+    Q =\\= Q1 - D,
+    D1 is D + 1,
+    keine_diagonale(Q, Qs, D1).
+
+% 2) Schrittweise setzen und sofort prüfen: viel kleinerer Suchraum
+damen2(N, Qs) :-
+    numlist(1, N, Ns),
+    setze(Ns, [], Qs).
+
+setze([], Qs, Qs).
+setze(Frei, Gesetzt, Qs) :-
+    select(Q, Frei, Rest),
+    keine_diagonale(Q, Gesetzt, 1),
+    setze(Rest, [Q|Gesetzt], Qs).
+
+zeige(Qs) :-
+    length(Qs, N),
+    forall(member(Q, Qs),
+           ( forall(between(1, N, S),
+                    ( S =:= Q -> write(' D') ; write(' .') )),
+             nl )).
+
+% ?- damen(6, Qs).
+% ?- damen2(8, Qs), zeige(Qs).
+% ?- aggregate_all(count, damen2(6, _), Anzahl).
+% ?- aggregate_all(count, damen2(8, _), Anzahl).
+% Statistik-Reiter, Messreihe: damen(N,_) und damen2(N,_) mit N = 4..8
+`},
+{id:'zebra', title:'09 Zebra-Rätsel (Einstein-Rätsel)', code:`% Das Zebra-Rätsel (Life International, 1962)
+% Fünf Häuser in einer Reihe. Jedes Haus: haus(Nation, Farbe, Tier, Getränk, Zigarette)
+
+rechts_von(A, B, [B, A | _]).
+rechts_von(A, B, [_ | Y]) :- rechts_von(A, B, Y).
+
+neben(A, B, L) :- rechts_von(A, B, L).
+neben(A, B, L) :- rechts_von(B, A, L).
+
+zebra(Zebra, Wasser, Haeuser) :-
+    Haeuser = [haus(norweger,_,_,_,_), _, haus(_,_,_,milch,_), _, _],   % 9, 10
+    member(haus(englaender, rot, _, _, _), Haeuser),                     % 2
+    member(haus(spanier, _, hund, _, _), Haeuser),                       % 3
+    member(haus(_, gruen, _, kaffee, _), Haeuser),                       % 4
+    member(haus(ukrainer, _, _, tee, _), Haeuser),                       % 5
+    rechts_von(haus(_, gruen, _, _, _), haus(_, elfenbein, _, _, _), Haeuser), % 6
+    member(haus(_, _, schnecken, _, old_gold), Haeuser),                 % 7
+    member(haus(_, gelb, _, _, kools), Haeuser),                         % 8
+    neben(haus(_, _, _, _, chesterfield), haus(_, _, fuchs, _, _), Haeuser), % 11
+    neben(haus(_, _, _, _, kools), haus(_, _, pferd, _, _), Haeuser),    % 12
+    member(haus(_, _, _, orangensaft, lucky_strike), Haeuser),           % 13
+    member(haus(japaner, _, _, _, parliament), Haeuser),                 % 14
+    neben(haus(norweger, _, _, _, _), haus(_, blau, _, _, _), Haeuser),  % 15
+    member(haus(Wasser, _, _, wasser, _), Haeuser),
+    member(haus(Zebra, _, zebra, _, _), Haeuser).
+
+loese :-
+    zebra(Z, W, H),
+    format("Das Zebra gehört dem ~w, Wasser trinkt der ~w.~n", [Z, W]),
+    forall(nth1(I, H, X), format("Haus ~w: ~w~n", [I, X])).
+
+% ?- loese.
+% ?- zebra(Z, W, _).
+% ?- findall(Z-W, zebra(Z, W, _), L).
+`},
+{id:'sudoku', title:'10 Kleines Sudoku (4x4)', code:`% 4x4-Sudoku ("Shidoku"): Jede Zeile, Spalte und jeder 2x2-Block
+% enthält 1, 2, 3, 4 genau einmal.
+
+reihe(R) :- permutation([1,2,3,4], R).
+
+verschieden([]).
+verschieden([X|Xs]) :- \\+ memberchk(X, Xs), verschieden(Xs).
+
+sudoku([[A1,A2,A3,A4],
+        [B1,B2,B3,B4],
+        [C1,C2,C3,C4],
+        [D1,D2,D3,D4]]) :-
+    reihe([A1,A2,A3,A4]),
+    reihe([B1,B2,B3,B4]),
+    verschieden([A1,A2,B1,B2]), verschieden([A3,A4,B3,B4]),
+    reihe([C1,C2,C3,C4]),
+    verschieden([A1,B1,C1]), verschieden([A2,B2,C2]),
+    verschieden([A3,B3,C3]), verschieden([A4,B4,C4]),
+    reihe([D1,D2,D3,D4]),
+    verschieden([A1,B1,C1,D1]), verschieden([A2,B2,C2,D2]),
+    verschieden([A3,B3,C3,D3]), verschieden([A4,B4,C4,D4]),
+    verschieden([C1,C2,D1,D2]), verschieden([C3,C4,D3,D4]).
+
+raetsel(1, [[_,2,_,_],
+            [_,_,1,_],
+            [_,_,_,3],
+            [4,_,_,_]]).
+raetsel(2, [[1,_,_,_],
+            [_,_,2,_],
+            [_,3,_,_],
+            [_,_,_,4]]).
+
+zeige_gitter(Z) :-
+    forall(member(R, Z), ( forall(member(X, R), (write(X), write(' '))), nl )).
+
+% ?- raetsel(1, Z), sudoku(Z), zeige_gitter(Z).
+% ?- raetsel(2, Z), sudoku(Z), zeige_gitter(Z).
+% ?- raetsel(1, _Z), aggregate_all(count, sudoku(_Z), Anzahl).
+% ?- aggregate_all(count, sudoku(_), Anzahl).
+`},
+{id:'ableiten', title:'11 Symbolisches Ableiten', code:`% Symbolisches Differenzieren: d(Ausdruck, Variable, Ableitung)
+% Terme wie x^2+3*x sind einfach Bäume – Prolog rechnet sie nicht aus.
+
+d(X, X, 1) :- !.
+d(C, _, 0) :- atomic(C), !.
+d(U+V, X, DU+DV) :- !, d(U, X, DU), d(V, X, DV).
+d(U-V, X, DU-DV) :- !, d(U, X, DU), d(V, X, DV).
+d(U*V, X, DU*V+U*DV) :- !, d(U, X, DU), d(V, X, DV).
+d(U/V, X, (DU*V-U*DV)/V^2) :- !, d(U, X, DU), d(V, X, DV).
+d(U^N, X, N*U^N1*DU) :- integer(N), !, N1 is N - 1, d(U, X, DU).
+d(-U, X, -DU) :- !, d(U, X, DU).
+d(sin(U), X, cos(U)*DU) :- !, d(U, X, DU).
+d(cos(U), X, -sin(U)*DU) :- !, d(U, X, DU).
+d(exp(U), X, exp(U)*DU) :- !, d(U, X, DU).
+d(ln(U), X, DU/U) :- !, d(U, X, DU).
+
+% Vereinfachen: Regeln für 0 und 1, Zahlen ausrechnen
+vereinfache(E, E) :- atomic(E), !.
+vereinfache(E, S) :-
+    E =.. [Op, A, B], !,
+    vereinfache(A, SA), vereinfache(B, SB),
+    regel(Op, SA, SB, S).
+vereinfache(E, S) :-
+    E =.. [Op, A],
+    vereinfache(A, SA),
+    ( Op == (-), number(SA) -> S is -SA ; S =.. [Op, SA] ).
+
+regel(+, 0, B, B) :- !.
+regel(+, A, 0, A) :- !.
+regel(-, A, 0, A) :- !.
+regel(*, 0, _, 0) :- !.
+regel(*, _, 0, 0) :- !.
+regel(*, 1, B, B) :- !.
+regel(*, A, 1, A) :- !.
+regel(/, A, 1, A) :- !.
+regel(^, _, 0, 1) :- !.
+regel(^, A, 1, A) :- !.
+regel(Op, A, B, C) :-
+    number(A), number(B), member(Op, [+, -, *]), !,
+    T =.. [Op, A, B], C is T.
+regel(Op, A, B, E) :- E =.. [Op, A, B].
+
+ableitung(E, X, S) :- d(E, X, D), vereinfache(D, S).
+
+% ?- d(x*x, x, D).
+% ?- ableitung(x*x, x, D).
+% ?- ableitung(x^3 + 2*x, x, D).
+% ?- ableitung(sin(x)*x, x, D).
+% ?- ableitung(exp(2*x), x, D).
+% ?- ableitung(a*x^2 + b*x + c, x, D).
+`},
+{id:'tiere', title:'12 Expertensystem Tierbestimmung', code:`% Kleines Expertensystem nach dem Lehrbuchklassiker (Winston):
+% Regeln beschreiben Tiere, fehlendes Wissen wird erfragt und gemerkt.
+
+:- dynamic bekannt/2.
+
+tier(gepard)   :- saeugetier, raubtier, merkmal(gelbbraun), merkmal(dunkle_flecken).
+tier(tiger)    :- saeugetier, raubtier, merkmal(gelbbraun), merkmal(schwarze_streifen).
+tier(giraffe)  :- huftier, merkmal(langer_hals), merkmal(lange_beine).
+tier(zebra)    :- huftier, merkmal(schwarze_streifen).
+tier(strauss)  :- vogel, merkmal(fliegt_nicht), merkmal(langer_hals).
+tier(pinguin)  :- vogel, merkmal(fliegt_nicht), merkmal(schwimmt).
+tier(albatros) :- vogel, merkmal(fliegt_gut).
+
+saeugetier :- merkmal(haare), !.
+saeugetier :- merkmal(gibt_milch).
+vogel      :- merkmal(federn), !.
+vogel      :- merkmal(fliegt), merkmal(legt_eier).
+raubtier   :- merkmal(frisst_fleisch), !.
+raubtier   :- merkmal(spitze_zaehne), merkmal(krallen).
+huftier    :- saeugetier, merkmal(hufe), !.
+huftier    :- saeugetier, merkmal(wiederkaeuer).
+
+% Schon beantwortet? Dann Antwort benutzen, sonst fragen und merken.
+merkmal(M) :- bekannt(M, Antwort), !, Antwort == ja.
+merkmal(M) :- frage(M, Antwort), assertz(bekannt(M, Antwort)), Antwort == ja.
+
+frage(M, A) :-
+    format("Merkmal ~w? (ja. / nein.) ", [M]),
+    read(Eingabe),
+    ( Eingabe == ja -> A = ja ; A = nein ).
+
+bestimme :-
+    retractall(bekannt(_, _)),
+    (   tier(T)
+    ->  format("Das Tier ist vermutlich: ~w~n", [T])
+    ;   write('Kein passendes Tier gefunden.'), nl
+    ).
+
+% Ohne Rückfragen testen: Antworten vorab in die Datenbank schreiben
+antworten(L) :-
+    retractall(bekannt(_, _)),
+    forall(member(M = A, L), assertz(bekannt(M, A))).
+
+% ?- bestimme.
+% ?- antworten([haare=ja, frisst_fleisch=ja, gelbbraun=ja, dunkle_flecken=nein, schwarze_streifen=ja]), tier(T).
+% ?- antworten([haare=nein, gibt_milch=nein, federn=ja, fliegt_nicht=ja, langer_hals=nein, schwimmt=ja]), tier(T).
+% ?- listing(bekannt/2).
+`},
+{id:'dcg', title:'13 DCG: deutsche Sätze & Rechenausdrücke', code:`% Definite Clause Grammar für einfache deutsche Sätze
+% Geschlecht (m/f/n) und Fall (nom/akk) müssen zusammenpassen.
+
+satz(s(NP, VP)) --> nominalphrase(NP, _, nom), verbalphrase(VP).
+
+nominalphrase(np(Art, N), G, K)      --> artikel(Art, G, K), nomen(N, G).
+nominalphrase(np(Art, Adj, N), G, K) --> artikel(Art, G, K), adjektiv(Adj, G, K), nomen(N, G).
+
+verbalphrase(vp(V, NP)) --> verb(V, trans), nominalphrase(NP, _, akk).
+verbalphrase(vp(V))     --> verb(V, intrans).
+
+artikel(art(der), m, nom) --> [der].
+artikel(art(den), m, akk) --> [den].
+artikel(art(die), f, _)   --> [die].
+artikel(art(das), n, _)   --> [das].
+
+% schwache Beugung nach bestimmtem Artikel: der kleine / den kleinen
+adjektiv(adj(A), G, K) --> [W], { stamm(A), endung(G, K, E), atom_concat(A, E, W) }.
+stamm(klein). stamm(gross). stamm(schnell). stamm(alt).
+endung(m, nom, e).  endung(m, akk, en).
+endung(f, _, e).    endung(n, _, e).
+
+nomen(n(hund), m)  --> [hund].
+nomen(n(kater), m) --> [kater].
+nomen(n(katze), f) --> [katze].
+nomen(n(maus), f)  --> [maus].
+nomen(n(kind), n)  --> [kind].
+nomen(n(pferd), n) --> [pferd].
+
+verb(v(jagt), trans)      --> [jagt].
+verb(v(sieht), trans)     --> [sieht].
+verb(v(schlaeft), intrans) --> [schlaeft].
+verb(v(bellt), intrans)   --> [bellt].
+
+analysiere(Text) :-
+    atomic_list_concat(Woerter, ' ', Text),
+    (   phrase(satz(Baum), Woerter)
+    ->  print(Baum), nl
+    ;   write('kein Satz dieser Grammatik'), nl
+    ).
+
+% --- Zweite Grammatik: Rechenausdrücke aus Zeichencodes ---
+ausdruck(W) --> summand(S), ausdruck_rest(S, W).
+ausdruck_rest(A, W) --> "+", !, summand(S), { A1 is A + S }, ausdruck_rest(A1, W).
+ausdruck_rest(A, W) --> "-", !, summand(S), { A1 is A - S }, ausdruck_rest(A1, W).
+ausdruck_rest(W, W) --> [].
+summand(W) --> faktor(F), summand_rest(F, W).
+summand_rest(A, W) --> "*", !, faktor(F), { A1 is A * F }, summand_rest(A1, W).
+summand_rest(A, W) --> "/", !, faktor(F), { A1 is A / F }, summand_rest(A1, W).
+summand_rest(W, W) --> [].
+faktor(W) --> "(", !, ausdruck(W), ")".
+faktor(W) --> ziffern(Ds), { number_codes(W, Ds) }.
+ziffern([D|T]) --> ziffer(D), ziffern_rest(T).
+ziffern_rest([D|T]) --> ziffer(D), !, ziffern_rest(T).
+ziffern_rest([]) --> [].
+ziffer(D) --> [D], { D >= 0'0, D =< 0'9 }.
+
+% ?- phrase(satz(B), [der, kleine, hund, jagt, die, katze]).
+% ?- phrase(satz(B), [die, katze, sieht, den, alten, kater]).
+% ?- phrase(satz(B), [den, hund, jagt, die, katze]).
+% ?- phrase(satz(B), [der, hund, bellt]).
+% ?- analysiere('das schnelle pferd sieht den kleinen hund').
+% ?- findall(S, phrase(satz(_), S), L), length(L, N).
+% ?- phrase(ausdruck(W), "2+3*(4-1)").
+% ?- listing(artikel/5).
+`},
+{id:'meta', title:'14 Meta-Interpreter', code:`% Prolog in Prolog: der "Vanilla"-Meta-Interpreter
+
+loese(true) :- !.
+loese((A, B)) :- !, loese(A), loese(B).
+loese((A ; B)) :- !, ( loese(A) ; loese(B) ).
+loese(\\+ A) :- !, \\+ loese(A).
+loese(Ziel) :- eingebaut(Ziel), !, call(Ziel).
+loese(Ziel) :- clause(Ziel, Rumpf), loese(Rumpf).
+
+eingebaut(Z) :- predicate_property(Z, built_in).
+
+% Variante 1: liefert den Beweisbaum mit
+:- op(700, xfx, <==).
+beweis(true, true) :- !.
+beweis((A, B), (BA, BB)) :- !, beweis(A, BA), beweis(B, BB).
+beweis(Z, Z <== eingebaut) :- eingebaut(Z), !, call(Z).
+beweis(Z, Z <== B) :- clause(Z, R), beweis(R, B).
+
+% Variante 2: Tiefenschranke gegen Endlosrekursion
+loese_tief(true, _) :- !.
+loese_tief((A, B), T) :- !, loese_tief(A, T), loese_tief(B, T).
+loese_tief(Z, _) :- eingebaut(Z), !, call(Z).
+loese_tief(Z, T) :- T > 0, T1 is T - 1, clause(Z, R), loese_tief(R, T1).
+
+% Variante 3: zählt die Resolutionsschritte
+loese_zaehle(true, N, N) :- !.
+loese_zaehle((A, B), N0, N) :- !, loese_zaehle(A, N0, N1), loese_zaehle(B, N1, N).
+loese_zaehle(Z, N0, N) :- eingebaut(Z), !, call(Z), N is N0 + 1.
+loese_zaehle(Z, N0, N) :- clause(Z, R), N1 is N0 + 1, loese_zaehle(R, N1, N).
+
+% Testprogramm
+mensch(sokrates).
+mensch(platon).
+sterblich(X) :- mensch(X).
+
+nat(0).
+nat(s(N)) :- nat(N).
+plus(0, Y, Y).
+plus(s(X), Y, s(Z)) :- plus(X, Y, Z).
+
+% ?- loese(sterblich(X)).
+% ?- loese(append(X, Y, [1,2])).
+% ?- beweis(plus(s(s(0)), s(0), Z), B).
+% ?- beweis(sterblich(sokrates), B).
+% ?- loese_tief(nat(N), 3).
+% ?- loese_zaehle(append([1,2,3], [4], L), 0, Schritte).
+`},
+{id:'datenbank', title:'15 Datenbank, Sammeln, Operatoren', code:`% assert/retract, findall/bagof/setof, op/3 und call/N
+
+:- dynamic zaehler/1.
+zaehler(0).
+
+erhoehe :- retract(zaehler(N)), N1 is N + 1, assertz(zaehler(N1)).
+
+% Biere als kleine Relation (Datalog-Stil): bier(Name, Gärung, Alkohol)
+bier(maerzen,    untergaerig, 5.6).
+bier(pils,       untergaerig, 4.9).
+bier(kellerbier, untergaerig, 5.0).
+bier(rauchbier,  untergaerig, 5.1).
+bier(weizen,     obergaerig,  5.4).
+bier(alt,        obergaerig,  4.8).
+bier(stout,      obergaerig,  4.2).
+
+stark(N) :- bier(N, _, A), A > 5.0.
+
+% eigene Operatoren
+:- op(700, xfx, ist_vater_von).
+:- op(200, xfy, und).
+
+otto ist_vater_von karl.
+karl ist_vater_von hans.
+grossvater(G, E) :- G ist_vater_von V, V ist_vater_von E.
+
+% Meta-Aufrufe
+quadrat(X, Y) :- Y is X * X.
+anwenden(F, X, Y) :- G =.. [F, X, Y], call(G).
+zweimal(G) :- call(G), call(G).
+
+% ?- erhoehe, erhoehe, zaehler(X).
+% ?- findall(N, bier(N, _, _), L).
+% ?- bagof(N, A^bier(N, T, A), L).
+% ?- setof(T-N, A^bier(N, T, A), L).
+% ?- findall(N, stark(N), L).
+% ?- aggregate_all(max(A-N), bier(N, _, A), Max).
+% ?- X ist_vater_von hans.
+% ?- grossvater(G, hans).
+% ?- X = (a und b und c), X = (K und R).
+% ?- maplist(quadrat, [1,2,3,4], L).
+% ?- anwenden(quadrat, 7, Y).
+% ?- zweimal(erhoehe), zaehler(X).
+% ?- X = f(X).
+% ?- unify_with_occurs_check(X, f(X)).
+`}
+];
+if(typeof module!=='undefined')module.exports=PL_EXAMPLES;
+
+</script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const P=Prolog;
+const eng=new P.Engine();
+eng.interactive=true;
+
+// ---------- Konsole ----------
+const out=$('out');let outLen=0;
+function print(text,cls){
+ if(!text)return;
+ const span=document.createElement('span');if(cls)span.className=cls;span.textContent=text;out.appendChild(span);
+ outLen+=text.length;
+ if(outLen>300000){while(out.firstChild&&outLen>200000){outLen-=out.firstChild.textContent.length;out.removeChild(out.firstChild);}}
+ out.scrollTop=out.scrollHeight;}
+let lastOutNl=true;
+eng.out=s=>{print(s,'');lastOutNl=s.endsWith('\n');};
+function sys(s,cls){if(!lastOutNl){print('\n');lastOutNl=true;}print(s+'\n',cls||'sys');}
+const status=$('status');
+function setStatus(s){status.textContent=s;}
+
+// ---------- Editor ----------
+const ed=$('ed'),gut=$('gut');
+function updGutter(){const n=ed.value.split('\n').length;let s='';for(let i=1;i<=n;i++)s+=i+'\n';gut.textContent=s;gut.scrollTop=ed.scrollTop;}
+ed.addEventListener('scroll',()=>{gut.scrollTop=ed.scrollTop;});
+let dirty=false,consulted='';
+function setDirty(d){dirty=d;$('dirty').textContent=d?'● geändert – neu konsultieren':'';}
+ed.addEventListener('input',()=>{updGutter();setDirty(ed.value!==consulted);updChips();});
+ed.addEventListener('keydown',e=>{
+ if(e.key==='Tab'){e.preventDefault();const s=ed.selectionStart,t=ed.selectionEnd;ed.setRangeText('    ',s,t,'end');ed.dispatchEvent(new Event('input'));}
+ if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();consult();}});
+function consult(){
+ if(running&&curQ){if(state==='run'&&!stepping)abortFlag=true;else finish('% Anfrage beendet.','warn');}
+ else if(running){sys('% Erst die laufende Messung beenden.','warn');return false;}
+ sys('?- consult(\''+$('fname').textContent+'\').','q');
+ eng.flags.occurs_check=$('oOcc').checked;
+ const r=eng.consultText(ed.value);
+ eng.flags.occurs_check=$('oOcc').checked;
+ consulted=ed.value;setDirty(false);dbRecent=-1;renderDB();
+ setStatus(`Wissensbasis geladen: ${r.n} Klauseln, ${r.preds} Prädikate${r.errs?', '+r.errs+' Fehler':''}.`);
+ return true;}
+$('bConsult').onclick=consult;
+$('bNew').onclick=()=>{if(ed.value.trim()&&!confirm('Editor leeren?'))return;ed.value='';$('fname').textContent='programm.pl';updGutter();setDirty(true);updChips();};
+$('bSave').onclick=()=>{const b=new Blob([ed.value],{type:'text/plain;charset=utf-8'});const a=document.createElement('a');a.href=URL.createObjectURL(b);
+ let n=$('fname').textContent||'programm.pl';if(!/\.(pl|pro|P)$/.test(n))n+='.pl';a.download=n;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},500);};
+$('bLoad').onclick=()=>$('fileIn').click();
+$('fileIn').onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{ed.value=r.result;$('fname').textContent=f.name;updGutter();updChips();consult();};r.readAsText(f,'utf-8');e.target.value='';};
+// Beispiele
+const exSel=$('exSel');
+for(const ex of PL_EXAMPLES){const o=document.createElement('option');o.value=ex.id;o.textContent=ex.title;exSel.appendChild(o);}
+function loadExample(id){const ex=PL_EXAMPLES.find(x=>x.id===id);if(!ex)return;ed.value=ex.code;$('fname').textContent=ex.id+'.pl';updGutter();updChips();out.textContent='';outLen=0;consult();
+ if(id==='damen'){$('mTpl').value='damen(N, _)';}}
+exSel.onchange=()=>{if(exSel.value){loadExample(exSel.value);}exSel.value='';};
+function updChips(){const qs=ed.value.split('\n').map(l=>l.match(/^%\s*\?-\s*(.+)$/)).filter(Boolean).map(m=>m[1].trim());
+ const c=$('chips');c.innerHTML=qs.length?'<div class="lbl">Beispielanfragen (antippen)</div>':'';
+ for(const q of qs){const b=document.createElement('button');b.className='chip';b.textContent=q;b.onclick=()=>{showTab('console');$('qin').value=q;runQuery();};c.appendChild(b);}}
+
+// ---------- Tabs ----------
+let curTab='console';
+function showTab(v){curTab=v;for(const b of $('tabs').children)b.classList.toggle('on',b.dataset.v===v);
+ for(const el of document.querySelectorAll('.view'))el.classList.toggle('on',el.id==='v-'+v);
+ if(v==='tree')renderTree();if(v==='trace')renderTrace();if(v==='db')renderDB();if(v==='help')renderHelp();}
+for(const b of $('tabs').children)b.onclick=()=>showTab(b.dataset.v);
+
+// ---------- Anfragen ----------
+let running=false,state='idle',stepping=false,abortFlag=false,curQ=null,history=[],hpos=0,stats=[],dbRecent=-1;
+let traceBuf=[],traceTrunc=false;const TRACE_MAX=6000;
+eng.onTrace=t=>{if(traceBuf.length<TRACE_MAX)traceBuf.push(t);else traceTrunc=true;};
+function spySet(){const s=new Set();for(const x of $('oSpy').value.split(/[\s,;]+/)){const m=x.trim().match(/^(.+)\/(\d+)$/);if(m)s.add(m[1]+'/'+m[2]);else if(x.trim())for(let i=0;i<=8;i++)s.add(x.trim()+'/'+i);}return s;}
+function setRunning(r){running=r;$('bAbort').disabled=!r;$('bRun').disabled=r&&state!=='input';}
+function runQuery(){
+ const qin=$('qin');let text=qin.value.trim();
+ if(state==='input'){feedInput(qin.value);qin.value='';return;}
+ if(state==='next'){if(text===''||text==='.'){stopQuery();qin.value='';return;}if(text===';'){nextSol();qin.value='';return;}stopQuery();}
+ if(running)return;
+ if(!text)return;
+ if(text.startsWith('?-'))text=text.slice(2).trim();
+ if(!text.endsWith('.'))text+='.';
+ qin.value='';history.push(text);hpos=history.length;
+ if(dirty&&ed.value.trim()){sys('% Editor geändert – automatisch neu konsultiert.','sys');consult();}
+ print('?- '+text+'\n','q');lastOutNl=true;
+ let r;try{r=eng.parseTerm(text);}catch(e){if(e instanceof P.PErr){sys('! Syntaxfehler: '+(e.syn||eng.errMsg(e.term)),'err');}else sys('! '+e,'err');return;}
+ eng.flags.occurs_check=$('oOcc').checked;
+ traceBuf=[];traceTrunc=false;
+ const o={trace:$('oTrace').checked,tree:$('oTree').checked,spy:spySet(),maxDepth:Math.max(10,+$('oDepth').value||1e5),maxInf:Math.max(100,+$('oInf').value||2e7),treeCap:1500};
+ eng.start(r.term,r.vars,o);
+ curQ={no:stats.length+1,text,sol:0,qno:eng.qno};dbRecent=eng.qno;
+ stepping=$('oStep').checked;abortFlag=false;state='run';setRunning(true);
+ if(stepping){showStepBar(true);setStatus('Einzelschritt: »Schritt« führt die nächste Resolution aus. Nächstes Ziel: '+nextGoal());$('stepGoal').textContent='nächstes Ziel: '+nextGoal();renderLive(true);}
+ else loop();}
+function nextGoal(){let n=eng.goals;while(n&&(n.g instanceof Object&&n.g.constructor.name==='Mark'))n=n.next;
+ if(!n)return'(keins – Lösung erreicht)';return eng.fmtGoal(n.g,120);}
+let lastRender=0;
+function loop(){
+ if(abortFlag){finish('% Anfrage abgebrochen.','warn');return;}
+ const res=eng.run(stepping?1:25000);
+ handle(res);}
+function handle(res){
+ switch(res.status){
+  case'more':
+   if(stepping){renderLive(true);const ng=nextGoal();setStatus(`Schritt · Inferenzen ${eng.st.inf} · nächstes Ziel: ${ng}`);$('stepGoal').textContent='nächstes Ziel: '+ng;return;}
+   const t=performance.now();if(t-lastRender>250){lastRender=t;renderLive(false);setStatus(`läuft … ${eng.st.inf.toLocaleString('de-DE')} Inferenzen, ${eng.st.bt.toLocaleString('de-DE')} Backtracking-Schritte`);}
+   setTimeout(loop,0);return;
+  case'yes':{
+   curQ.sol++;
+   const b=res.bindings;let s=b.length?b.map(x=>x.name+' = '+x.val).join(',\n'):'true';
+   if(!lastOutNl)print('\n');
+   print(s,'ans');lastOutNl=false;
+   if(res.more){print(' ','ans');state='next';$('nextbar').classList.add('on');showStepBar(false);$('prompt').textContent=';';$('qin').placeholder='Enter/. = fertig, ; = nächste Lösung';setStatus('Lösung '+curQ.sol+' – weitere Lösungen möglich (Wahlpunkte offen).');renderLive(true);$('qin').focus();return;}
+   print('.\n','ans');lastOutNl=true;finish(null);return;}
+  case'no':if(!lastOutNl)print('\n');print('false.\n','no');lastOutNl=true;finish(null);return;
+  case'error':sys('! '+res.msg,'err');finish(null);return;
+  case'limit':sys('! '+res.msg,'err');finish(null);return;
+  case'halt':sys('% halt – Anfrage beendet (die Werkbank bleibt offen).');finish(null);return;
+  case'input':state='input';$('prompt').textContent='|:';$('qin').placeholder='Eingabe für read/1, mit Punkt abschließen, z. B. ja.';setStatus('read/1 wartet auf Eingabe.');renderLive(true);$('qin').focus();return;
+ }}
+function feedInput(s){print(s+'\n','q');lastOutNl=true;eng.inputBuf+=s+'\n';state='run';$('prompt').textContent='?-';$('qin').placeholder='Anfrage, z. B. append(X, Y, [1,2,3]).';if(stepping)handle(eng.run(1));else loop();}
+function nextSol(){if(state!=='next')return;print(' ;\n','ans');lastOutNl=true;$('nextbar').classList.remove('on');$('prompt').textContent='?-';state='run';eng.redo();if(stepping){showStepBar(true);handle(eng.run(1));}else loop();}
+function stopQuery(){if(state!=='next')return;print('.\n','ans');lastOutNl=true;finish(null);}
+function finish(msg,cls){
+ if(msg)sys(msg,cls);
+ state='idle';setRunning(false);$('nextbar').classList.remove('on');showStepBar(false);$('prompt').textContent='?-';$('qin').placeholder='Anfrage, z. B. append(X, Y, [1,2,3]).';
+ if(curQ){const st=eng.st;stats.push({no:curQ.no,text:curQ.text,sol:curQ.sol,inf:st.inf,bt:st.bt,d:st.maxD,cp:st.maxCp,ms:st.ms});renderStats();
+  setStatus(`Fertig: ${curQ.sol} Lösung(en), ${st.inf.toLocaleString('de-DE')} Inferenzen, ${st.bt.toLocaleString('de-DE')} Backtracking-Schritte, ${st.ms.toFixed(1)} ms.`);curQ=null;}
+ renderLive(true);if(curTab==='db')renderDB();}
+function showStepBar(on){$('stepbar').classList.toggle('on',on);}
+$('bRun').onclick=runQuery;
+$('qin').addEventListener('keydown',e=>{
+ if(e.key==='Enter'){e.preventDefault();runQuery();return;}
+ if(state==='next'&&(e.key===';'||e.key===' '||e.key==='n')&&$('qin').value===''){e.preventDefault();nextSol();return;}
+ if(state==='next'&&e.key==='.'&&$('qin').value===''){e.preventDefault();stopQuery();return;}
+ if(e.key==='ArrowUp'&&history.length&&state==='idle'){e.preventDefault();hpos=Math.max(0,hpos-1);$('qin').value=history[hpos];}
+ if(e.key==='ArrowDown'&&state==='idle'){e.preventDefault();hpos=Math.min(history.length,hpos+1);$('qin').value=history[hpos]||'';}});
+$('bNext').onclick=nextSol;$('bStop').onclick=stopQuery;
+function abort(){if(!running)return;if(state==='next'||state==='input'||stepping){finish('% Anfrage abgebrochen.','warn');return;}abortFlag=true;}
+$('bAbort').onclick=abort;$('bAbort2').onclick=abort;
+$('bStep').onclick=()=>{if(state==='run'&&stepping)handle(eng.run(1));};
+$('bCont').onclick=()=>{if(state==='run'&&stepping){stepping=false;showStepBar(false);loop();}};
+$('oOcc').onchange=()=>{eng.flags.occurs_check=$('oOcc').checked;};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')abort();});
+
+// ---------- Live-Ansichten ----------
+function renderLive(force){if(curTab==='tree')renderTree();if(curTab==='trace')renderTrace();if(force&&curTab==='db')renderDB();}
+function renderTree(){
+ const el=$('treeOut');
+ if(!eng.tree){el.innerHTML='<p class="dim">Noch kein Suchbaum. »Suchbaum« ankreuzen und eine Anfrage stellen. Jeder Knoten ist ein Resolutionsschritt: das ausgewählte Ziel und die benutzte Klausel.</p>';return;}
+ const cur=eng.tnode;const onPath=new Set();for(let n=cur;n;n=n.parent)onPath.add(n);
+ const succ=new Set();(function mark(n){let s=n.s==='sol';for(const k of n.kids)if(mark(k))s=true;if(s)succ.add(n);return s;})(eng.tree);
+ const parts=[];
+ (function rec(n){
+  let c;
+  if(n.s==='root')c='root';else if(n.s==='sol')c='solv';else if(n.s==='cut')c='cutn';else if(n.s==='fail')c='fail';else if(succ.has(n))c='succ';else if(onPath.has(n)&&!eng.done)c='act';else if(eng.done||!onPath.has(n))c='fail';else c='act';
+  parts.push('<li><span class="tn '+c+(n===cur&&!eng.done?' cur':'')+'"'+(n.res?' title="Resolvente danach: '+esc(n.res)+'"':'')+'>'+esc(n.label)+(n.cp>0?' <b class="cp">◆'+n.cp+'</b>':'')+'</span>');
+  if(n.kids.length){parts.push('<ul>');for(const k of n.kids)rec(k);parts.push('</ul>');}
+  parts.push('</li>');})(eng.tree);
+ el.innerHTML='<ul class="tree">'+parts.join('')+'</ul>'+(eng.ttrunc?'<p class="dim">… Baum bei '+eng.treeCap+' Knoten gekappt; die Suche lief weiter.</p>':'');
+ const c=el.querySelector('.cur');if(c)c.scrollIntoView({block:'nearest'});}
+function renderTrace(){
+ const el=$('traceOut');
+ if(!traceBuf.length){el.innerHTML='<span class="dim">Kein Trace. »Trace« ankreuzen oder Spy-Punkte (z. B. append/3) setzen und Anfrage stellen.</span>';return;}
+ const parts=[];for(const t of traceBuf){parts.push('<span class="p-'+t.port+(t.builtin?' p-b':'')+'">'+'  '.repeat(Math.min(t.d,40))+esc(t.text)+'</span>\n');}
+ if(traceTrunc)parts.push('<span class="dim">… nach '+TRACE_MAX+' Zeilen gekappt</span>');
+ el.innerHTML=parts.join('');el.parentElement.scrollTop=el.parentElement.scrollHeight;}
+function renderDB(){
+ const el=$('dbOut');const showLib=$('dbLib').checked;const parts=[];
+ const preds=[...eng.db.values()].filter(p=>showLib||!p.lib).sort((a,b)=>a.key<b.key?-1:1);
+ for(const p of preds){
+  const head=`<h4>${esc(p.name)}/${p.ar} <small>${p.dynamic?'dynamisch':'statisch'}${p.lib?' · Bibliothek':''} · ${p.clauses.length} Klausel(n)</small></h4>`;
+  const cl=p.clauses.map(c=>`<pre class="${c.born>0?'added':''}">${esc(eng.portray(c))}</pre>`);
+  const gone=(p.gone||[]).map(g=>`<pre class="gone">${esc(eng.portray(g.cl))}</pre>`);
+  parts.push('<div class="pred">'+head+cl.join('')+gone.join('')+'</div>');}
+ el.innerHTML=parts.length?parts.join(''):'<p class="dim">Die Wissensbasis ist leer. Programm im Editor schreiben und »Konsultieren«.</p>';}
+$('dbLib').onchange=renderDB;
+function renderStats(){
+ const tb=$('stTab').tBodies[0];tb.innerHTML=stats.slice().reverse().map(s=>`<tr><td class="n">${s.no}</td><td>${esc(s.text.length>70?s.text.slice(0,69)+'…':s.text)}</td><td class="n">${s.sol}</td><td class="n">${s.inf.toLocaleString('de-DE')}</td><td class="n">${s.bt.toLocaleString('de-DE')}</td><td class="n">${s.d}</td><td class="n">${s.cp}</td><td class="n">${s.ms.toFixed(1)}</td><td class="n">${s.ms>0.5?Math.round(s.inf/s.ms*1000).toLocaleString('de-DE'):'–'}</td></tr>`).join('');}
+
+// ---------- Messreihe ----------
+$('mRun').onclick=async()=>{
+ if(running){sys('% Erst die laufende Anfrage beenden.','warn');return;}
+ if(dirty&&ed.value.trim())consult();
+ const tpl=$('mTpl').value.trim().replace(/\.$/,''),from=+$('mFrom').value,to=+$('mTo').value,mode=$('mMode').value;
+ const rows=[];const mo=$('mOut');mo.innerHTML='<p class="dim">misst …</p>';running=true;$('mRun').disabled=true;
+ try{
+  for(let n=from;n<=to;n++){
+   const q=mode==='first'?`N = ${n}, once((${tpl}))`:`N = ${n}, findall(x, (${tpl}), L), length(L, Anzahl)`;
+   let r;try{r=eng.parseTerm(q);}catch(e){mo.innerHTML='<p class="no">Syntaxfehler in der Vorlage.</p>';return;}
+   eng.start(r.term,r.vars,{maxDepth:+$('oDepth').value||1e5,maxInf:+$('oInf').value||2e7});
+   let res;do{res=eng.run(50000);if(res.status==='more')await new Promise(f=>setTimeout(f,0));}while(res.status==='more');
+   const an=res.status==='yes'?(res.bindings.find(b=>b.name==='Anzahl')||{}).val:'';
+   rows.push({n,inf:eng.st.inf,bt:eng.st.bt,ms:eng.st.ms,ok:res.status,an});
+   drawSeries(rows,tpl,mode);}
+ }finally{running=false;$('mRun').disabled=false;}};
+function drawSeries(rows,tpl,mode){
+ const max=Math.max(...rows.map(r=>r.inf),10);const lg=x=>Math.log10(Math.max(1,x))/Math.log10(max);
+ const W=Math.max(360,rows.length*70),H=200,bw=24;
+ let svg=`<svg class="bars" viewBox="0 0 ${W} ${H+40}" width="100%" style="max-width:${W}px" role="img" aria-label="Inferenzen je N, logarithmisch">`;
+ svg+=`<line x1="30" y1="${H}" x2="${W}" y2="${H}" stroke="#5e4c2c"/>`;
+ rows.forEach((r,i)=>{const x=40+i*((W-50)/rows.length);const h1=lg(r.inf)*(H-20),h2=lg(r.bt)*(H-20);
+  svg+=`<rect class="inf" x="${x}" y="${H-h1}" width="${bw}" height="${h1}"/><rect class="bt" x="${x+bw+2}" y="${H-h2}" width="${bw*.6}" height="${h2}"/>`;
+  svg+=`<text x="${x}" y="${H-h1-4}">${r.inf>=1e6?(r.inf/1e6).toFixed(1)+'M':r.inf>=1e3?(r.inf/1e3).toFixed(1)+'k':r.inf}</text><text x="${x+6}" y="${H+16}">N=${r.n}</text>`;});
+ svg+=`<text x="30" y="${H+34}">■ Inferenzen (gelb) · ■ Backtracking (blau) · Höhe logarithmisch</text></svg>`;
+ const tab='<table style="margin-top:6px"><tr><th>N</th><th>Inferenzen</th><th>Backtracking</th><th>ms</th><th>Faktor zu N−1</th>'+(mode==='all'?'<th>Lösungen</th>':'')+'<th>Ergebnis</th></tr>'+
+  rows.map((r,i)=>`<tr><td class="n">${r.n}</td><td class="n">${r.inf.toLocaleString('de-DE')}</td><td class="n">${r.bt.toLocaleString('de-DE')}</td><td class="n">${r.ms.toFixed(1)}</td><td class="n">${i?(r.inf/Math.max(1,rows[i-1].inf)).toFixed(2)+'×':'–'}</td>${mode==='all'?`<td class="n">${esc(r.an||'')}</td>`:''}<td>${r.ok==='yes'?'ok':esc(r.ok)}</td></tr>`).join('')+'</table>';
+ $('mOut').innerHTML=`<p class="dim">${esc(tpl)} · ${mode==='first'?'bis zur ersten Lösung':'alle Lösungen'}</p>`+svg+tab;}
+
+// ---------- Unifikation ----------
+let uSteps=[],uPos=0;
+function uCompute(){
+ const s1=$('u1').value.trim().replace(/\.$/,''),s2=$('u2').value.trim().replace(/\.$/,'');
+ let r;try{r=eng.parseTerm('('+s1+') = ('+s2+')');}catch(e){$('uMsg').textContent='Syntaxfehler: '+(e.syn||'');uSteps=[];return;}
+ const t=P.deref(r.term);const T1=t.args[0],T2=t.args[1];const names=new Map(r.vars.map(([n,v])=>[v,n]));
+ let anon=0;const nameOf=v=>{if(!names.has(v))names.set(v,'_'+(++anon));return names.get(v);};
+ const occ=$('uOcc').checked;const bound=[];const sh=x=>eng.show(x,{quoted:true,varNames:{get:v=>nameOf(v)}});
+ const steps=[];const stack=[[T1,T2]];
+ const snap=(msg,hl,done)=>{steps.push({msg,hl,done,stack:stack.slice().reverse().map(([a,b])=>sh(a)+'  =  '+sh(b)),
+   binds:bound.map(v=>({n:nameOf(v),to:sh(v.ref),full:sh(v)})),varv:new Map(bound.map(v=>[v,sh(v)]))});};
+ snap('Start: die Gleichung '+sh(T1)+' = '+sh(T2)+' liegt auf dem Stapel.',[],false);
+ let ok=true;let guard=0;
+ while(stack.length&&guard++<500){
+  const[a,b]=stack.pop();const x=P.deref(a),y=P.deref(b);const hl=[a,b];
+  if(x===y){snap(`${sh(a)} und ${sh(b)} sind identisch – Gleichung entfällt.`,hl,false);continue;}
+  if(x instanceof P.Var||y instanceof P.Var){
+   const v=x instanceof P.Var?x:y,o=v===x?y:x;
+   if(o instanceof P.Var){v.ref=o;bound.push(v);snap(`Variable ${nameOf(v)} wird an Variable ${nameOf(o)} gebunden (beide bleiben frei, sind aber jetzt dieselbe).`,hl,false);continue;}
+   if(P.occurs(v,o)){if(occ){ok=false;snap(`Occurs-Check schlägt an: ${nameOf(v)} kommt in ${sh(o)} vor. Die Unifikation scheitert.`,hl,true);break;}
+    v.ref=o;bound.push(v);snap(`Bindung ${nameOf(v)} := ${sh(o)} – ohne Occurs-Check entsteht ein zyklischer (unendlicher) Term!`,hl,false);continue;}
+   v.ref=o;bound.push(v);snap(`Bindung ${nameOf(v)} := ${sh(o)}`,hl,false);continue;}
+  if(x instanceof P.Str&&y instanceof P.Str){
+   if(x.name!==y.name||x.args.length!==y.args.length){ok=false;snap(`Konflikt: Funktor ${P.qatom(x.name)}/${x.args.length} passt nicht zu ${P.qatom(y.name)}/${y.args.length}. Die Unifikation scheitert.`,hl,true);break;}
+   for(let i=x.args.length-1;i>=0;i--)stack.push([x.args[i],y.args[i]]);
+   snap(`Zerlegen: beide Seiten haben den Funktor ${P.qatom(x.name)}/${x.args.length} → ${x.args.length} neue Gleichung(en) für die Argumente.`,hl,false);continue;}
+  if(P.compare(x,y)===0&&!(x instanceof P.Str)){snap(`${sh(x)} = ${sh(y)}: gleiche Konstanten.`,hl,false);continue;}
+  ok=false;snap(`Konflikt: ${sh(x)} und ${sh(y)} sind verschiedene Konstanten bzw. Strukturen. Die Unifikation scheitert.`,hl,true);break;}
+ if(ok)snap('Erfolg! Der gemeinsame Term (allgemeinster Unifikator angewandt): '+sh(T1),[],true);
+ uSteps=steps;uPos=0;uSteps.T1=T1;uSteps.T2=T2;uSteps.nameOf=nameOf;uSteps.ok=ok;
+ for(const v of bound)v.ref=null;}
+function uRender(){
+ if(!uSteps.length)return;const st=uSteps[uPos];
+ $('uMsg').innerHTML=`<b>Schritt ${uPos}/${uSteps.length-1}:</b> `+esc(st.msg);
+ const hl=new Set(st.hl);
+ $('uT1').innerHTML=treeSVG(uSteps.T1,hl,st.varv,uSteps.nameOf);$('uT2').innerHTML=treeSVG(uSteps.T2,hl,st.varv,uSteps.nameOf);
+ $('uStack').innerHTML=st.stack.length?st.stack.map((s,i)=>`<div${i===0?' style="color:var(--hi)"':''}>${esc(s)}</div>`).join(''):'<span class="dim">(leer)</span>';
+ $('uBind').innerHTML=st.binds.length?'<table><tr><th>Variable</th><th>gebunden an</th><th>aufgelöst</th></tr>'+st.binds.map(b=>`<tr><td style="color:var(--var)">${esc(b.n)}</td><td>${esc(b.to)}</td><td>${esc(b.full)}</td></tr>`).join('')+'</table>':'<span class="dim">noch keine</span>';}
+function treeSVG(t,hl,varv,nameOf){
+ const nodes=[],edges=[];let leaf=0;
+ function lay(t,depth){const d=P.deref(t);const raw=t;
+  let label,kids=[],isVar=false;
+  if(raw instanceof P.Var){isVar=true;label=nameOf(raw);}
+  else if(raw instanceof P.Str){if(raw.name==='.'&&raw.args.length===2)label='[ | ]';else label=raw.name;kids=raw.args;}
+  else if(raw instanceof P.Atom)label=raw.name;else label=eng.show(raw);
+  let x;const ids=[];
+  if(!kids.length){x=leaf++;}else{const xs=kids.map(k=>lay(k,depth+1));x=(xs[0].x+xs[xs.length-1].x)/2;xs.forEach(c=>edges.push([x,depth,c.x,depth+1]));}
+  const n={x,depth,label,isVar,hl:hl.has(raw),val:isVar&&varv.has(raw)?varv.get(raw):null};nodes.push(n);return n;}
+ lay(t,0);
+ const dx=64,dy=58,W=Math.max(1,leaf)*dx+20,maxD=Math.max(...nodes.map(n=>n.depth)),H=(maxD+1)*dy+20;
+ const X=x=>10+dx/2+x*dx,Y=d=>22+d*dy;
+ let s=`<svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:${W*1.2}px;min-width:${Math.min(W,260)}px">`;
+ for(const[a,b,c,d]of edges)s+=`<line x1="${X(a)}" y1="${Y(b)+8}" x2="${X(c)}" y2="${Y(d)-12}" stroke="#5e4c2c"/>`;
+ for(const n of nodes){const col=n.hl?'#ffe2a8':n.isVar?'#d9a6ff':'#ffb847';
+  s+=`<g><rect x="${X(n.x)-28}" y="${Y(n.depth)-13}" width="56" height="20" fill="${n.hl?'#3a3018':'#0d100b'}" stroke="${n.hl?'#ffe2a8':n.isVar?'#7a5aa0':'#5e4c2c'}" ${n.isVar?'stroke-dasharray="3 2"':''}/>`;
+  s+=`<text x="${X(n.x)}" y="${Y(n.depth)+1}" fill="${col}" font-size="12" text-anchor="middle">${esc(n.label.length>8?n.label.slice(0,7)+'…':n.label)}</text>`;
+  if(n.val)s+=`<text x="${X(n.x)}" y="${Y(n.depth)+21}" fill="#8dff7a" font-size="10" text-anchor="middle">↦ ${esc(n.val.length>12?n.val.slice(0,11)+'…':n.val)}</text>`;
+  s+='</g>';}
+ return s+'</svg>';}
+$('uStart').onclick=()=>{uCompute();uRender();};
+$('uStep').onclick=()=>{if(!uSteps.length){uCompute();}else if(uPos<uSteps.length-1)uPos++;uRender();};
+$('uBack').onclick=()=>{if(uPos>0)uPos--;uRender();};
+$('uAll').onclick=()=>{if(!uSteps.length)uCompute();uPos=uSteps.length-1;uRender();};
+$('uEx').onchange=()=>{const v=$('uEx').value;if(!v)return;const i=v.indexOf(' = ');$('u1').value=v.slice(0,i);$('u2').value=v.slice(i+3);$('uOcc').checked=v==='X = f(X)'||v.startsWith('p(X, f');$('uEx').value='';uCompute();uRender();};
+
+// ---------- Hilfe ----------
+let helpDone=false;
+function renderHelp(){
+ if(helpDone)return;helpDone=true;
+ const bi=[...P.BUILTINS.keys()].filter(k=>!k.startsWith('$')).sort();
+ const ctl=[...P.CONTROL.keys()].sort();
+ const lib=[...eng.libDB.keys()].filter(k=>!k.startsWith('$')&&!k.includes("'")).sort();
+ const ops=[];for(const[kind,m]of[['prefix',eng.ops.prefix],['infix',eng.ops.infix],['postfix',eng.ops.postfix]])for(const[n,o]of m)ops.push([o.p,o.type,n]);
+ ops.sort((a,b)=>b[0]-a[0]||(a[2]<b[2]?-1:1));
+ const byP=new Map();for(const[p,t,n]of ops){const k=p+' '+t;if(!byP.has(k))byP.set(k,[]);byP.get(k).push(n);}
+ $('v-help').innerHTML=`
+<h3>Schnellstart</h3>
+<ul><li>Links steht die <b>Wissensbasis</b> (Fakten und Regeln). <code>Konsultieren</code> (Strg+Enter) lädt sie; alte Klauseln werden dabei ersetzt.</li>
+<li>Rechts unten hinter <code>?-</code> eine Anfrage eingeben und Enter drücken. Der abschließende Punkt darf fehlen.</li>
+<li>Gibt es weitere Lösungen, erscheint die Antwort ohne Punkt: <code>;</code> (oder Leertaste) holt die nächste, Enter oder <code>.</code> beendet.</li>
+<li><code>read/1</code> fragt im Eingabefeld (Prompt <code>|:</code>) – Eingaben wie <code>ja.</code> mit Punkt abschließen.</li>
+<li>Esc oder ■ bricht eine laufende Anfrage ab. Tiefen- und Inferenzgrenze schützen vor Endlosschleifen.</li>
+<li><b>Einzelschritt</b>: Jeder Klick auf »Schritt« führt eine Resolution aus; Suchbaum und Trace wachsen mit.</li>
+<li><b>Spy-Punkte</b>: <code>append/3, weg/4</code> oder nur <code>append</code> – zeigt im Trace nur diese Prädikate, auch wenn »Trace« aus ist.</li>
+<li>Programme werden nur im Speicher gehalten. »Speichern« lädt eine .pl-Datei herunter, »Laden« liest .pl/.pro-Dateien ein.</li></ul>
+<h3>Syntax (Edinburgh)</h3>
+<ul><li><b>Atome</b>: <code>hund</code>, <code>'Hallo Welt'</code>, <code>[]</code>, <code>+</code>, <code>=..</code> · <b>Zahlen</b>: <code>42</code>, <code>-7</code>, <code>3.14</code>, <code>1.0e10</code>, <code>0'a</code> (Zeichencode), <code>0xFF</code> · Ganzzahlen sind beliebig groß.</li>
+<li><b>Variablen</b> beginnen mit Großbuchstaben oder <code>_</code>; <code>_</code> allein ist die anonyme Variable.</li>
+<li><b>Strukturen</b>: <code>datum(10, nov, 2026)</code>, Operatorschreibweise <code>1+2*3</code> = <code>+(1, *(2,3))</code>.</li>
+<li><b>Listen</b>: <code>[1,2,3]</code>, <code>[Kopf|Rest]</code>; intern Punktpaare <code>'.'(1, '.'(2, []))</code>. <code>"abc"</code> ist eine Liste von Zeichencodes.</li>
+<li><b>Klauseln</b>: Fakt <code>p(a).</code> · Regel <code>k :- z1, z2.</code> · Direktive <code>:- dynamic zaehler/1.</code> · DCG <code>s --> np, vp.</code></li>
+<li><b>Kommentare</b>: <code>% bis Zeilenende</code> und <code>/* Block */</code>. Zeilen der Form <code>% ?- anfrage.</code> erscheinen als antippbare Beispielanfragen.</li></ul>
+<h3>Steuerkonstrukte</h3>
+<p><code>A, B</code> (und) · <code>A ; B</code> (oder) · <code>C -> T ; E</code> (wenn-dann-sonst) · <code>C *-> T ; E</code> (weiches Wenn) · <code>!</code> (Cut) · <code>\\+ G</code> (Negation als Fehlschlag) · <code>call/1..8</code> · <code>catch/3</code>, <code>throw/1</code> · <code>findall/3,4</code> · <code>true</code>, <code>fail</code>, <code>false</code>.</p>
+<h3>Eingebaute Prädikate (${bi.length+ctl.length})</h3><p>${[...ctl,...bi].map(k=>'<code>'+esc(k)+'</code>').join(' · ')}</p>
+<h3>Bibliothek in Prolog (${lib.length})</h3><p>Diese Prädikate sind in Prolog geschrieben und dürfen im eigenen Programm neu definiert werden (die eigene Definition ersetzt dann die Bibliotheksfassung):</p><p>${lib.map(k=>'<code>'+esc(k)+'</code>').join(' · ')}</p>
+<h3>Arithmetik (is/2, =:=, &lt; …)</h3>
+<p><code>+ - * / // mod rem div min max abs sign gcd ** ^ sqrt sin cos tan asin acos atan atan/2 exp log log/2 log2 float integer truncate round ceiling floor float_integer_part float_fractional_part &gt;&gt; &lt;&lt; /\\ \\/ xor \\ msb random/1 pi e inf nan</code>. <code>X = 1+2</code> baut nur den Term <code>+(1,2)</code>; erst <code>X is 1+2</code> rechnet.</p>
+<h3>Operatoren</h3><table><tr><th>Priorität</th><th>Typ</th><th>Operatoren</th></tr>${[...byP].map(([k,ns])=>{const[p,t]=k.split(' ');return`<tr><td class="n">${p}</td><td>${t}</td><td><code>${ns.map(esc).join('  ')}</code></td></tr>`;}).join('')}</table>
+<p>Eigene Operatoren mit <code>:- op(700, xfx, ist_vater_von).</code> Beim Konsultieren wird die Operatortabelle auf den Standard zurückgesetzt.</p>
+<h3>Fehlermeldungen</h3>
+<p>Laufzeitfehler werden als ISO-Fehlerterme <code>error(Formal, Kontext)</code> geworfen und lassen sich mit <code>catch/3</code> fangen, z. B. <code>instantiation_error</code> (ungebundene Variable in <code>is/2</code>), <code>type_error(evaluable, foo/0)</code>, <code>existence_error(procedure, p/1)</code> (unbekanntes Prädikat), <code>evaluation_error(zero_divisor)</code>, <code>permission_error(modify, static_procedure, append/3)</code>.</p>
+<h3>Abweichungen von ISO-Prolog</h3>
+<ul>
+<li>Kein Modulsystem, keine Streams: <code>write/2</code>, <code>format/3</code> usw. akzeptieren nur die Standardausgabe; <code>format/3</code> zusätzlich <code>atom(A)</code> und <code>codes(C)</code>. Keine Dateien, <code>consult/1</code> wirft einen Fehler – stattdessen der Editor.</li>
+<li>Kein eigener String-Typ: <code>"abc"</code> ist (wie im ISO-Standardfall <code>double_quotes=codes</code>) eine Codeliste; umschaltbar mit <code>set_prolog_flag(double_quotes, chars|atom)</code>.</li>
+<li><code>/</code> liefert bei Ganzzahlen eine Ganzzahl, wenn die Division aufgeht (<code>6/2 = 3</code>, <code>7/2 = 3.5</code>) – wie SWI-Prolog. Ganzzahlen sind unbeschränkt (keine <code>max_integer</code>-Grenze).</li>
+<li><code>clause/2</code> funktioniert auch auf statischen Benutzerprädikaten (wie SWI-Prolog); ISO verlangt dafür <code>dynamic</code>. Nur eingebaute Prädikate sind geschützt.</li>
+<li>Eingebaute Listenprädikate (<code>length/2</code>, <code>between/3</code>, <code>msort/2</code>, …) und die Bibliothek dürfen umdefiniert werden; ISO-Kernprädikate nicht.</li>
+<li>Der Occurs-Check ist standardmäßig aus (wie in fast allen Systemen); zyklische Terme werden bei der Ausgabe als <code>...</code> abgekürzt.</li>
+<li><code>bagof/3</code> gruppiert die freien Variablen nach Varianten; die Reihenfolge der Gruppen folgt der Standardordnung.</li>
+<li>Nicht vorhanden: Constraint-Bibliotheken (CLP(FD)), Tabling, Attributvariablen, Threads, <code>assert</code> auf Klauseln mit Modulpräfix, <code>char_conversion</code>.</li>
+<li>Der Trace meldet bei tiefem Backtracking nicht jedes Redo der umschließenden Aufrufe (das Box-Modell wird vereinfacht angezeigt); <code>catch/3</code> bleibt aktiv, solange das gerufene Ziel Wahlpunkte hat.</li>
+</ul>
+<h3>Tastatur</h3><p>Enter: Anfrage · ↑/↓: Verlauf · <code>;</code>/Leertaste: nächste Lösung · <code>.</code>/Enter: fertig · Esc: Abbruch · Strg+Enter im Editor: Konsultieren · Tab im Editor: vier Leerzeichen.</p>
+<h3>Mehr</h3><p>Artikel und weitere Werkbänke: <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a> · <a href="lisp.html">Lisp-Werkbank</a> · <a href="https://sky4walk.github.io/SmallCircuits/SmallHtml/lambda-kalkuel.html">Lambda-Kalkül</a></p>`;}
+
+// ---------- Start ----------
+sys('PROLOG-WERKBANK · Edinburgh-Syntax, Kern nach ISO-Prolog\n% Beispiel wählen oder Programm schreiben, »Konsultieren«, dann Anfragen hinter ?- stellen.\n% Hilfe-Reiter: Syntax, eingebaute Prädikate, Operatoren, Abweichungen von ISO.');
+loadExample('stammbaum');
+uCompute();uRender();
+$('qin').focus({preventScroll:true});
+window.PLW={eng,runQuery,loadExample,showTab};
+})();
+
+</script>
+</body>
+</html>
