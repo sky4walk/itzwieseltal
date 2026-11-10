@@ -2552,6 +2552,769 @@ begin
   Tabelliere(Quadrat, 'Quadrat ');
   Tabelliere(Glocke,  'Glocke  ')
 end.
+`},
+{id:'minipascal', name:'13 Ein Pascal-Interpreter in Pascal', mode:'iso', src:
+`program minipascal(output);
+{ ============================================================
+  Mini-Pascal-Interpreter -- in Pascal geschrieben
+  ------------------------------------------------------------
+  Ein Pascal-Programm, das selbst Pascal-Programme ausfuehrt.
+  Aufbau wie bei Wirths PL/0 (Compilerbau, 1976):
+    1. Scanner   zerlegt den Quelltext in Token
+    2. Parser    rekursiver Abstieg, ein Unterprogramm je Regel
+    3. Ausfuehrung direkt beim Parsen ("exec"-Schalter):
+       ist exec falsch, wird nur gelesen und uebersprungen.
+  Gast-Sprache: integer-Variablen, Prozeduren und Funktionen
+  mit Wert-Parametern, Rekursion, lokale Variablen,
+  if/while/repeat/for, write/writeln.
+  Mehr: https://itzwieseltal.wordpress.com
+  ============================================================ }
+
+const
+  maxsrc = 6000;  maxtok = 2500;  maxname = 150;
+  maxvar = 600;   maxproc = 20;   maxpool = 1500;
+  maxarg = 8;     al = 12;        zlen = 60;
+  anzkw = 24;
+
+  { Token-Arten }
+  keof = 0;  knum = 1;  kident = 2;  kstr = 3;
+  kplus = 10; kminus = 11; kstern = 12; kklauf = 13; kklzu = 14;
+  kkomma = 15; ksemi = 16; kdpunkt = 17; kzuw = 18; kpunkt = 19;
+  kgl = 20; kungl = 21; kkl = 22; kgr = 23; kkg = 24; kgg = 25;
+  kprogram = 30; kvar = 31; kinteger = 32; kprocedure = 33;
+  kfunction = 34; kbegin = 35; kend = 36; kif = 37; kthen = 38;
+  kelse = 39; kwhile = 40; kdo = 41; krepeat = 42; kuntil = 43;
+  kfor = 44; kto = 45; kdownto = 46; kdiv = 47; kmod = 48;
+  kand = 49; kor = 50; knot = 51; kwrite = 52; kwriteln = 53;
+
+type
+  alfa = packed array[1..al] of char;
+  zeile = packed array[1..zlen] of char;
+
+var
+  { Quelltext }
+  src: array[1..maxsrc] of char;
+  srclen: integer;
+  { Token-Liste }
+  tart, twert, tlaen: array[0..maxtok] of integer;
+  ntok, pos: integer;
+  { Namen und Zeichenketten }
+  namen: array[0..maxname] of alfa;
+  nnamen: integer;
+  pool: array[0..maxpool] of char;
+  npool: integer;
+  { Schluesselwoerter }
+  kwname: array[1..anzkw] of alfa;
+  kwart: array[1..anzkw] of integer;
+  { Laufzeit: Variablenstapel }
+  vname, vwert: array[0..maxvar] of integer;
+  vtop, basis, gtop: integer;
+  { Unterprogramme }
+  pname, pstart: array[0..maxproc] of integer;
+  pfunk: array[0..maxproc] of boolean;
+  nproc: integer;
+  fehlerda: boolean;
+
+{ ---------------- Quelltext laden ---------------- }
+
+procedure zl(z: zeile);
+var n, k: integer; fertig: boolean;
+begin
+  n := zlen; fertig := false;
+  while not fertig do
+    if n = 0 then fertig := true
+    else if z[n] = ' ' then n := n - 1
+    else fertig := true;
+  for k := 1 to n do
+  begin
+    srclen := srclen + 1; src[srclen] := z[k]
+  end;
+  srclen := srclen + 1; src[srclen] := ' '
+end;
+
+procedure fehler(nr: integer);
+begin
+  if not fehlerda then
+  begin
+    writeln;
+    write('*** Fehler ', nr:1, ' bei Token ', pos:1);
+    if (tart[pos] = kident) then
+      write(' (', namen[twert[pos]], ')');
+    writeln
+  end;
+  fehlerda := true;
+  pos := ntok
+end;
+
+{ ---------------- Scanner ---------------- }
+
+function buchstabe(c: char): boolean;
+begin
+  buchstabe := ((c >= 'a') and (c <= 'z')) or
+               ((c >= 'A') and (c <= 'Z')) or (c = '_')
+end;
+
+function ziffer(c: char): boolean;
+begin
+  ziffer := (c >= '0') and (c <= '9')
+end;
+
+function gross(c: char): char;
+begin
+  if (c >= 'a') and (c <= 'z') then
+    gross := chr(ord(c) - ord('a') + ord('A'))
+  else gross := c
+end;
+
+procedure token(art, wert, laen: integer);
+begin
+  if ntok < maxtok then
+  begin
+    ntok := ntok + 1;
+    tart[ntok] := art; twert[ntok] := wert; tlaen[ntok] := laen
+  end
+end;
+
+function namenr(a: alfa): integer;
+var i, gef: integer;
+begin
+  gef := 0;
+  for i := 1 to nnamen do
+    if namen[i] = a then gef := i;
+  if gef = 0 then
+  begin
+    nnamen := nnamen + 1; namen[nnamen] := a; gef := nnamen
+  end;
+  namenr := gef
+end;
+
+procedure scanne;
+var p, k, n, art, start: integer;
+    c: char; a: alfa; fertig: boolean;
+begin
+  src[srclen + 1] := ' ';
+  p := 1; ntok := 0;
+  while p <= srclen do
+  begin
+    c := src[p];
+    if c = ' ' then p := p + 1
+    else if c = '{' then
+    begin
+      fertig := false;
+      while not fertig do
+        if p > srclen then fertig := true
+        else if src[p] = '}' then fertig := true
+        else p := p + 1;
+      p := p + 1
+    end
+    else if buchstabe(c) then
+    begin
+      for k := 1 to al do a[k] := ' ';
+      k := 0;
+      while buchstabe(src[p]) or ziffer(src[p]) do
+      begin
+        k := k + 1;
+        if k <= al then a[k] := gross(src[p]);
+        p := p + 1
+      end;
+      art := kident;
+      for k := 1 to anzkw do
+        if kwname[k] = a then art := kwart[k];
+      if art = kident then token(kident, namenr(a), 0)
+      else token(art, 0, 0)
+    end
+    else if ziffer(c) then
+    begin
+      n := 0;
+      while ziffer(src[p]) do
+      begin
+        n := 10 * n + ord(src[p]) - ord('0'); p := p + 1
+      end;
+      token(knum, n, 0)
+    end
+    else if c = '''' then
+    begin
+      start := npool; p := p + 1; fertig := false;
+      while not fertig do
+        if p > srclen then fertig := true
+        else if src[p] = '''' then
+        begin
+          if src[p + 1] = '''' then
+          begin
+            pool[npool] := ''''; npool := npool + 1; p := p + 2
+          end
+          else
+          begin
+            fertig := true; p := p + 1
+          end
+        end
+        else
+        begin
+          pool[npool] := src[p]; npool := npool + 1; p := p + 1
+        end;
+      token(kstr, start, npool - start)
+    end
+    else
+    begin
+      art := keof;
+      if c = '+' then art := kplus
+      else if c = '-' then art := kminus
+      else if c = '*' then art := kstern
+      else if c = '(' then art := kklauf
+      else if c = ')' then art := kklzu
+      else if c = ',' then art := kkomma
+      else if c = ';' then art := ksemi
+      else if c = '.' then art := kpunkt
+      else if c = '=' then art := kgl
+      else if c = ':' then
+      begin
+        art := kdpunkt;
+        if src[p + 1] = '=' then begin art := kzuw; p := p + 1 end
+      end
+      else if c = '<' then
+      begin
+        art := kkl;
+        if src[p + 1] = '=' then begin art := kkg; p := p + 1 end
+        else if src[p + 1] = '>' then begin art := kungl; p := p + 1 end
+      end
+      else if c = '>' then
+      begin
+        art := kgr;
+        if src[p + 1] = '=' then begin art := kgg; p := p + 1 end
+      end;
+      if art = keof then
+      begin
+        writeln('*** unbekanntes Zeichen: ', c); fehlerda := true
+      end
+      else token(art, 0, 0);
+      p := p + 1
+    end
+  end;
+  token(keof, 0, 0)
+end;
+
+{ ---------------- Hilfen fuer den Parser ---------------- }
+
+procedure weiter;
+begin
+  if pos < ntok then pos := pos + 1
+end;
+
+procedure erwarte(art: integer);
+begin
+  if tart[pos] = art then weiter else fehler(art)
+end;
+
+procedure neuevar(name, wert: integer);
+begin
+  if vtop >= maxvar then fehler(90)
+  else
+  begin
+    vtop := vtop + 1; vname[vtop] := name; vwert[vtop] := wert
+  end
+end;
+
+function suchevar(name: integer): integer;
+var i, gef: integer;
+begin
+  gef := 0;
+  i := vtop;
+  while (gef = 0) and (i > basis) do
+  begin
+    if vname[i] = name then gef := i;
+    i := i - 1
+  end;
+  i := gtop;
+  while (gef = 0) and (i > 0) do
+  begin
+    if vname[i] = name then gef := i;
+    i := i - 1
+  end;
+  suchevar := gef
+end;
+
+function sucheproc(name: integer): integer;
+var i, gef: integer;
+begin
+  gef := 0;
+  for i := 1 to nproc do
+    if pname[i] = name then gef := i;
+  sucheproc := gef
+end;
+
+procedure varteil;
+begin
+  weiter; { VAR }
+  while (tart[pos] = kident) and not fehlerda do
+  begin
+    neuevar(twert[pos], 0); weiter;
+    while tart[pos] = kkomma do
+    begin
+      weiter;
+      if tart[pos] = kident then
+      begin
+        neuevar(twert[pos], 0); weiter
+      end
+      else fehler(2)
+    end;
+    erwarte(kdpunkt); erwarte(kinteger); erwarte(ksemi)
+  end
+end;
+
+{ ---------------- Ausdruecke ---------------- }
+
+function ausdruck(ex: boolean): integer; forward;
+procedure anweisung(ex: boolean); forward;
+
+function aufruf(nr: integer; ex: boolean): integer;
+var arg: array[1..maxarg] of integer;
+    n, k, merkpos, merkbasis, merktop, erg: integer;
+begin
+  n := 0; erg := 0;
+  if tart[pos] = kklauf then
+  begin
+    weiter;
+    n := 1; arg[1] := ausdruck(ex);
+    while (tart[pos] = kkomma) and (n < maxarg) do
+    begin
+      weiter; n := n + 1; arg[n] := ausdruck(ex)
+    end;
+    erwarte(kklzu)
+  end;
+  if ex and not fehlerda then
+  begin
+    merkpos := pos; merkbasis := basis; merktop := vtop;
+    basis := vtop;
+    if pfunk[nr] then neuevar(pname[nr], 0);
+    pos := pstart[nr];
+    k := 0;
+    if tart[pos] = kklauf then
+    begin
+      weiter;
+      while (tart[pos] <> kklzu) and not fehlerda do
+        if tart[pos] = kident then
+        begin
+          k := k + 1;
+          if k <= n then neuevar(twert[pos], arg[k]);
+          weiter
+        end
+        else if tart[pos] = keof then fehler(3)
+        else weiter;
+      weiter
+    end;
+    if k <> n then fehler(4);
+    if pfunk[nr] then
+    begin
+      erwarte(kdpunkt); erwarte(kinteger)
+    end;
+    erwarte(ksemi);
+    if tart[pos] = kvar then varteil;
+    anweisung(true);
+    if pfunk[nr] then erg := vwert[merktop + 1];
+    vtop := merktop; basis := merkbasis; pos := merkpos
+  end;
+  aufruf := erg
+end;
+
+function faktor(ex: boolean): integer;
+var v, nr: integer;
+begin
+  v := 0;
+  if tart[pos] = knum then
+  begin
+    v := twert[pos]; weiter
+  end
+  else if tart[pos] = kident then
+  begin
+    nr := sucheproc(twert[pos]);
+    if nr > 0 then
+    begin
+      weiter; v := aufruf(nr, ex)
+    end
+    else
+    begin
+      nr := suchevar(twert[pos]);
+      if nr = 0 then fehler(5)
+      else
+      begin
+        v := vwert[nr]; weiter
+      end
+    end
+  end
+  else if tart[pos] = kklauf then
+  begin
+    weiter; v := ausdruck(ex); erwarte(kklzu)
+  end
+  else if tart[pos] = knot then
+  begin
+    weiter; v := ord(faktor(ex) = 0)
+  end
+  else fehler(6);
+  faktor := v
+end;
+
+function term(ex: boolean): integer;
+var v, w, op: integer;
+begin
+  v := faktor(ex);
+  while (tart[pos] = kstern) or (tart[pos] = kdiv) or
+        (tart[pos] = kmod) or (tart[pos] = kand) do
+  begin
+    op := tart[pos]; weiter;
+    w := faktor(ex);
+    if op = kstern then v := v * w
+    else if op = kand then v := ord((v <> 0) and (w <> 0))
+    else if w = 0 then
+    begin
+      if ex then fehler(7)
+    end
+    else if op = kdiv then v := v div w
+    else v := v mod w
+  end;
+  term := v
+end;
+
+function einfach(ex: boolean): integer;
+var v, w, op: integer;
+begin
+  if tart[pos] = kminus then
+  begin
+    weiter; v := -term(ex)
+  end
+  else
+  begin
+    if tart[pos] = kplus then weiter;
+    v := term(ex)
+  end;
+  while (tart[pos] = kplus) or (tart[pos] = kminus) or
+        (tart[pos] = kor) do
+  begin
+    op := tart[pos]; weiter;
+    w := term(ex);
+    if op = kplus then v := v + w
+    else if op = kminus then v := v - w
+    else v := ord((v <> 0) or (w <> 0))
+  end;
+  einfach := v
+end;
+
+function ausdruck;
+var v, w, op: integer;
+begin
+  v := einfach(ex);
+  op := tart[pos];
+  if (op >= kgl) and (op <= kgg) then
+  begin
+    weiter;
+    w := einfach(ex);
+    if op = kgl then v := ord(v = w)
+    else if op = kungl then v := ord(v <> w)
+    else if op = kkl then v := ord(v < w)
+    else if op = kgr then v := ord(v > w)
+    else if op = kkg then v := ord(v <= w)
+    else v := ord(v >= w)
+  end;
+  ausdruck := v
+end;
+
+{ ---------------- Anweisungen ---------------- }
+
+procedure schreibe(ex, zeilenende: boolean);
+
+  procedure element;
+  var v, k: integer;
+  begin
+    if tart[pos] = kstr then
+    begin
+      if ex then
+        for k := 0 to tlaen[pos] - 1 do write(pool[twert[pos] + k]);
+      weiter
+    end
+    else
+    begin
+      v := ausdruck(ex);
+      if ex then write(v:1)
+    end
+  end;
+
+begin
+  weiter;
+  if tart[pos] = kklauf then
+  begin
+    weiter;
+    element;
+    while (tart[pos] = kkomma) and not fehlerda do
+    begin
+      weiter; element
+    end;
+    erwarte(kklzu)
+  end;
+  if ex and zeilenende then writeln
+end;
+
+procedure anweisung;
+var nr, c, start, i, a, b: integer;
+    auf, weiterlaufen: boolean;
+begin
+  if fehlerda then
+  else if tart[pos] = kident then
+  begin
+    if tart[pos + 1] = kzuw then
+    begin
+      nr := suchevar(twert[pos]);
+      if nr = 0 then fehler(5)
+      else
+      begin
+        weiter; weiter;
+        c := ausdruck(ex);
+        if ex then vwert[nr] := c
+      end
+    end
+    else
+    begin
+      nr := sucheproc(twert[pos]);
+      if nr = 0 then fehler(8)
+      else
+      begin
+        weiter; c := aufruf(nr, ex)
+      end
+    end
+  end
+  else if tart[pos] = kbegin then
+  begin
+    weiter;
+    anweisung(ex);
+    while (tart[pos] = ksemi) and not fehlerda do
+    begin
+      weiter; anweisung(ex)
+    end;
+    erwarte(kend)
+  end
+  else if tart[pos] = kif then
+  begin
+    weiter;
+    c := ausdruck(ex);
+    erwarte(kthen);
+    anweisung(ex and (c <> 0));
+    if tart[pos] = kelse then
+    begin
+      weiter; anweisung(ex and (c = 0))
+    end
+  end
+  else if tart[pos] = kwhile then
+  begin
+    weiter;
+    start := pos;
+    repeat
+      pos := start;
+      c := ausdruck(ex);
+      erwarte(kdo);
+      weiterlaufen := ex and (c <> 0) and not fehlerda;
+      anweisung(weiterlaufen)
+    until not weiterlaufen
+  end
+  else if tart[pos] = krepeat then
+  begin
+    weiter;
+    start := pos;
+    repeat
+      pos := start;
+      anweisung(ex);
+      while (tart[pos] = ksemi) and not fehlerda do
+      begin
+        weiter; anweisung(ex)
+      end;
+      erwarte(kuntil);
+      c := ausdruck(ex)
+    until (not ex) or (c <> 0) or fehlerda
+  end
+  else if tart[pos] = kfor then
+  begin
+    weiter;
+    nr := 0;
+    if tart[pos] = kident then nr := suchevar(twert[pos]);
+    if nr = 0 then fehler(5)
+    else
+    begin
+      weiter; erwarte(kzuw);
+      a := ausdruck(ex);
+      auf := tart[pos] = kto;
+      if auf or (tart[pos] = kdownto) then weiter else fehler(kto);
+      b := ausdruck(ex);
+      erwarte(kdo);
+      start := pos;
+      if ex then
+      begin
+        i := a;
+        weiterlaufen := (auf and (i <= b)) or ((not auf) and (i >= b));
+        while weiterlaufen and not fehlerda do
+        begin
+          vwert[nr] := i;
+          pos := start;
+          anweisung(true);
+          if auf then i := i + 1 else i := i - 1;
+          weiterlaufen := (auf and (i <= b)) or ((not auf) and (i >= b))
+        end
+      end;
+      pos := start;
+      anweisung(false)
+    end
+  end
+  else if tart[pos] = kwrite then schreibe(ex, false)
+  else if tart[pos] = kwriteln then schreibe(ex, true)
+  { sonst: leere Anweisung }
+end;
+
+{ ---------------- Programm ---------------- }
+
+procedure programm;
+var tiefe: integer;
+begin
+  pos := 1;
+  erwarte(kprogram); erwarte(kident); erwarte(ksemi);
+  if tart[pos] = kvar then varteil;
+  gtop := vtop; basis := vtop;
+  while ((tart[pos] = kprocedure) or (tart[pos] = kfunction))
+        and not fehlerda do
+  begin
+    if nproc < maxproc then nproc := nproc + 1 else fehler(91);
+    pfunk[nproc] := tart[pos] = kfunction;
+    weiter;
+    if tart[pos] = kident then pname[nproc] := twert[pos]
+    else fehler(2);
+    weiter;
+    pstart[nproc] := pos;
+    { Rumpf ueberspringen: bis zum passenden END }
+    while (tart[pos] <> kbegin) and (tart[pos] <> keof) do weiter;
+    tiefe := 0;
+    repeat
+      if tart[pos] = kbegin then tiefe := tiefe + 1
+      else if tart[pos] = kend then tiefe := tiefe - 1;
+      weiter
+    until (tiefe = 0) or (tart[pos] = keof);
+    erwarte(ksemi)
+  end;
+  anweisung(true);
+  if not fehlerda then erwarte(kpunkt)
+end;
+
+procedure gastprogramm;
+begin
+  zl('program gast;                                               ');
+  zl('{ Dieses Programm laeuft im Mini-Pascal-Interpreter, }      ');
+  zl('{ der selbst in Pascal geschrieben ist.             }       ');
+  zl('var i, s: integer;                                          ');
+  zl('function fak(n: integer): integer;                          ');
+  zl('begin                                                       ');
+  zl('  if n <= 1 then fak := 1                                   ');
+  zl('  else fak := n * fak(n - 1)                                ');
+  zl('end;                                                        ');
+  zl('function fib(n: integer): integer;                          ');
+  zl('begin                                                       ');
+  zl('  if n < 2 then fib := n                                    ');
+  zl('  else fib := fib(n - 1) + fib(n - 2)                       ');
+  zl('end;                                                        ');
+  zl('function ggt(a, b: integer): integer;                       ');
+  zl('begin                                                       ');
+  zl('  while b <> 0 do                                           ');
+  zl('  begin                                                     ');
+  zl('    s := a mod b; a := b; b := s                            ');
+  zl('  end;                                                      ');
+  zl('  ggt := a                                                  ');
+  zl('end;                                                        ');
+  zl('procedure primzahlen(max: integer);                         ');
+  zl('var k, t, prim: integer;                                    ');
+  zl('begin                                                       ');
+  zl('  write(''Primzahlen bis '', max, '':'');                       ');
+  zl('  for k := 2 to max do                                      ');
+  zl('  begin                                                     ');
+  zl('    prim := 1; t := 2;                                      ');
+  zl('    while (t * t <= k) and (prim = 1) do                    ');
+  zl('    begin                                                   ');
+  zl('      if k mod t = 0 then prim := 0;                        ');
+  zl('      t := t + 1                                            ');
+  zl('    end;                                                    ');
+  zl('    if prim = 1 then write('' '', k)                          ');
+  zl('  end;                                                      ');
+  zl('  writeln                                                   ');
+  zl('end;                                                        ');
+  zl('procedure collatz(n: integer);                              ');
+  zl('var schritte: integer;                                      ');
+  zl('begin                                                       ');
+  zl('  schritte := 0;                                            ');
+  zl('  write(''Collatz('', n, ''):'');                               ');
+  zl('  repeat                                                    ');
+  zl('    write('' '', n);                                          ');
+  zl('    if n mod 2 = 0 then n := n div 2                        ');
+  zl('    else n := 3 * n + 1;                                    ');
+  zl('    schritte := schritte + 1                                ');
+  zl('  until n = 1;                                              ');
+  zl('  writeln('' 1  ('', schritte, '' Schritte)'')                  ');
+  zl('end;                                                        ');
+  zl('procedure countdown(n: integer);                            ');
+  zl('begin                                                       ');
+  zl('  if n > 0 then                                             ');
+  zl('  begin                                                     ');
+  zl('    write(n, '' '');                                          ');
+  zl('    countdown(n - 1)                                        ');
+  zl('  end                                                       ');
+  zl('  else writeln(''Start!'')                                    ');
+  zl('end;                                                        ');
+  zl('begin                                                       ');
+  zl('  writeln(''--- Hallo aus dem Gast-Programm ---'');           ');
+  zl('  for i := 1 to 7 do                                        ');
+  zl('    writeln(i, ''! = '', fak(i));                             ');
+  zl('  write(''Fibonacci:'');                                      ');
+  zl('  for i := 0 to 12 do write('' '', fib(i));                   ');
+  zl('  writeln;                                                  ');
+  zl('  writeln(''ggT(1071, 462) = '', ggt(1071, 462));             ');
+  zl('  primzahlen(60);                                           ');
+  zl('  collatz(27 div 3);                                        ');
+  zl('  countdown(5);                                             ');
+  zl('  for i := 3 downto 1 do write(i, ''..'');                    ');
+  zl('  writeln(''fertig.'')                                        ');
+  zl('end.                                                        ');
+end;
+
+begin
+  srclen := 0; npool := 0; nnamen := 0; nproc := 0;
+  vtop := 0; basis := 0; gtop := 0; fehlerda := false;
+  kwname[1] := 'PROGRAM     '; kwart[1] := kprogram;
+  kwname[2] := 'VAR         '; kwart[2] := kvar;
+  kwname[3] := 'INTEGER     '; kwart[3] := kinteger;
+  kwname[4] := 'PROCEDURE   '; kwart[4] := kprocedure;
+  kwname[5] := 'FUNCTION    '; kwart[5] := kfunction;
+  kwname[6] := 'BEGIN       '; kwart[6] := kbegin;
+  kwname[7] := 'END         '; kwart[7] := kend;
+  kwname[8] := 'IF          '; kwart[8] := kif;
+  kwname[9] := 'THEN        '; kwart[9] := kthen;
+  kwname[10] := 'ELSE        '; kwart[10] := kelse;
+  kwname[11] := 'WHILE       '; kwart[11] := kwhile;
+  kwname[12] := 'DO          '; kwart[12] := kdo;
+  kwname[13] := 'REPEAT      '; kwart[13] := krepeat;
+  kwname[14] := 'UNTIL       '; kwart[14] := kuntil;
+  kwname[15] := 'FOR         '; kwart[15] := kfor;
+  kwname[16] := 'TO          '; kwart[16] := kto;
+  kwname[17] := 'DOWNTO      '; kwart[17] := kdownto;
+  kwname[18] := 'DIV         '; kwart[18] := kdiv;
+  kwname[19] := 'MOD         '; kwart[19] := kmod;
+  kwname[20] := 'AND         '; kwart[20] := kand;
+  kwname[21] := 'OR          '; kwart[21] := kor;
+  kwname[22] := 'NOT         '; kwart[22] := knot;
+  kwname[23] := 'WRITE       '; kwart[23] := kwrite;
+  kwname[24] := 'WRITELN     '; kwart[24] := kwriteln;
+  writeln('Mini-Pascal-Interpreter, geschrieben in Pascal');
+  writeln('==============================================');
+  gastprogramm;
+  scanne;
+  writeln('Quelltext: ', srclen:1, ' Zeichen, ', ntok:1, ' Token, ',
+          nnamen:1, ' Namen');
+  writeln;
+  if not fehlerda then programm;
+  writeln;
+  if fehlerda then writeln('Abbruch wegen Fehler.')
+  else writeln('Gast-Programm sauber beendet.')
+end.
 `}
 ];
 const PW_FILES = {
