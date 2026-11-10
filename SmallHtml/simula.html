@@ -1,0 +1,2786 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Simula-Werkbank</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+Condensed:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --steel:#c9c6bc; --steel2:#b5b1a5; --panel:#dedad0; --ink:#1d1f1e; --dim:#5b5d58;
+  --edge:#8d897d; --navy:#1f3a5a; --amber:#e8a33a; --red:#b8332a; --green:#3f8a4b;
+  --paper:#f6f3e6; --bar:#d9ead2; --barline:#b9d3ae; --code:#fbfaf4; --hl:#ffe9a8; --err:#f5c4bc;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+  --sans:"IBM Plex Sans Condensed","Arial Narrow",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--steel);color:var(--ink);font-family:var(--sans);font-size:15px;
+  background-image:repeating-linear-gradient(90deg,rgba(0,0,0,.025) 0 2px,transparent 2px 6px);}
+a{color:var(--navy)}
+header{background:var(--navy);color:#f1ede1;padding:10px 16px;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 18px;border-bottom:4px solid #0f2236}
+header h1{font-family:var(--mono);font-size:21px;letter-spacing:.18em;margin:0;font-weight:600}
+header .sub{font-size:13px;opacity:.8;letter-spacing:.05em}
+header a{color:#f6d38a;margin-left:auto;font-size:13px}
+.console{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;padding:10px 16px;background:var(--panel);border-bottom:2px solid var(--edge)}
+.group{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.group>label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+button,select{font-family:var(--sans);font-size:14px;letter-spacing:.04em;text-transform:uppercase;border:1px solid #6e6a5f;background:linear-gradient(#f4f1e8,#d4d0c4);color:var(--ink);padding:6px 11px;border-radius:2px;cursor:pointer;box-shadow:0 2px 0 #7d796d}
+button:active{transform:translateY(2px);box-shadow:none}
+button.go{background:linear-gradient(#5d9e66,#3f8a4b);color:#fff;border-color:#2b5e33}
+button.stop{background:linear-gradient(#cf5a4f,#b8332a);color:#fff;border-color:#7a1f19}
+button:disabled{opacity:.45;cursor:default}
+select{text-transform:none}
+.lamps{display:flex;gap:10px;margin-left:auto;align-items:center;flex-wrap:wrap}
+.lamp{display:flex;align-items:center;gap:5px;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.lamp i{width:13px;height:13px;border-radius:50%;background:#77736a;border:1px solid #4a473f;box-shadow:inset 0 -2px 3px rgba(0,0,0,.4)}
+.lamp.on i{background:var(--amber);box-shadow:0 0 8px var(--amber)}
+.lamp.on.r i{background:#ff5b4b;box-shadow:0 0 8px #ff5b4b}
+.lamp.on.g i{background:#71d77f;box-shadow:0 0 8px #71d77f}
+.counter{font-family:var(--mono);font-size:13px;background:#232521;color:#ffb347;padding:3px 8px;border-radius:2px;min-width:7em;text-align:right}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:12px;padding:12px 16px 20px}
+@media (max-width:980px){ main{grid-template-columns:minmax(0,1fr)} .lamps{margin-left:0} }
+.card{background:var(--panel);border:1px solid var(--edge);border-radius:3px;box-shadow:0 2px 0 rgba(0,0,0,.08)}
+.card h2{margin:0;font-size:12px;letter-spacing:.16em;text-transform:uppercase;padding:6px 10px;background:var(--steel2);border-bottom:1px solid var(--edge);display:flex;gap:10px;align-items:center}
+.card h2 span{margin-left:auto;font-weight:400;letter-spacing:.04em;text-transform:none;font-family:var(--mono)}
+.editor{position:relative;display:flex;height:min(62vh,640px);background:var(--code);font-family:var(--mono);font-size:13px;line-height:19px}
+.gutter{width:46px;flex:none;overflow:hidden;background:#ece8db;border-right:1px solid #cfc9b6;color:#8e897a;text-align:right;user-select:none;cursor:pointer}
+.gutter div{padding-right:6px;height:19px}
+.gutter div.bp{background:var(--red);color:#fff}
+.edwrap{position:relative;flex:1;min-width:0;overflow:hidden}
+#hl{position:absolute;left:0;right:0;height:19px;background:var(--hl);display:none;pointer-events:none}
+#hl.err{background:var(--err)}
+#src{position:absolute;inset:0;width:100%;height:100%;border:0;resize:none;background:transparent;font:inherit;line-height:19px;padding:0 8px;color:var(--ink);white-space:pre;overflow:auto;outline:none;tab-size:3}
+.inbox{display:flex;flex-direction:column;gap:4px;padding:8px 10px}
+.inbox textarea{width:100%;height:64px;font-family:var(--mono);font-size:13px;background:var(--code);border:1px solid #cfc9b6;padding:4px 6px;resize:vertical}
+.small{font-size:12px;color:var(--dim)}
+.tabs{display:flex;overflow-x:auto;background:var(--steel2);border-bottom:1px solid var(--edge)}
+.tabs button{border:0;border-right:1px solid var(--edge);border-radius:0;box-shadow:none;background:transparent;padding:8px 12px;font-size:12px;letter-spacing:.12em;white-space:nowrap}
+.tabs button.act{background:var(--panel);font-weight:600;box-shadow:inset 0 3px 0 var(--navy)}
+.pane{display:none;height:min(72vh,760px);overflow:auto;padding:10px}
+.pane.act{display:block}
+/* Zeilendrucker */
+#printer{padding:0;background:#777;}
+.paper{position:relative;margin:0 auto;max-width:100%;min-height:100%;background:var(--paper);padding:10px 34px 30px;font-family:var(--mono);font-size:13px;line-height:20px;
+  background-image:radial-gradient(circle at 13px 10px,#777 4px,transparent 5px),radial-gradient(circle at calc(100% - 13px) 10px,#777 4px,transparent 5px),repeating-linear-gradient(to bottom,var(--bar) 0 40px,var(--paper) 40px 80px);
+  background-size:100% 20px,100% 20px,100% 80px;background-position:0 0,0 0,0 10px;border-left:1px dashed #b7b09a;border-right:1px dashed #b7b09a}
+.paper .ln{white-space:pre;min-height:20px;overflow-x:visible}
+.paper .ff{border-top:2px dashed #9a937d;margin:8px 0;height:0;min-height:0}
+.paper .echo{color:var(--navy)}
+.paper .sys{color:#7a7461}
+.paper .errl{color:var(--red);font-weight:600;white-space:pre-wrap}
+.paper .bar{color:#7a7461;letter-spacing:.06em}
+#term{display:none;gap:6px;align-items:center;padding:8px 10px;background:#232521;color:#ffb347;font-family:var(--mono);font-size:13px;flex-wrap:wrap}
+#term.on{display:flex}
+#term input{flex:1;min-width:140px;background:#111;color:#ffcf7a;border:1px solid #555;font-family:var(--mono);font-size:14px;padding:5px}
+/* Tabellen und Ansichten */
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{border-bottom:1px solid #c6c0ae;padding:3px 6px;text-align:left;vertical-align:top}
+th{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);background:#e8e4d8;position:sticky;top:0}
+td.m,.m{font-family:var(--mono)}
+.sec{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim);margin:12px 0 4px;border-bottom:1px solid var(--edge);padding-bottom:2px}
+.sec:first-child{margin-top:0}
+.chg{background:var(--hl);font-weight:600}
+.scope{border:1px solid #c6c0ae;background:var(--code);margin-bottom:8px}
+.scope h4{margin:0;font-size:12px;padding:3px 6px;background:#ece8db;font-family:var(--mono);font-weight:600}
+.big{font-family:var(--mono);font-size:26px;background:#232521;color:#ffb347;padding:4px 12px;display:inline-block;border-radius:2px}
+.st{display:inline-block;padding:0 6px;border-radius:2px;font-size:12px;font-family:var(--mono);border:1px solid #9b9583}
+.st-aktiv,.st-angehängt{background:#ffd27a}.st-geplant,.st-fortgesetzt{background:#cfe3f5}.st-passiv,.st-losgelöst{background:#e6e1d3}.st-beendet{background:#c9c4b6;color:#555}
+.st-Präfixblock,.st-Hauptprogramm{background:#d8ebd0}
+/* Heap */
+.heap{position:relative;display:flex;flex-wrap:wrap;gap:26px 30px;align-items:flex-start;padding:6px 6px 30px}
+.obj{background:var(--code);border:1.5px solid #5f5b50;min-width:170px;max-width:290px;font-family:var(--mono);font-size:12px;position:relative;z-index:1;box-shadow:3px 3px 0 rgba(0,0,0,.12)}
+.obj.cur{border-color:var(--amber);box-shadow:0 0 0 3px rgba(232,163,58,.55)}
+.obj .hd{background:var(--navy);color:#fff;padding:3px 6px;display:flex;gap:6px;align-items:center}
+.obj .hd b{font-weight:600}
+.obj .hd .st{margin-left:auto;color:var(--ink);font-size:11px}
+.obj .lv{border-top:1px solid #9b9583;padding:2px 6px 3px}
+.obj .lv .lvn{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+.obj .at{display:flex;gap:6px;justify-content:space-between;white-space:nowrap}
+.obj .at .v{overflow:hidden;text-overflow:ellipsis;max-width:150px;text-align:right}
+.obj .at.ref .v{color:var(--navy);font-weight:600}
+svg.arrows{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:visible}
+/* Klassen */
+.tree ul{list-style:none;margin:0 0 0 18px;padding:0;border-left:1px dashed #9b9583}
+.tree>ul{margin-left:0;border:0}
+.tree li{margin:6px 0 6px 0;padding-left:12px;position:relative}
+.tree li:before{content:"";position:absolute;left:0;top:14px;width:10px;border-top:1px dashed #9b9583}
+.cls{background:var(--code);border:1px solid #9b9583;display:inline-block;min-width:230px;max-width:100%;font-family:var(--mono);font-size:12px}
+.cls .hd{background:#ece8db;padding:3px 6px;font-weight:600}
+.cls .hd small{font-weight:400;color:var(--dim)}
+.cls .bd{padding:3px 6px}
+.cls .virt{color:#7b3d9a}
+.cls.sys{opacity:.75}
+.cls.sys .hd{background:#ddd8ca}
+/* Hilfe */
+.help{font-size:14px;line-height:1.45}
+.help h3{font-size:13px;letter-spacing:.12em;text-transform:uppercase;margin:16px 0 4px;border-bottom:1px solid var(--edge)}
+.help code,.help pre{font-family:var(--mono);font-size:12.5px;background:var(--code)}
+.help pre{padding:6px 8px;border:1px solid #cfc9b6;overflow-x:auto}
+.help td{font-size:13px}
+.hidden{display:none!important}
+@media (max-width:600px){ .paper{font-size:11px;padding:10px 26px 30px} .editor{font-size:12px} .pane{height:70vh} }
+footer{padding:4px 16px 24px;font-size:12px;color:var(--dim)}
+</style>
+</head>
+<body>
+<header>
+  <h1>SIMULA-WERKBANK</h1>
+  <span class="sub">Simula 67 nach dem Simula Standard 1986 · Interpreter im Browser</span>
+  <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a>
+</header>
+
+<div class="console">
+  <div class="group"><label for="exsel">Programm</label>
+    <select id="exsel"></select>
+    <button id="bNew" title="Leeres Programm">Neu</button>
+    <button id="bLoad" title=".sim-Datei laden">Laden</button>
+    <button id="bSave" title="Als .sim-Datei speichern">Speichern</button>
+    <input type="file" id="fileIn" accept=".sim,.txt,.sml" class="hidden">
+  </div>
+  <div class="group"><label>Lauf</label>
+    <button id="bRun" class="go">Start</button>
+    <button id="bStep" title="Eine Anweisung">Schritt</button>
+    <button id="bEvent" title="Bis zum nächsten Simulationsereignis">Nächstes Ereignis</button>
+    <button id="bPause">Pause</button>
+    <button id="bStop" class="stop">Stopp</button>
+    <select id="speed" title="Tempo">
+      <option value="max">Tempo: voll</option>
+      <option value="fast">Tempo: zügig</option>
+      <option value="slow">Tempo: langsam</option>
+      <option value="crawl">Tempo: Schritt/s</option>
+    </select>
+  </div>
+  <div class="lamps">
+    <span class="lamp" id="lReady"><i></i>Bereit</span>
+    <span class="lamp g" id="lRun"><i></i>Läuft</span>
+    <span class="lamp" id="lWait"><i></i>Eingabe</span>
+    <span class="lamp r" id="lErr"><i></i>Fehler</span>
+    <span class="counter" id="cnt">0 Schritte</span>
+  </div>
+</div>
+
+<main>
+  <section class="card">
+    <h2>Programmkarte <span id="posInfo">Zeile 1</span></h2>
+    <div class="editor">
+      <div class="gutter" id="gutter" title="Klick: Haltepunkt setzen/entfernen"></div>
+      <div class="edwrap"><div id="hl"></div><textarea id="src" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea></div>
+    </div>
+    <div class="inbox">
+      <label class="small" for="sysin"><b>Eingabe (sysin)</b> – Lochkartenstapel für inimage/inint; ist er leer, fragt das Terminal nach.</label>
+      <textarea id="sysin" spellcheck="false"></textarea>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="tabs" id="tabs">
+      <button data-t="printer" class="act">Drucker</button>
+      <button data-t="trace">Trace</button>
+      <button data-t="classes">Klassen</button>
+      <button data-t="heap">Heap</button>
+      <button data-t="coro">Koroutinen</button>
+      <button data-t="sim">Simulation</button>
+      <button data-t="files">Dateien</button>
+      <button data-t="help">Hilfe</button>
+    </div>
+    <div id="term"><span>EINGABE ▸</span><input id="termIn" autocomplete="off"><button id="termSend">Senden</button><button id="termEof" title="endfile = true">Dateiende</button></div>
+    <div class="pane act" id="printer"><div class="paper" id="paper"></div></div>
+    <div class="pane" id="trace"></div>
+    <div class="pane" id="classes"></div>
+    <div class="pane" id="heap"></div>
+    <div class="pane" id="coro"></div>
+    <div class="pane" id="sim"></div>
+    <div class="pane" id="files"></div>
+    <div class="pane help" id="help"></div>
+  </section>
+</main>
+<footer>Simula-Werkbank · Teil der Reihe „alte Programmiersprachen“ auf <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a> · Schwesterseiten: <a href="algol.html">ALGOL-Werkbank</a>, <a href="pascal.html">Pascal-Werkbank</a> · Kein Speichern im Browser: Programme bitte als .sim-Datei sichern.</footer>
+<script>
+// ===== Simula-Werkbank: Lexer und Parser =====
+class SimErr extends Error { constructor(msg, line){ super(msg); this.sline = line; } }
+
+const KW = new Set(['activate','after','and','array','at','before','begin','boolean','character','class','comment','delay','do','else','end','eq','eqv','external','false','for','ge','goto','gt','hidden','if','imp','in','inner','inspect','integer','is','label','le','long','lt','name','ne','new','none','not','notext','or','otherwise','prior','procedure','protected','qua','reactivate','real','ref','short','step','switch','text','then','this','true','until','value','virtual','when','while']);
+const DISP=new Map();
+function dn(n){ return DISP.get(n)||n; }
+function dispMsg(m){ return m.replace(/\b[a-z_][a-z0-9_]*\b/g,w=>{ const o=DISP.get(w); return o&&o!==w?o:w; }); }
+const ENDSTOP = new Set(['end','else','when','otherwise']);
+
+function lex(src){
+  const toks=[]; let i=0, line=1; const n=src.length;
+  const isL=c=>(c>='a'&&c<='z')||(c>='A'&&c<='Z')||c==='_';
+  const isD=c=>c>='0'&&c<='9';
+  const P=(t,v,l)=>toks.push({t,v,line:l});
+  while(i<n){
+    const c=src[i];
+    if(c==='\n'){line++;i++;continue;}
+    if(c<=' '){i++;continue;}
+    if(c==='!'){ const l0=line; i++; while(i<n&&src[i]!==';'){ if(src[i]==='\n')line++; i++; }
+      if(i>=n) throw new SimErr('Kommentar mit „!“ wurde nicht mit „;“ abgeschlossen', l0); i++; continue; }
+    if(isL(c)){
+      let j=i; while(j<n&&(isL(src[j])||isD(src[j])))j++;
+      const orig=src.slice(i,j), w=orig.toLowerCase(); const l0=line; i=j;
+      if(!KW.has(w)&&!DISP.has(w)&&!lex.sys) DISP.set(w,orig);
+      if(w==='comment'){ while(i<n&&src[i]!==';'){ if(src[i]==='\n')line++; i++; }
+        if(i>=n) throw new SimErr('„comment“ wurde nicht mit „;“ abgeschlossen', l0); i++; continue; }
+      if(KW.has(w)){
+        P('kw',w,l0);
+        if(w==='end'){ // Endkommentar: alles bis ; end else when otherwise
+          while(i<n){ const d=src[i];
+            if(d==='\n'){line++;i++;continue;}
+            if(d<=' '){i++;continue;}
+            if(d===';')break;
+            if(isL(d)){ let k=i; while(k<n&&(isL(src[k])||isD(src[k])))k++;
+              if(ENDSTOP.has(src.slice(i,k).toLowerCase())) break; i=k; continue; }
+            i++; }
+        }
+      } else P('id',w,l0);
+      continue;
+    }
+    if(isD(c)||(c==='.'&&isD(src[i+1]||''))){
+      let j=i, real=false; while(j<n&&isD(src[j]))j++;
+      if(src[j]==='.'&&isD(src[j+1]||'')){ real=true; j++; while(j<n&&isD(src[j]))j++; }
+      let num=src.slice(i,j);
+      if(src[j]==='&'){ let k=j+1; if(src[k]==='&')k++; const s=k; if(src[k]==='+'||src[k]==='-')k++;
+        if(isD(src[k]||'')){ while(k<n&&isD(src[k]))k++; num+='e'+src.slice(s,k); real=true; j=k; } }
+      P('num',{v:Number(num),real},line); i=j; continue;
+    }
+    if(c==='"'){
+      const l0=line; let s=''; i++;
+      for(;;){
+        if(i>=n) throw new SimErr('Zeichenkette wurde nicht abgeschlossen', l0);
+        const d=src[i];
+        if(d==='"'){
+          if(src[i+1]==='"'){ s+='"'; i+=2; continue; }
+          i++; let k=i, ln=0; while(k<n&&src[k]<=' '){ if(src[k]==='\n')ln++; k++; }
+          if(src[k]==='"'){ i=k+1; line+=ln; continue; }
+          break;
+        }
+        if(d==='\n') throw new SimErr('Zeilenumbruch innerhalb einer Zeichenkette', line);
+        if(d==='!'){ const m=/^!(\d{1,3})!/.exec(src.slice(i,i+5)); if(m){ s+=String.fromCharCode(+m[1]); i+=m[0].length; continue; } }
+        s+=d; i++;
+      }
+      P('str',s,l0); continue;
+    }
+    if(c==="'"){
+      const m=/^'!(\d{1,3})!'/.exec(src.slice(i,i+7));
+      if(m){ P('chr',String.fromCharCode(+m[1]),line); i+=m[0].length; continue; }
+      if(src[i+2]==="'" && src[i+1]!=='\n'){ P('chr',src[i+1],line); i+=3; continue; }
+      throw new SimErr('Ungültige Zeichenkonstante (Form: \'x\')', line);
+    }
+    const three=src.substr(i,3), two=src.substr(i,2);
+    if(three==='=/='){ P('op',three,line); i+=3; continue; }
+    if([':=',':-','**','//','<=','>=','<>','=='].includes(two)){ P('op',two,line); i+=2; continue; }
+    if('+-*/()[],;:.=<>&'.includes(c)){ P('op',c,line); i++; continue; }
+    throw new SimErr('Unerwartetes Zeichen „'+c+'“', line);
+  }
+  P('eof',null,line);
+  return toks;
+}
+
+const TYPEKW=['integer','real','boolean','character','text','ref','short','long'];
+
+class Parser{
+  constructor(toks){ this.t=toks; this.p=0; }
+  get cur(){ return this.t[this.p]; }
+  peek(k=1){ return this.t[Math.min(this.p+k,this.t.length-1)]; }
+  is(v){ const c=this.cur; return (c.t==='kw'||c.t==='op')&&c.v===v; }
+  isAt(k,v){ const c=this.peek(k); return (c.t==='kw'||c.t==='op')&&c.v===v; }
+  accept(v){ if(this.is(v)){ this.p++; return true; } return false; }
+  desc(t){ if(t.t==='eof')return 'Programmende'; if(t.t==='str')return 'Zeichenkette'; if(t.t==='chr')return 'Zeichenkonstante'; if(t.t==='num')return 'Zahl '+t.v.v; return '„'+t.v+'“'; }
+  err(m,line){ throw new SimErr(m, line ?? this.cur.line); }
+  expect(v,what){ if(!this.accept(v)) this.err('„'+v+'“ erwartet'+(what?' '+what:'')+', gefunden '+this.desc(this.cur)); }
+  ident(what){ const c=this.cur; if(c.t!=='id') this.err('Bezeichner erwartet'+(what?' ('+what+')':'')+', gefunden '+this.desc(c)+(c.t==='kw'?' – das ist ein Schlüsselwort':'')); this.p++; return c.v; }
+
+  program(){
+    const s=this.statement();
+    while(this.accept(';')){}
+    if(this.cur.t!=='eof') this.err('Text nach Programmende: '+this.desc(this.cur));
+    return s;
+  }
+  statement(){
+    const line=this.cur.line; const labels=[];
+    while(this.cur.t==='id'&&this.isAt(1,':')){ labels.push(this.cur.v); this.p+=2; }
+    const s=this.stmt0();
+    if(s.line===undefined) s.line=line;
+    if(labels.length) s.labels=labels;
+    return s;
+  }
+  stmt0(){
+    const c=this.cur, line=c.line;
+    if(c.t==='kw'){
+      switch(c.v){
+        case 'begin': return this.block(null);
+        case 'if': { this.p++; const cond=this.expr(); this.expect('then'); const th=this.statement(); let el=null; if(this.accept('else')) el=this.statement(); return {k:'if',cond,th,el,line}; }
+        case 'while': { this.p++; const cond=this.expr(); this.expect('do'); return {k:'while',cond,body:this.statement(),line}; }
+        case 'for': return this.forStmt();
+        case 'goto': this.p++; return {k:'goto',target:this.expr(),line};
+        case 'inspect': return this.inspectStmt();
+        case 'activate': case 'reactivate': return this.activateStmt();
+        case 'inner': this.p++; return {k:'inner',line};
+        case 'end': case 'else': case 'when': case 'otherwise': return {k:'empty',line};
+      }
+      if(TYPEKW.includes(c.v)||['array','procedure','class'].includes(c.v)) this.err('Deklaration an dieser Stelle nicht erlaubt (nur am Anfang eines Blocks mit begin)');
+    }
+    if(c.t==='op'&&c.v===';') return {k:'empty',line};
+    if(c.t==='id'&&c.v==='go'&&this.peek().t==='id'&&this.peek().v==='to'){ this.p+=2; return {k:'goto',target:this.expr(),line}; }
+    if(c.t==='eof') this.err('Unerwartetes Programmende');
+    const e=this.expr();
+    if(this.is(':=')||this.is(':-')){
+      const op=this.cur.v; const targets=[e]; let val;
+      for(;;){ this.p++; const x=this.expr();
+        if(this.is(op)){ targets.push(x); continue; }
+        if(this.is(op===':='?':-':':=')) this.err('„:=“ und „:-“ dürfen in einer Mehrfachzuweisung nicht gemischt werden');
+        val=x; break; }
+      for(const t of targets) if(t.k!=='id'&&t.k!=='dot') this.err('Linke Seite einer Zuweisung ist keine Variable', line);
+      return {k:'assign',op,targets,val,line};
+    }
+    if(this.is('begin')){
+      if(e.k==='id') return this.block({name:e.name,args:e.args||[]});
+      this.err('Präfix eines Blocks muss ein Klassenname sein');
+    }
+    if(e.k==='bin'&&e.op==='='&&(e.a.k==='id'||e.a.k==='dot')) this.err('„=“ ist ein Vergleich – für die Zuweisung „:=“ (Werte) bzw. „:-“ (Referenzen) schreiben', line);
+    if(!['id','dot','new'].includes(e.k)) this.err('Dieser Ausdruck ist keine Anweisung', line);
+    return {k:'call',e,line};
+  }
+  block(prefix){
+    const line=this.cur.line; this.expect('begin');
+    const decls=[], stmts=[];
+    while(!this.is('end')){
+      if(this.cur.t==='eof') this.err('„end“ fehlt zum „begin“ aus Zeile '+line);
+      if(this.isDecl()) decls.push(...this.decl());
+      else stmts.push(this.statement());
+      if(!this.accept(';')){ if(!this.is('end')) this.err('„;“ oder „end“ erwartet, gefunden '+this.desc(this.cur)); }
+    }
+    this.p++;
+    const b={k:'block',decls,stmts,line};
+    return prefix ? {k:'pblock',prefix,block:b,line} : b;
+  }
+  isDecl(){
+    const c=this.cur;
+    if(c.t==='kw'&&(TYPEKW.includes(c.v)||['array','procedure','class','switch','external'].includes(c.v))) return true;
+    return c.t==='id'&&this.isAt(1,'class');
+  }
+  decl(){
+    const line=this.cur.line, c=this.cur;
+    if(c.t==='id'){ this.p++; return [this.classDecl(c.v,line)]; }
+    if(this.is('class')) return [this.classDecl(null,line)];
+    if(this.accept('external')) this.err('external-Deklarationen (getrennte Übersetzung) werden nicht unterstützt');
+    if(this.accept('procedure')) return [this.procDecl(null,line)];
+    if(this.accept('array')) return [this.arrDecl({t:'real'},line)];
+    if(this.accept('switch')) return [this.switchDecl(line)];
+    const ty=this.type();
+    if(this.accept('array')) return [this.arrDecl(ty,line)];
+    if(this.accept('procedure')) return [this.procDecl(ty,line)];
+    const names=[], inits={};
+    do{ const nm=this.ident('Variablenname'); names.push(nm); if(this.accept('=')) inits[nm]=this.expr(); }while(this.accept(','));
+    return [{k:'var',ty,names,inits,line}];
+  }
+  type(){
+    const c=this.cur;
+    if(this.accept('short')){ this.expect('integer'); return {t:'integer'}; }
+    if(this.accept('long')){ this.expect('real'); return {t:'real'}; }
+    for(const t of ['integer','real','boolean','character','text']) if(this.accept(t)) return {t};
+    if(this.accept('ref')){ this.expect('('); const q=this.ident('Klassenname'); this.expect(')'); return {t:'ref',q}; }
+    this.err('Typ erwartet, gefunden '+this.desc(c));
+  }
+  arrDecl(ty,line){
+    const segs=[]; let names=[];
+    for(;;){
+      names.push(this.ident('Feldname'));
+      if(this.is('(')||this.is('[')){
+        const close=this.is('(')?')':']'; this.p++; const bounds=[];
+        do{ const lo=this.expr(); this.expect(':','zwischen Feldgrenzen'); const hi=this.expr(); bounds.push([lo,hi]); }while(this.accept(','));
+        this.expect(close); segs.push({names,bounds}); names=[];
+        if(!this.accept(','))break;
+      } else this.expect(',','oder Feldgrenzen');
+    }
+    return {k:'arr',ty,segs,line};
+  }
+  switchDecl(line){
+    const name=this.ident('Switch-Name'); this.expect(':='); const exprs=[];
+    do exprs.push(this.expr()); while(this.accept(','));
+    return {k:'switch',name,exprs,line};
+  }
+  heading(d){
+    d.params=[]; d.modes={}; d.specs={};
+    if(this.accept('(')){ do d.params.push(this.ident('Parameter')); while(this.accept(',')); this.expect(')'); }
+    this.expect(';');
+    if(d.params.length){
+      for(;;){
+        if(this.accept('value')){ do d.modes[this.ident()]='value'; while(this.accept(',')); this.expect(';'); continue; }
+        if(this.accept('name')){ do d.modes[this.ident()]='name'; while(this.accept(',')); this.expect(';'); continue; }
+        if(this.isSpec()){ this.spec(d.specs); this.expect(';'); continue; }
+        break;
+      }
+      for(const p of d.params) if(!d.specs[p]) this.err('Parameter „'+p+'“ von „'+d.name+'“ hat keine Spezifikation (z. B. integer '+p+';)', d.line);
+      for(const m in d.modes) if(!d.params.includes(m)) this.err('„'+m+'“ ist kein Parameter von „'+d.name+'“', d.line);
+    }
+  }
+  isSpec(){ const c=this.cur; return c.t==='kw'&&(TYPEKW.includes(c.v)||['array','procedure','label','switch'].includes(c.v)); }
+  spec(into){
+    let ty=null, kind='simple';
+    if(this.accept('label')) kind='label';
+    else if(this.accept('switch')) kind='switch';
+    else if(this.accept('array')){ ty={t:'real'}; kind='array'; }
+    else if(this.accept('procedure')) kind='proc';
+    else { ty=this.type(); if(this.accept('array')) kind='array'; else if(this.accept('procedure')) kind='proc'; }
+    const names=[]; do names.push(this.ident()); while(this.accept(','));
+    for(const n of names) into[n]={ty,kind};
+    return names;
+  }
+  procDecl(ty,line){
+    const d={k:'proc',name:this.ident('Prozedurname'),ty,line};
+    this.heading(d);
+    d.body=this.statement();
+    return d;
+  }
+  classDecl(prefix,line){
+    this.expect('class');
+    const d={k:'class',name:this.ident('Klassenname'),prefix,line,virtuals:[],hidden:new Set(),prot:new Set()};
+    this.heading(d);
+    for(;;){
+      if(this.accept('virtual')){
+        this.expect(':');
+        while(this.isSpec()){ const sp={}; const names=this.spec(sp); for(const nm of names) d.virtuals.push({name:nm,...sp[nm]}); this.expect(';'); }
+        continue;
+      }
+      if(this.is('hidden')||this.is('protected')){
+        let h=false, pr=false;
+        for(;;){ if(this.accept('hidden')){h=true;continue;} if(this.accept('protected')){pr=true;continue;} break; }
+        const names=[]; do names.push(this.ident()); while(this.accept(',')); this.expect(';');
+        for(const nm of names){ if(h) d.hidden.add(nm); d.prot.add(nm); }
+        continue;
+      }
+      break;
+    }
+    d.body=this.statement();
+    return d;
+  }
+  forStmt(){
+    const line=this.cur.line; this.p++;
+    const target=this.primary();
+    let op; if(this.accept(':=')) op=':='; else if(this.accept(':-')) op=':-'; else this.err('„:=“ oder „:-“ in der for-Anweisung erwartet');
+    const elems=[];
+    do{
+      const e=this.expr();
+      if(this.accept('step')){ const st=this.expr(); this.expect('until'); elems.push({k:'step',init:e,step:st,until:this.expr()}); }
+      else if(this.accept('while')) elems.push({k:'while',e,cond:this.expr()});
+      else elems.push({k:'single',e});
+    }while(this.accept(','));
+    this.expect('do');
+    return {k:'for',target,op,elems,body:this.statement(),line};
+  }
+  inspectStmt(){
+    const line=this.cur.line; this.p++;
+    const s={k:'inspect',obj:this.expr(),whens:[],doBody:null,otherwise:null,line};
+    if(this.accept('do')) s.doBody=this.statement();
+    else{
+      if(!this.is('when')) this.err('„do“ oder „when“ nach inspect erwartet');
+      while(this.accept('when')){ const cls=this.ident('Klassenname'); this.expect('do'); s.whens.push({cls,body:this.statement()}); }
+    }
+    if(this.accept('otherwise')) s.otherwise=this.statement();
+    return s;
+  }
+  activateStmt(){
+    const line=this.cur.line, reac=this.cur.v==='reactivate'; this.p++;
+    const s={k:'activate',reac,obj:this.expr(),code:0,time:null,ref:null,prior:false,line};
+    if(this.accept('at')){ s.code=1; s.time=this.expr(); s.prior=this.accept('prior'); }
+    else if(this.accept('delay')){ s.code=2; s.time=this.expr(); s.prior=this.accept('prior'); }
+    else if(this.accept('before')){ s.code=3; s.ref=this.expr(); }
+    else if(this.accept('after')){ s.code=4; s.ref=this.expr(); }
+    return s;
+  }
+  // ---- Ausdrücke ----
+  expr(){
+    if(this.is('if')){ const line=this.cur.line; this.p++; const c=this.expr(); this.expect('then'); const a=this.simple(); this.expect('else','(bedingter Ausdruck braucht else)'); const b=this.expr(); return {k:'cond',c,a,b,line}; }
+    return this.simple();
+  }
+  simple(){ return this.eqv(); }
+  bin(op,a,b,line){ return {k:'bin',op,a,b,line}; }
+  eqv(){ let a=this.imp(); while(this.is('eqv')){ const l=this.cur.line; this.p++; a=this.bin('eqv',a,this.imp(),l); } return a; }
+  imp(){ let a=this.orx(); while(this.is('imp')){ const l=this.cur.line; this.p++; a=this.bin('imp',a,this.orx(),l); } return a; }
+  orx(){ let a=this.andx(); while(this.is('or')){ const l=this.cur.line; this.p++; const op=this.accept('else')?'orelse':'or'; a=this.bin(op,a,this.andx(),l); } return a; }
+  andx(){ let a=this.notx(); while(this.is('and')){ const l=this.cur.line; this.p++; const op=this.accept('then')?'andthen':'and'; a=this.bin(op,a,this.notx(),l); } return a; }
+  notx(){ if(this.is('not')){ const l=this.cur.line; this.p++; return {k:'un',op:'not',a:this.notx(),line:l}; } return this.rel(); }
+  rel(){
+    const a=this.cat(); const c=this.cur, line=c.line;
+    const map={'<':'<','<=':'<=','=':'=','<>':'<>','>=':'>=','>':'>','lt':'<','le':'<=','eq':'=','ne':'<>','ge':'>=','gt':'>','==':'==','=/=':'=/='};
+    if((c.t==='op'||c.t==='kw')&&map[c.v]){ this.p++; return this.bin(map[c.v],a,this.cat(),line); }
+    if(this.accept('is')) return {k:'is',e:a,cls:this.ident('Klassenname'),line};
+    if(this.accept('in')) return {k:'in',e:a,cls:this.ident('Klassenname'),line};
+    return a;
+  }
+  cat(){ let a=this.add(); while(this.is('&')){ const l=this.cur.line; this.p++; a=this.bin('&',a,this.add(),l); } return a; }
+  add(){
+    let a; const line=this.cur.line;
+    if(this.is('+')||this.is('-')){ const op=this.cur.v; this.p++; a={k:'un',op,a:this.term(),line}; } else a=this.term();
+    while(this.is('+')||this.is('-')){ const op=this.cur.v, l=this.cur.line; this.p++; a=this.bin(op,a,this.term(),l); }
+    return a;
+  }
+  term(){ let a=this.factor(); while(this.is('*')||this.is('/')||this.is('//')){ const op=this.cur.v,l=this.cur.line; this.p++; a=this.bin(op,a,this.factor(),l); } return a; }
+  factor(){ let a=this.primary(); while(this.is('**')){ const l=this.cur.line; this.p++; a=this.bin('**',a,this.primary(),l); } return a; }
+  primary(){
+    const c=this.cur, line=c.line; let e;
+    if(c.t==='num'){ this.p++; e={k:'num',v:c.v.v,real:c.v.real,line}; }
+    else if(c.t==='str'){ this.p++; e={k:'str',v:c.v,line}; }
+    else if(c.t==='chr'){ this.p++; e={k:'chr',v:c.v,line}; }
+    else if(c.t==='id'){ this.p++; e={k:'id',name:c.v,args:this.args(),line}; }
+    else if(this.accept('true')) e={k:'bool',v:true,line};
+    else if(this.accept('false')) e={k:'bool',v:false,line};
+    else if(this.accept('none')) e={k:'none',line};
+    else if(this.accept('notext')) e={k:'notext',line};
+    else if(this.accept('(')){ e=this.expr(); this.expect(')'); }
+    else if(this.accept('new')){ e={k:'new',cls:this.ident('Klassenname nach new'),line}; e.args=this.args()||[]; }
+    else if(this.accept('this')){ e={k:'this',cls:this.ident('Klassenname nach this'),line}; }
+    else if(this.is('if')) this.err('Bedingter Ausdruck muss hier in Klammern stehen');
+    else this.err('Ausdruck erwartet, gefunden '+this.desc(c));
+    for(;;){
+      if(this.is('.')){ const l=this.cur.line; this.p++; const nm=this.ident('Attributname nach „.“'); e={k:'dot',obj:e,name:nm,args:this.args(),line:l}; continue; }
+      if(this.is('qua')){ const l=this.cur.line; this.p++; e={k:'qua',e,cls:this.ident('Klassenname nach qua'),line:l}; continue; }
+      break;
+    }
+    return e;
+  }
+  args(){
+    if(this.is('(')||this.is('[')){
+      const close=this.is('(')?')':']'; this.p++; const a=[];
+      if(!this.is(close)) do a.push(this.expr()); while(this.accept(','));
+      this.expect(close); return a;
+    }
+    return null;
+  }
+}
+function parseProgram(src){ return new Parser(lex(src)).program(); }
+
+// ===== Simula-Werkbank: Systemklassen SIMSET und SIMULATION (in Simula geschrieben) =====
+const PRELUDE_SRC = `begin
+class SIMSET;
+begin
+   class linkage;
+   begin
+      ref(linkage) SUC_, PRED_;
+      ref(link) procedure suc;  suc :- if SUC_ in link then SUC_ else none;
+      ref(link) procedure pred; pred :- if PRED_ in link then PRED_ else none;
+      ref(linkage) procedure prev; prev :- PRED_;
+   end linkage;
+
+   linkage class head;
+   begin
+      ref(link) procedure first; first :- suc;
+      ref(link) procedure last;  last :- pred;
+      boolean procedure empty;   empty := SUC_ == this head;
+      integer procedure cardinal;
+      begin integer I; ref(linkage) X;
+         X :- SUC_;
+         while X =/= this head do begin I := I + 1; X :- X.SUC_ end;
+         cardinal := I
+      end;
+      procedure clear;
+      begin ref(link) X;
+         X :- first;
+         while X =/= none do begin X.out; X :- first end
+      end;
+      SUC_ :- PRED_ :- this head;
+   end head;
+
+   linkage class link;
+   begin
+      procedure out;
+         if SUC_ =/= none then
+         begin
+            SUC_.PRED_ :- PRED_; PRED_.SUC_ :- SUC_;
+            SUC_ :- PRED_ :- none
+         end;
+      procedure follow(X); ref(linkage) X;
+      begin
+         out;
+         if X =/= none then begin
+            if X.SUC_ =/= none then begin
+               PRED_ :- X; SUC_ :- X.SUC_;
+               SUC_.PRED_ :- this link; X.SUC_ :- this link
+            end
+         end
+      end;
+      procedure precede(X); ref(linkage) X;
+      begin
+         out;
+         if X =/= none then begin
+            if X.SUC_ =/= none then begin
+               SUC_ :- X; PRED_ :- X.PRED_;
+               PRED_.SUC_ :- this link; X.PRED_ :- this link
+            end
+         end
+      end;
+      procedure into(S); ref(head) S;  precede(S);
+   end link;
+end SIMSET;
+
+SIMSET class SIMULATION;
+begin
+   class EVENT_NOTICE(EVTIME, PROC); real EVTIME; ref(PROCESS) PROC;
+   begin ref(EVENT_NOTICE) SUC_, PRED_; end;
+
+   ref(EVENT_NOTICE) SQS_;
+   ref(MAIN_PROGRAM) main;
+
+   link class PROCESS;
+   begin
+      ref(EVENT_NOTICE) EVENT_;
+      boolean TERMINATED_;
+      boolean procedure idle;       idle := EVENT_ == none;
+      boolean procedure terminated; terminated := TERMINATED_;
+      real procedure evtime;
+         if EVENT_ == none then error("evtime: Prozess ist nicht geplant")
+         else evtime := EVENT_.EVTIME;
+      ref(PROCESS) procedure nextev;
+         nextev :- if EVENT_ == none then none
+                   else if EVENT_.SUC_ == SQS_ then none
+                   else EVENT_.SUC_.PROC;
+      detach;
+      inner;
+      TERMINATED_ := true;
+      passivate;
+      error("Ein beendeter Prozess wurde fortgesetzt");
+   end PROCESS;
+
+   PROCESS class MAIN_PROGRAM;
+   begin
+      while true do detach;
+   end;
+
+   ref(PROCESS) procedure current; current :- SQS_.SUC_.PROC;
+   real procedure time; time := SQS_.SUC_.EVTIME;
+
+   procedure SCHEDULE_(EV, PRIO_); ref(EVENT_NOTICE) EV; boolean PRIO_;
+   begin ref(EVENT_NOTICE) P;
+      P :- SQS_.PRED_;
+      if PRIO_ then begin
+         while P =/= SQS_ and then P.EVTIME >= EV.EVTIME do P :- P.PRED_
+      end else begin
+         while P =/= SQS_ and then P.EVTIME > EV.EVTIME do P :- P.PRED_
+      end;
+      EV.PRED_ :- P; EV.SUC_ :- P.SUC_;
+      P.SUC_.PRED_ :- EV; P.SUC_ :- EV
+   end;
+
+   procedure UNLINK_(EV); ref(EVENT_NOTICE) EV;
+   begin
+      EV.PRED_.SUC_ :- EV.SUC_; EV.SUC_.PRED_ :- EV.PRED_;
+      EV.SUC_ :- EV.PRED_ :- none
+   end;
+
+   procedure hold(T); real T;
+   begin ref(EVENT_NOTICE) EV;
+      EV :- SQS_.SUC_;
+      if T > 0 then EV.EVTIME := EV.EVTIME + T;
+      if EV.SUC_ =/= SQS_ and then EV.SUC_.EVTIME <= EV.EVTIME then
+      begin UNLINK_(EV); SCHEDULE_(EV, false); resume(current) end
+   end;
+
+   procedure passivate;
+   begin ref(EVENT_NOTICE) EV;
+      EV :- SQS_.SUC_;
+      UNLINK_(EV); EV.PROC.EVENT_ :- none;
+      if SQS_.SUC_ == SQS_ then error("passivate: Die Ereignisliste (SQS) ist leer");
+      resume(current)
+   end;
+
+   procedure wait(S); ref(head) S;
+   begin current.into(S); passivate end;
+
+   procedure cancel(X); ref(PROCESS) X;
+      if X == current then passivate
+      else if X =/= none then begin
+         if X.EVENT_ =/= none then begin UNLINK_(X.EVENT_); X.EVENT_ :- none end
+      end;
+
+   procedure ACTIVAT_(REAC, X, CODE, T, Y, PRIO_);
+      boolean REAC, PRIO_; ref(PROCESS) X, Y; integer CODE; real T;
+   begin ref(EVENT_NOTICE) EV; ref(PROCESS) CUR;
+      if X =/= none then begin
+         if not X.TERMINATED_ and (REAC or X.EVENT_ == none) then begin
+            CUR :- current;
+            if CODE = 0 then begin T := time; PRIO_ := true end
+            else if CODE = 2 then T := time + T
+            else if CODE = 1 then begin if T < time then T := time end;
+            if X.EVENT_ =/= none then begin UNLINK_(X.EVENT_); X.EVENT_ :- none end;
+            if CODE = 3 or CODE = 4 then begin
+               if Y =/= none and then Y =/= X and then Y.EVENT_ =/= none then begin
+                  EV :- new EVENT_NOTICE(Y.EVENT_.EVTIME, X);
+                  if CODE = 3 then begin
+                     EV.SUC_ :- Y.EVENT_; EV.PRED_ :- Y.EVENT_.PRED_;
+                     EV.PRED_.SUC_ :- EV; Y.EVENT_.PRED_ :- EV
+                  end else begin
+                     EV.PRED_ :- Y.EVENT_; EV.SUC_ :- Y.EVENT_.SUC_;
+                     EV.SUC_.PRED_ :- EV; Y.EVENT_.SUC_ :- EV
+                  end;
+                  X.EVENT_ :- EV
+               end
+            end else begin
+               EV :- new EVENT_NOTICE(T, X);
+               SCHEDULE_(EV, PRIO_);
+               X.EVENT_ :- EV
+            end;
+            if SQS_.SUC_ == SQS_ then error("activate: Die Ereignisliste (SQS) ist leer");
+            if CUR =/= current then resume(current)
+         end
+      end
+   end;
+
+   procedure accum(A, B, C, D); name A, B, C; real A, B, C, D;
+   begin A := A + C * (time - B); B := time; C := C + D end;
+
+   SQS_ :- new EVENT_NOTICE(0, none);
+   SQS_.SUC_ :- SQS_.PRED_ :- SQS_;
+   main :- new MAIN_PROGRAM;
+   main.EVENT_ :- new EVENT_NOTICE(0, main);
+   SCHEDULE_(main.EVENT_, true);
+   inner;
+end SIMULATION;
+end`;
+
+// ===== Simula-Werkbank: Interpreter =====
+class GotoSig { constructor(lab){ this.lab=lab; } }
+class TermSig { }
+const SWITCH = {t:'switch'};
+
+class TextFrame{ constructor(chars,constant){ this.c=chars; this.constant=constant; this.id=++TextFrame.n; } }
+TextFrame.n=0;
+class TRef{
+  constructor(f,s,l,p){ this.f=f; this.s=s; this.l=l; this.p=p||1; }
+  static notext(){ return new TRef(null,0,0,1); }
+  copyRef(){ return new TRef(this.f,this.s,this.l,this.p); }
+  str(){ if(!this.f||this.l===0) return ''; let r=''; for(let i=0;i<this.l;i++) r+=this.f.c[this.s+i]; return r; }
+}
+function mkText(s,constant){ if(s.length===0) return TRef.notext(); return new TRef(new TextFrame(Array.from(s),!!constant),0,s.length,1); }
+
+class ClassInfo{
+  constructor(decl,env){ this.decl=decl; this.name=decl.name; this.env=env; this.sys=!!decl.sys; this.prefix=null; this.chain=null; this.depth=0; this.virt=null; this.id=++ClassInfo.n; }
+}
+ClassInfo.n=0;
+
+class SObj{
+  constructor(ci,id){ this.cls=ci; this.chain=ci.chain; this.id=id; this.frames=ci.chain.map(()=>new Map()); this.envs=null; this.tokens=ci.chain.map(()=>({}));
+    this.state='neu'; this.gen=null; this.caller=null; this.cont=this; this.innerDone=[]; this.stack=[]; }
+  get label(){ if(this.cls.sys&&this.cls.name==='main_program') return 'main#'+this.id; return (this.cls.pblock?'Block['+dn(this.chain[this.chain.length-2].name)+']':dn(this.cls.name))+'#'+this.id; }
+}
+
+class FileObj{
+  constructor(m,ci,title,width,sysname){ this.m=m; this.cls=ci; this.title=title; this.sys=sysname||null;
+    this.image=width?mkText(' '.repeat(width)):TRef.notext(); this.isOpen=!!width; this.endfile=false;
+    this.lines=null; this.lp=0; this.out=[]; this.id=++m.oid; this.state='Datei'; }
+  get label(){ return this.sys || (this.cls.name+'#'+this.id+'("'+this.title+'")'); }
+}
+
+class Env{ constructor(parent,kind,info){ this.parent=parent; this.kind=kind; this.vars=new Map(); this.info=info||null; } }
+
+class SArr{
+  constructor(bounds,ty,m,line){
+    this.lo=bounds.map(b=>b[0]); this.hi=bounds.map(b=>b[1]); this.ty=ty; let n=1;
+    for(let k=0;k<bounds.length;k++){ const s=this.hi[k]-this.lo[k]+1; if(s<0) m.err('Feldgrenzen '+this.lo[k]+':'+this.hi[k]+' – obere Grenze kleiner als untere',line); n*=s; }
+    if(n>2000000) m.err('Feld zu groß ('+n+' Elemente)',line);
+    this.d=new Array(n); for(let i=0;i<n;i++) this.d[i]=m.defVal(ty);
+  }
+  off(idx,name,m,line){
+    if(idx.length!==this.lo.length) m.err('Feld „'+name+'“ hat '+this.lo.length+' Index(e), angegeben: '+idx.length,line);
+    let o=0;
+    for(let k=0;k<idx.length;k++){ const i=idx[k];
+      if(i<this.lo[k]||i>this.hi[k]) m.err('Feldgrenzen überschritten: '+name+'('+idx.join(',')+') – zulässig ist '+this.lo.map((l,j)=>l+':'+this.hi[j]).join(', '),line);
+      o=o*(this.hi[k]-this.lo[k]+1)+(i-this.lo[k]); }
+    return o;
+  }
+}
+
+function isObj(v){ return v instanceof SObj || v instanceof FileObj; }
+function typeName(v){ if(v===null) return 'none'; if(typeof v==='number') return 'Zahl'; if(typeof v==='boolean') return 'boolean'; if(typeof v==='string') return 'character'; if(v instanceof TRef) return 'text'; if(isObj(v)) return 'Objekt'; return 'Wert'; }
+function charShow(c){ const k=c.charCodeAt(0); return (k<32||k>126&&k<160)?"'!"+k+"!'":"'"+c+"'"; }
+
+let PRELUDE_AST=null;
+function markSys(node){
+  if(!node||typeof node!=='object') return;
+  if(Array.isArray(node)){ node.forEach(markSys); return; }
+  if(node.k==='class') node.sys=true;
+  for(const key in node){ if(key!=='line') { const v=node[key]; if(v&&typeof v==='object'&&!(v instanceof Set)) markSys(v); } }
+}
+
+class Machine{
+  constructor(src,opts){
+    opts=opts||{};
+    this.src=src; this.opts=opts;
+    DISP.clear(); this.prog=parseProgram(src);
+    if(!PRELUDE_AST){ lex.sys=true; PRELUDE_AST=parseProgram(PRELUDE_SRC); lex.sys=false; markSys(PRELUDE_AST); }
+    this.oid=0; this.objs=[]; this.files=[]; this.outLines=[]; this.switchLog=[]; this.steps=0;
+    this.inLines=(opts.input||'').split('\n'); if(this.inLines.length&&this.inLines[this.inLines.length-1]==='') this.inLines.pop();
+    this.inPtr=0; this.inEOF=!!opts.noInteractive; this.waitingInput=false;
+    this.vfs=opts.vfs||{};
+    this.changed=new Set(); this.lastChanged=new Set();
+    this.curLine=1; this.lq=null; this.finished=false; this.error=null; this.depth=0;
+    this.simObj=null; this.timeline=[]; this.qSamples=new Map(); this.lastSimCur=null; this.lastSimT=-1;
+    this.nativeCI={};
+    for(const n of ['infile','outfile','printfile','directfile']){ const ci=new ClassInfo({name:n,k:'class',params:['title'],specs:{title:{ty:{t:'text'},kind:'simple'}},modes:{},virtuals:[],hidden:new Set(),prot:new Set()},null); ci.native=true; ci.chain=[ci]; ci.sys=true; this.nativeCI[n]=ci; }
+    this.sysout=new FileObj(this,this.nativeCI.printfile,'SYSOUT',132,'sysout');
+    this.sysin=new FileObj(this,this.nativeCI.infile,'SYSIN',80,'sysin'); this.sysin.image.p=81; this.oid=0;
+    this.baseEnv=new Env(null,'base',{name:'Systemumgebung'});
+    this.installNatives();
+    this.sysEnv=new Env(this.baseEnv,'block',{name:'Systemklassen'});
+    // Prelude-Klassen deklarieren (ohne Generator nötig, keine Felder)
+    const it=this.declare(PRELUDE_AST.decls,this.sysEnv.vars,this.sysEnv); while(!it.next().done){}
+    this.mainComp={isMain:true,label:'Hauptprogramm',state:'Hauptprogramm',stack:[],cont:null};
+    this.mainComp.cont=this.mainComp;
+    this.mainComp.gen=this.runMain();
+    this.cur=this.mainComp;
+  }
+  err(msg,line){ throw new SimErr(dispMsg(msg), line ?? this.curLine); }
+  defVal(ty){ switch(ty.t){ case 'integer': case 'real': return 0; case 'boolean': return false; case 'character': return '\0'; case 'text': return TRef.notext(); default: return null; } }
+
+  *runMain(){ yield* this.execStmt(this.prog,new Env(this.sysEnv,'block',{name:'Programm'})); }
+
+  // ---------- Treiber ----------
+  run(maxSteps,stopFn){
+    let n=0;
+    if(this.finished) return 'end';
+    try{
+      while(n<maxSteps){
+        if(this.waitingInput) return 'input';
+        const comp=this.cur;
+        const r=comp.gen.next();
+        if(r.done){ this.componentEnded(comp); if(this.finished) return 'end'; continue; }
+        const s=r.value;
+        if(s.t==='step'){
+          n++; this.steps++; this.lastStep=s; this.lastChanged=this.changed; this.changed=new Set();
+          if(stopFn&&stopFn(s)) return 'pause';
+        } else if(s.t==='switch'){ this.afterSwitch(); }
+        else if(s.t==='input'){ return 'input'; }
+      }
+      return 'running';
+    }catch(ex){
+      this.finished=true;
+      if(ex instanceof TermSig) return 'end';
+      if(ex instanceof SimErr){ this.error={msg:ex.message,line:ex.sline||this.curLine}; return 'error'; }
+      if(ex instanceof GotoSig){ this.error={msg:'Sprung zu einer Marke außerhalb ihres Gültigkeitsbereichs',line:this.curLine}; return 'error'; }
+      if(ex instanceof RangeError){ this.error={msg:'Stapelüberlauf (zu tiefe Rekursion?)',line:this.curLine}; return 'error'; }
+      this.error={msg:'Interner Fehler: '+ex.message,line:this.curLine,stack:ex.stack}; return 'error';
+    }
+  }
+  componentEnded(c){
+    if(c.isMain){ this.finished=true; this.flushOut(); return; }
+    const prev=c.state; c.state='beendet'; c.gen=null;
+    if(prev==='angehängt') this.transfer(c.caller,'Ende',c);
+    else this.transfer(this.mainComp.cont,'Ende',c);
+    this.afterSwitch();
+  }
+  transfer(to,op,obj,line){
+    const from=this.cur;
+    this.switchLog.push({from:from.label,to:(op==='detach'||op==='Ende')?to.label:(obj?obj.label:to.label),op,obj:obj?obj.label:'',line:line??this.curLine,step:this.steps,t:this.simTime()});
+    if(this.switchLog.length>3000) this.switchLog.splice(0,1000);
+    this.cur=to;
+  }
+  flushOut(){ const f=this.sysout; if(f.image.p>1||f.image.str().trim()) this.outimage(f); }
+  provideInput(line){ this.inLines.push(line); this.waitingInput=false; }
+  setEOF(){ this.inEOF=true; this.waitingInput=false; }
+
+  // ---------- Simulationsdaten ----------
+  simLevel(){ if(!this.simObj) return -1; return this.simObj.chain.findIndex(c=>c.sys&&c.name==='simulation'); }
+  simTime(){ try{ const l=this.simLevel(); if(l<0) return null; const sqs=this.simObj.frames[l].get('sqs_').v; if(!sqs) return null; const f=sqs.frames[0].get('suc_').v; return f===sqs?null:f.frames[0].get('evtime').v; }catch(e){ return null; } }
+  simCurrent(){ try{ const l=this.simLevel(); const sqs=this.simObj.frames[l].get('sqs_').v; const f=sqs.frames[0].get('suc_').v; return f===sqs?null:f.frames[0].get('proc').v; }catch(e){ return null; } }
+  sqsList(){
+    const res=[]; const l=this.simLevel(); if(l<0) return res;
+    const sqs=this.simObj.frames[l].get('sqs_').v; if(!sqs) return res;
+    let n=sqs.frames[0].get('suc_').v, k=0;
+    while(n&&n!==sqs&&k<500){ res.push({t:n.frames[0].get('evtime').v,proc:n.frames[0].get('proc').v}); n=n.frames[0].get('suc_').v; k++; }
+    return res;
+  }
+  procInfo(o){
+    const l=o.chain.findIndex(c=>c.sys&&c.name==='process'); if(l<0) return null;
+    return {event:o.frames[l].get('event_').v, term:o.frames[l].get('terminated_').v};
+  }
+  isProcess(o){ return o instanceof SObj && o.chain.some(c=>c.sys&&c.name==='process'); }
+  isHead(o){ return o instanceof SObj && o.chain.some(c=>c.sys&&c.name==='head'); }
+  headCard(h){ const l=h.chain.findIndex(c=>c.sys&&c.name==='linkage'); let x=h.frames[l].get('suc_').v,n=0; while(x&&x!==h&&n<100000){ n++; const lx=x.chain.findIndex(c=>c.sys&&c.name==='linkage'); x=x.frames[lx].get('suc_').v; } return n; }
+  findHeads(){
+    // Warteschlangen: head-Objekte, die von Variablen des Simulationsblocks referenziert werden
+    const res=[]; if(!this.simObj) return res;
+    const top=this.simObj.frames[this.simObj.frames.length-1];
+    for(const [nm,b] of top){
+      if(b.k==='var'&&this.isHead(b.v)) res.push({name:nm,h:b.v});
+      if(b.k==='arr'&&b.ty.t==='ref'){ b.a.d.forEach((v,i)=>{ if(this.isHead(v)) res.push({name:nm+'('+(b.a.lo[0]+i)+')',h:v}); }); }
+    }
+    return res;
+  }
+  afterSwitch(){
+    if(!this.simObj) return;
+    const t=this.simTime(); if(t===null) return;
+    const c=this.simCurrent();
+    if(c!==this.lastSimCur||t!==this.lastSimT){
+      this.timeline.push({t,proc:c?c.label:'–',cls:c?c.cls.name:''});
+      if(this.timeline.length>5000) this.timeline.splice(0,1000);
+      this.lastSimCur=c; this.lastSimT=t;
+    }
+    for(const {name,h} of this.findHeads()){
+      let arr=this.qSamples.get(name); if(!arr){ arr=[]; this.qSamples.set(name,arr); }
+      const n=this.headCard(h); const last=arr[arr.length-1];
+      if(last&&last.t===t) last.n=n; else if(!last||last.n!==n) arr.push({t,n});
+      if(arr.length>20000) arr.splice(0,5000);
+    }
+  }
+
+  // ---------- Namensauflösung ----------
+  lookup(env,name){
+    for(let e=env;e;e=e.parent){
+      if(e.kind==='obj'){ const b=this.objLookup(e.info.obj,e.info.level,name,true,env); if(b) return b; }
+      else if(e.kind==='conn'){ const b=this.objLookup(e.info.obj,e.info.level,name,false,env); if(b) return b; }
+      else { const b=e.vars.get(name); if(b) return b; }
+    }
+    return undefined;
+  }
+  objLookup(obj,level,name,internal,env,line){
+    if(obj instanceof FileObj) return this.fileBinding(obj,name);
+    const qc=obj.chain[level];
+    if(qc.virt.has(name)){
+      const vb=obj.cls.virt.get(name);
+      if(!vb.bind) this.err('Virtuelle Prozedur „'+name+'“ hat in Klasse '+obj.cls.name+' keine Implementierung',line);
+      return {k:'proc',decl:vb.bind.decl,env:obj.envs[vb.bind.level],virtual:true};
+    }
+    for(let l=level;l>=0;l--){
+      const b=obj.frames[l].get(name);
+      if(b){
+        const c=obj.chain[l];
+        if(l<level&&c.decl.hidden&&c.decl.hidden.has(name)) continue;
+        if(!internal&&c.decl.prot&&c.decl.prot.has(name)&&!this.protOK(env,c))
+          this.err('Attribut „'+name+'“ ist in Klasse '+c.name+' als protected erklärt und von hier aus nicht zugänglich',line);
+        return b;
+      }
+    }
+    return undefined;
+  }
+  protOK(env,c){
+    for(let e=env;e;e=e.parent) if(e.kind==='obj'&&this.ciInherits(e.info.obj.chain[e.info.level],c)) return true;
+    return false;
+  }
+  ciInherits(a,c){ return a.chain&&a.chain.length>c.depth&&a.chain[c.depth]===c; }
+  inherits(o,ci){
+    if(o instanceof FileObj) return ci.native&&(ci===o.cls||(ci.name==='outfile'&&o.cls.name==='printfile'));
+    if(!(o instanceof SObj)) return false;
+    return o.chain.length>ci.depth&&o.chain[ci.depth]===ci;
+  }
+  classByName(env,name,line){
+    const b=this.lookup(env,name);
+    if(!b||b.k!=='class') this.err('„'+name+'“ ist keine (sichtbare) Klasse',line);
+    return b.ci;
+  }
+  resolveQ(cell){
+    if(cell.qci!==undefined) return cell.qci;
+    if(!cell.ty||cell.ty.t!=='ref'||!cell.ty.q){ cell.qci=null; return null; }
+    const b=this.lookup(cell.qenv,cell.ty.q);
+    if(!b||b.k!=='class') this.err('Qualifikation ref('+cell.ty.q+'): keine Klasse dieses Namens sichtbar',cell.line);
+    cell.qci=b.ci; return b.ci;
+  }
+  qualLevel(o,q){ if(q&&!q.native&&o.chain[q.depth]===q) return q.depth; return o.chain.length-1; }
+  thisObj(env){ for(let e=env;e;e=e.parent) if(e.kind==='obj') return e.info.obj; return null; }
+  deref(b){
+    let k=0;
+    while(b&&b.k==='name'&&b.expr.k==='id'&&!b.expr.args&&k++<100){ const n=this.lookup(b.env,b.expr.name); if(!n) this.err('Unbekannter Bezeichner „'+b.expr.name+'“',b.expr.line); if(n.k==='var') return b; b=n; }
+    return b;
+  }
+
+  // ---------- Deklarationen ----------
+  *declare(decls,map,env,ownerObj){
+    const pending=[];
+    const seen=new Set(map.keys());
+    const dup=(nm,line)=>{ if(seen.has(nm)) this.err('„'+nm+'“ ist in diesem Block doppelt deklariert (Simula unterscheidet nicht zwischen Groß- und Kleinschreibung)',line); seen.add(nm); };
+    for(const d of decls){
+      if(d.k==='var') d.names.forEach(n=>dup(n,d.line));
+      else if(d.k==='arr') d.segs.forEach(sg=>sg.names.forEach(n=>dup(n,d.line)));
+      else dup(d.name,d.line);
+    }
+    for(const d of decls){
+      if(d.k==='proc') map.set(d.name,{k:'proc',decl:d,env});
+      else if(d.k==='class'){ const ci=new ClassInfo(d,env); map.set(d.name,{k:'class',ci}); pending.push(ci); }
+      else if(d.k==='switch') map.set(d.name,{k:'switch',exprs:d.exprs,env,name:d.name});
+    }
+    for(const ci of pending) this.finalizeClass(ci);
+    for(const d of decls){
+      if(d.k==='var'){
+        for(const nm of d.names){
+          const cell={k:'var',ty:d.ty,v:this.defVal(d.ty),qenv:env,line:d.line,name:nm};
+          map.set(nm,cell);
+          if(d.inits[nm]){ this.curLine=d.line; const v=yield* this.ev(d.inits[nm],env); this.assignCell(cell,v,d.ty.t==='ref'||d.ty.t==='text'?':-':':=',d.line); }
+        }
+      } else if(d.k==='arr'){
+        for(const seg of d.segs){
+          const bounds=[];
+          for(const [lo,hi] of seg.bounds){ this.curLine=d.line; bounds.push([yield* this.evInt(lo,env),yield* this.evInt(hi,env)]); }
+          for(const nm of seg.names){ const a=new SArr(bounds,d.ty,this,d.line); a.name=nm; map.set(nm,{k:'arr',ty:d.ty,a,qenv:env,line:d.line,name:nm}); }
+        }
+      }
+    }
+  }
+  finalizeClass(ci,seen){
+    if(ci.chain) return;
+    seen=seen||new Set(); if(seen.has(ci)) this.err('Zyklische Präfixkette bei Klasse '+ci.name,ci.decl.line); seen.add(ci);
+    const d=ci.decl;
+    if(d.prefix){
+      const b=this.lookup(ci.env,d.prefix);
+      if(!b||b.k!=='class') this.err('Präfix „'+d.prefix+'“ von '+(ci.decl.name==='Präfixblock'?'Präfixblock':'Klasse '+ci.name)+' ist keine sichtbare Klasse',d.line);
+      if(b.ci.native) this.err('Systemdateiklassen können nicht als Präfix verwendet werden',d.line);
+      this.finalizeClass(b.ci,seen); ci.prefix=b.ci; ci.chain=b.ci.chain.concat([ci]);
+    } else ci.chain=[ci];
+    ci.depth=ci.chain.length-1;
+    ci.virt=new Map();
+    if(ci.prefix) for(const [k,v] of ci.prefix.virt) ci.virt.set(k,{spec:v.spec,bind:v.bind,level:v.level});
+    for(const v of d.virtuals||[]) if(!ci.virt.has(v.name)) ci.virt.set(v.name,{spec:v,bind:null,level:ci.depth});
+    if(d.body&&d.body.k==='block') for(const pd of d.body.decls) if(pd.k==='proc'&&ci.virt.has(pd.name)) ci.virt.get(pd.name).bind={decl:pd,level:ci.depth};
+  }
+  declareLabels(stmts,map,token){
+    stmts.forEach((st,i)=>{ if(st.labels) for(const l of st.labels) map.set(l,{k:'label',name:l,owner:token,idx:i}); });
+  }
+
+  // ---------- Objekterzeugung ----------
+  *newObj(ci,actuals,env,line){
+    if(ci.native){
+      if(actuals.length!==1) this.err('new '+ci.name+': genau ein Parameter (Dateiname) erwartet',line);
+      const t=yield* this.argVal(actuals[0]);
+      if(!(t instanceof TRef)) this.err('new '+ci.name+': Dateiname muss ein Text sein',line);
+      const f=new FileObj(this,ci,t.str(),0); this.files.push(f); return f;
+    }
+    const obj=new SObj(ci,++this.oid);
+    this.objs.push(obj); if(this.objs.length>20000) this.objs.splice(0,5000);
+    obj.envs=ci.chain.map((c,l)=>new Env(c.env,'obj',{obj,level:l}));
+    const allp=[];
+    ci.chain.forEach((c,l)=>{ for(const p of c.decl.params||[]) allp.push([l,p,c.decl]); });
+    if(actuals.length!==allp.length) this.err('new '+ci.name+': '+allp.length+' Parameter erwartet, '+actuals.length+' angegeben',line);
+    for(let i=0;i<allp.length;i++){
+      const [l,p,d]=allp[i]; const sp=d.specs[p];
+      const mode=d.modes[p];
+      if(mode==='name') this.err('Klassenparameter dürfen nicht als name übergeben werden („'+p+'“)',d.line);
+      if(sp.kind==='proc'||sp.kind==='label'||sp.kind==='switch') this.err('Klassenparameter „'+p+'“: Prozeduren/Marken als Klassenparameter sind nicht erlaubt',d.line);
+      obj.frames[l].set(p,yield* this.bindParam(sp,mode,actuals[i],p,obj.envs[l],line));
+    }
+    for(let l=0;l<ci.chain.length;l++){
+      const body=ci.chain[l].decl.body;
+      if(body&&body.k==='block'){ yield* this.declare(body.decls,obj.frames[l],obj.envs[l],obj); this.declareLabels(body.stmts,obj.frames[l],obj.tokens[l]); }
+    }
+    return obj;
+  }
+  *objBody(obj){ yield* this.runLevel(obj,0); }
+  *runLevel(obj,l){
+    const body=obj.chain[l].decl.body; const env=obj.envs[l];
+    obj.innerDone[l]=false;
+    if(body){ if(body.k==='block') yield* this.execList(body.stmts,env,obj.tokens[l]); else yield* this.execStmt(body,env); }
+    if(!obj.innerDone[l]&&l<obj.chain.length-1){ obj.innerDone[l]=true; yield* this.runLevel(obj,l+1); }
+  }
+
+  // ---------- Parameter ----------
+  actuals(args,env){ return (args||[]).map(e=>({e,env})); }
+  *argVal(a){ if('val' in a) return a.val; return yield* this.ev(a.e,a.env); }
+  *bindParam(sp,mode,act,pname,penv,line){
+    if(mode==='name'){
+      if('val' in act) return {k:'var',ty:sp.ty||{t:'?'},v:act.val,name:pname};
+      return {k:'name',expr:act.e,env:act.env,ty:sp.ty,kind:sp.kind,name:pname,line};
+    }
+    switch(sp.kind){
+      case 'simple': {
+        const v=yield* this.argVal(act);
+        const cell={k:'var',ty:sp.ty,v:this.defVal(sp.ty),qenv:penv,name:pname,line};
+        if(sp.ty.t==='text'){
+          if(!(v instanceof TRef)) this.err('Parameter „'+pname+'“: Text erwartet, '+typeName(v)+' angegeben',line);
+          cell.v= mode==='value' ? mkText(v.str()) : v.copyRef();
+          if(mode==='value') cell.v.p=1;
+        } else if(sp.ty.t==='ref'){
+          if(mode==='value') this.err('ref-Parameter können nicht als value übergeben werden',line);
+          this.assignCell(cell,v,':-',line,'Parameter „'+pname+'“');
+        } else this.assignCell(cell,v,':=',line,'Parameter „'+pname+'“');
+        return cell;
+      }
+      case 'array': {
+        if('val' in act) this.err('Feldparameter erwartet',line);
+        let b= act.e.k==='id'&&!act.e.args ? this.deref(this.lookup(act.env,act.e.name)) : null;
+        if(b&&b.k==='name') b=this.deref(b);
+        if(!b||b.k!=='arr') this.err('Parameter „'+pname+'“: als aktueller Parameter wird ein Feld erwartet',line);
+        if(mode==='value'){ const a=Object.assign(Object.create(SArr.prototype),b.a); a.d=b.a.d.slice(); return {k:'arr',ty:b.ty,a,name:pname}; }
+        return {k:'arr',ty:b.ty,a:b.a,name:pname,qenv:b.qenv,line:b.line};
+      }
+      case 'proc': {
+        if('val' in act||act.e.k!=='id'||act.e.args) this.err('Parameter „'+pname+'“: als aktueller Parameter wird ein Prozedurname erwartet',line);
+        let b=this.deref(this.lookup(act.env,act.e.name));
+        if(b&&b.k==='result') b=b.proc;
+        if(!b||(b.k!=='proc'&&b.k!=='native')) this.err('Parameter „'+pname+'“: „'+act.e.name+'“ ist keine Prozedur',line);
+        return b;
+      }
+      case 'label': case 'switch': {
+        const b= act.e.k==='id'? this.deref(this.lookup(act.env,act.e.name)) : null;
+        if(!b||(b.k!=='label'&&b.k!=='switch')) this.err('Parameter „'+pname+'“: Marke erwartet',line);
+        return b;
+      }
+    }
+  }
+
+  // ---------- Aufrufe ----------
+  *invoke(b,actuals,env,line,name){
+    b=this.deref(b);
+    if(b.k==='result') b=b.proc;
+    if(b.k==='proc') return yield* this.callProc(b,actuals,line);
+    if(b.k==='native') return yield* this.callNative(b,actuals,env,line);
+    this.err('„'+(name||'?')+'“ ist keine Prozedur',line);
+  }
+  *callProc(b,actuals,line){
+    const d=b.decl;
+    if(actuals.length!==d.params.length) this.err('Prozedur „'+d.name+'“: '+d.params.length+' Parameter erwartet, '+actuals.length+' angegeben',line);
+    const env=new Env(b.env,'proc',{decl:d});
+    for(let i=0;i<d.params.length;i++){ const p=d.params[i]; env.vars.set(p,yield* this.bindParam(d.specs[p],d.modes[p],actuals[i],p,b.env,line)); }
+    let res=null;
+    if(d.ty){ res={k:'var',ty:d.ty,v:this.defVal(d.ty),qenv:b.env,name:d.name,line:d.line}; env.vars.set(d.name,{k:'result',proc:b,cell:res}); }
+    const comp=this.cur; comp.stack.push({name:d.name,line});
+    if(++this.depth>800){ this.depth=0; this.err('Rekursionstiefe überschritten (mehr als 800 verschachtelte Aufrufe)',line); }
+    try{ yield* this.execStmt(d.body,env); }
+    finally{ comp.stack.pop(); this.depth--; }
+    if(res){ if(d.ty.t==='ref') this.lq=this.resolveQ(res); return res.v; }
+    return undefined;
+  }
+  *callNative(b,actuals,env,line){
+    if(b.modes!==null&&actuals.length!==b.modes.length) this.err('„'+b.name+'“: '+b.modes.length+' Parameter erwartet, '+actuals.length+' angegeben',line);
+    const args=[];
+    for(let i=0;i<actuals.length;i++){
+      const m=b.modes?b.modes[i]:'v', a=actuals[i];
+      if(m==='v') args.push(yield* this.argVal(a));
+      else if(m==='n'){ if('val' in a) this.err(b.name+': Variable erwartet',line); args.push(yield* this.lval(a.e,a.env)); }
+      else if(m==='a'){ let x= a.e&&a.e.k==='id'&&!a.e.args ? this.deref(this.lookup(a.env,a.e.name)) : null; if(!x||x.k!=='arr') this.err(b.name+': Feld als Parameter erwartet',line); args.push(x); }
+    }
+    this.lq=null;
+    if(b.gen) return yield* b.fn.call(this,args,env,line);
+    return b.fn.call(this,args,env,line);
+  }
+
+  // ---------- Zuweisung ----------
+  conv(v,ty,line,what){
+    const w=what?what+': ':'';
+    switch(ty.t){
+      case 'integer': if(typeof v!=='number') this.err(w+'integer-Wert erwartet, '+typeName(v)+' gefunden',line); return Number.isInteger(v)?v:Math.floor(v+0.5);
+      case 'real': if(typeof v!=='number') this.err(w+'real-Wert erwartet, '+typeName(v)+' gefunden',line); return v;
+      case 'boolean': if(typeof v!=='boolean') this.err(w+'boolean-Wert erwartet, '+typeName(v)+' gefunden',line); return v;
+      case 'character': if(typeof v!=='string') this.err(w+'character-Wert erwartet, '+typeName(v)+' gefunden'+(v instanceof TRef?' (Text ist kein Zeichen; Zeichen in Apostrophen schreiben)':''),line); return v;
+    }
+    return v;
+  }
+  assignCell(cell,v,op,line,what){ this.storeL({get:()=>cell.v,set:x=>{cell.v=x;},ty:cell.ty,cell},v,op,line,what); }
+  storeL(L,v,op,line,what){
+    const ty=L.ty, w=what?what+': ':'';
+    if(op===':='){
+      if(ty.t==='text') this.textAssign(L.get(),v,line);
+      else if(ty.t==='ref') this.err(w+'Referenzen werden mit „:-“ zugewiesen, nicht mit „:=“',line);
+      else L.set(this.conv(v,ty,line,what));
+    } else {
+      if(ty.t==='text'){ if(!(v instanceof TRef)) this.err(w+'Text erwartet, '+typeName(v)+' gefunden',line); L.set(v.copyRef()); }
+      else if(ty.t==='ref'){
+        if(v!==null&&!isObj(v)) this.err(w+'Objektreferenz erwartet, '+typeName(v)+' gefunden',line);
+        const q=L.cell?this.resolveQ(L.cell):null;
+        if(v!==null&&q&&!this.inherits(v,q)) this.err(w+'Objekt '+v.label+' passt nicht zur Qualifikation ref('+q.name+')',line);
+        L.set(v);
+      } else if(ty.t==='?') L.set(v);
+      else this.err(w+'„:-“ ist nur für Referenzen und Texte erlaubt, für '+ty.t+' „:=“ verwenden',line);
+    }
+    if(L.cell) this.changed.add(L.cell);
+  }
+  textAssign(tgt,v,line){
+    if(!(v instanceof TRef)) this.err('Textzuweisung: Text erwartet, '+typeName(v)+' gefunden',line);
+    if(tgt.f&&tgt.f.constant) this.err('Textzuweisung an eine Textkonstante ist nicht erlaubt',line);
+    const s=v.str();
+    if(s.length>tgt.l) this.err('Textzuweisung: Wert hat '+s.length+' Zeichen, Ziel nur '+tgt.l+(tgt.l===0?' (Ziel ist notext – erst mit „:- blanks(n)“ oder „:- copy(…)“ Platz schaffen)':''),line);
+    for(let i=0;i<tgt.l;i++) tgt.f.c[tgt.s+i]= i<s.length? s[i] : ' ';
+  }
+  *lval(e,env){
+    if(e.k==='id'){ const b=this.lookup(env,e.name); if(!b) this.err('Unbekannter Bezeichner „'+e.name+'“',e.line); return yield* this.lvalB(b,e.args,env,e.line,e.name); }
+    if(e.k==='dot'){
+      const [o,q]=yield* this.evRef(e.obj,env);
+      if(o===null) this.err('Zugriff auf Attribut „'+e.name+'“ über none',e.line);
+      if(o instanceof TRef) this.err('Textattribut „'+e.name+'“ kann nicht zugewiesen werden',e.line);
+      if(o instanceof FileObj){ const b=this.fileBinding(o,e.name); if(!b) this.err('Datei hat kein Attribut „'+e.name+'“',e.line); return yield* this.lvalB(b,e.args,env,e.line,e.name); }
+      if(!(o instanceof SObj)) this.err('Punktnotation nur bei Objekten und Texten',e.line);
+      const lvl=this.qualLevel(o,q); const b=this.objLookup(o,lvl,e.name,false,env,e.line);
+      if(!b) this.noAttr(o,lvl,e.name,e.line);
+      return yield* this.lvalB(b,e.args,env,e.line,e.name);
+    }
+    this.err('Hier wird eine Variable erwartet',e.line);
+  }
+  *lvalB(b,args,env,line,name){
+    switch(b.k){
+      case 'var': if(args) this.err('„'+name+'“ ist kein Feld',line); return {get:()=>b.v,set:v=>{b.v=v;},ty:b.ty,cell:b};
+      case 'arr': {
+        if(!args) this.err('Feld „'+name+'“ ohne Index',line);
+        const idx=[]; for(const a of args) idx.push(yield* this.evInt(a,env));
+        const o=b.a.off(idx,name,this,line);
+        return {get:()=>b.a.d[o],set:v=>{b.a.d[o]=v;},ty:b.ty,cell:b};
+      }
+      case 'result': return {get:()=>b.cell.v,set:v=>{b.cell.v=v;},ty:b.cell.ty,cell:b.cell};
+      case 'name': {
+        if(args){ const d=this.deref(b); if(d.k==='name') this.err('name-Parameter „'+name+'“ ist kein Feld',line); return yield* this.lvalB(d,args,env,line,name); }
+        if(b.expr.k!=='id'&&b.expr.k!=='dot') this.err('Zuweisung an name-Parameter „'+name+'“, dessen aktueller Parameter ein Ausdruck ist',line);
+        return yield* this.lval(b.expr,b.env);
+      }
+      case 'proc': case 'native': this.err('Zuweisung an Prozedurnamen „'+name+'“ ist nur in ihrem eigenen Rumpf erlaubt',line);
+    }
+    this.err('„'+name+'“ ist keine Variable',line);
+  }
+  noAttr(o,lvl,name,line){
+    let hint='';
+    if(lvl<o.chain.length-1){ for(let l=lvl+1;l<o.chain.length;l++) if(o.frames[l].has(name)) hint=' – das Objekt ist ein '+o.cls.name+'; mit „qua '+o.chain[l].name+'“ oder inspect qualifizieren'; }
+    this.err('Klasse '+o.chain[lvl].name+' hat kein Attribut „'+name+'“'+hint,line);
+  }
+
+  // ---------- Anweisungen ----------
+  *execList(stmts,env,token){
+    let i=0; const n=stmts.length;
+    while(i<n){
+      if(token){
+        try{ yield* this.execStmt(stmts[i],env); i++; }
+        catch(ex){ if(ex instanceof GotoSig&&ex.lab.owner===token){ i=ex.lab.idx; continue; } throw ex; }
+      } else { yield* this.execStmt(stmts[i],env); i++; }
+    }
+  }
+  step(s,env){ this.curLine=s.line; return {t:'step',s,env}; }
+  *execStmt(s,env){
+    switch(s.k){
+      case 'block': {
+        const hasL=s.stmts.some(x=>x.labels);
+        if(!s.decls.length&&!hasL) return yield* this.execList(s.stmts,env,null);
+        const benv=new Env(env,'block',{line:s.line}); const token={};
+        yield* this.declare(s.decls,benv.vars,benv);
+        this.declareLabels(s.stmts,benv.vars,token);
+        return yield* this.execList(s.stmts,benv,token);
+      }
+      case 'pblock': {
+        yield this.step(s,env);
+        const b=this.lookup(env,s.prefix.name);
+        if(!b||b.k!=='class') this.err('Präfix „'+s.prefix.name+'“ ist keine Klasse',s.line);
+        const ci=new ClassInfo({k:'class',name:'Präfixblock',prefix:s.prefix.name,params:[],specs:{},modes:{},virtuals:[],hidden:new Set(),prot:new Set(),body:s.block,line:s.line},env);
+        ci.pblock=true; this.finalizeClass(ci);
+        const obj=yield* this.newObj(ci,this.actuals(s.prefix.args,env),env,s.line);
+        obj.state='Präfixblock';
+        if(obj.chain.some(c=>c.sys&&c.name==='simulation')) this.simObj=obj;
+        yield* this.runLevel(obj,0);
+        obj.state='beendet';
+        return;
+      }
+      case 'empty': return;
+      case 'assign': {
+        yield this.step(s,env);
+        const Ls=[]; for(const t of s.targets) Ls.push(yield* this.lval(t,env));
+        const v=yield* this.ev(s.val,env);
+        for(let i=Ls.length-1;i>=0;i--) this.storeL(Ls[i],v,s.op,s.line);
+        return;
+      }
+      case 'call': {
+        yield this.step(s,env);
+        const e=s.e;
+        if(e.k==='id'){ const b=this.lookup(env,e.name); if(b&&b.k==='var'&&!e.args) this.err('„'+e.name+'“ ist eine Variable, keine Prozedur',s.line); }
+        yield* this.ev(e,env); return;
+      }
+      case 'if': {
+        yield this.step(s,env);
+        const c=yield* this.evBool(s.cond,env,'if');
+        if(c) yield* this.execStmt(s.th,env); else if(s.el) yield* this.execStmt(s.el,env);
+        return;
+      }
+      case 'while': {
+        for(;;){ yield this.step(s,env); if(!(yield* this.evBool(s.cond,env,'while'))) break; yield* this.execStmt(s.body,env); }
+        return;
+      }
+      case 'for': return yield* this.execFor(s,env);
+      case 'goto': {
+        yield this.step(s,env);
+        const t=s.target; let lab=null;
+        if(t.k==='id'){
+          let b=this.lookup(env,t.name); b=this.deref(b);
+          if(b&&b.k==='switch'&&t.args){ const i=yield* this.evInt(t.args[0],env); if(i<1||i>b.exprs.length) this.err('Switch-Index '+i+' außerhalb 1:'+b.exprs.length,s.line); const x=b.exprs[i-1]; lab=this.deref(this.lookup(b.env,x.name)); }
+          else lab=b;
+        }
+        if(!lab||lab.k!=='label') this.err('goto: Sprungziel ist keine Marke',s.line);
+        throw new GotoSig(lab);
+      }
+      case 'inspect': {
+        yield this.step(s,env);
+        const [o,q]=yield* this.evRef(s.obj,env);
+        if(o!==null&&!isObj(o)) this.err('inspect: Objektreferenz erwartet, '+typeName(o)+' gefunden',s.line);
+        if(o===null){ if(s.otherwise) yield* this.execStmt(s.otherwise,env); return; }
+        if(s.doBody){ const lvl= o instanceof SObj ? this.qualLevel(o,q) : 0; yield* this.execStmt(s.doBody,new Env(env,'conn',{obj:o,level:lvl})); return; }
+        for(const w of s.whens){
+          const ci=this.classByName(env,w.cls,s.line);
+          if(this.inherits(o,ci)){ yield* this.execStmt(w.body,new Env(env,'conn',{obj:o,level:o instanceof SObj?ci.depth:0})); return; }
+        }
+        if(s.otherwise) yield* this.execStmt(s.otherwise,env);
+        return;
+      }
+      case 'activate': {
+        yield this.step(s,env);
+        const b=this.lookup(env,'activat_');
+        if(!b) this.err((s.reac?'reactivate':'activate')+' ist nur innerhalb eines SIMULATION-Blocks erlaubt',s.line);
+        const x=yield* this.ev(s.obj,env);
+        if(x!==null&&!this.isProcess(x)) this.err((s.reac?'reactivate':'activate')+': '+(isObj(x)?'Objekt '+x.label+' ist kein process':typeName(x)+' ist kein Prozess'),s.line);
+        const t= s.time? yield* this.ev(s.time,env) : 0;
+        if(typeof t!=='number') this.err('Zeitangabe muss eine Zahl sein',s.line);
+        const y= s.ref? yield* this.ev(s.ref,env) : null;
+        if(s.ref&&y!==null&&!this.isProcess(y)) this.err('before/after: Bezugsobjekt ist kein Prozess',s.line);
+        yield* this.invoke(b,[{val:s.reac},{val:x},{val:s.code},{val:t},{val:y},{val:s.prior}],env,s.line,'activate');
+        return;
+      }
+      case 'inner': {
+        yield this.step(s,env);
+        let e=env; while(e&&e.kind!=='obj') e=e.parent;
+        if(!e) this.err('inner außerhalb eines Klassenrumpfs',s.line);
+        const {obj,level}=e.info;
+        if(obj.innerDone[level]) this.err('inner wurde in diesem Klassenrumpf bereits ausgeführt',s.line);
+        obj.innerDone[level]=true;
+        if(level<obj.chain.length-1) yield* this.runLevel(obj,level+1);
+        return;
+      }
+    }
+    this.err('Unbekannte Anweisung '+s.k,s.line);
+  }
+  *execFor(s,env){
+    const L=yield* this.lval(s.target,env);
+    const store=v=>this.storeL(L,v,s.op,s.line);
+    for(const el of s.elems){
+      if(el.k==='single'){ yield this.step(s,env); store(yield* this.ev(el.e,env)); yield* this.execStmt(s.body,env); }
+      else if(el.k==='while'){
+        for(;;){ yield this.step(s,env); store(yield* this.ev(el.e,env)); if(!(yield* this.evBool(el.cond,env,'for … while'))) break; yield* this.execStmt(s.body,env); }
+      } else {
+        if(s.op!==':=') this.err('step … until nur für Zahlen',s.line);
+        store(yield* this.evNum(el.init,env));
+        for(;;){
+          yield this.step(s,env);
+          const st=yield* this.evNum(el.step,env), u=yield* this.evNum(el.until,env);
+          if((L.get()-u)*Math.sign(st)>0) break;
+          yield* this.execStmt(s.body,env);
+          const st2=yield* this.evNum(el.step,env);
+          store(L.get()+st2);
+        }
+      }
+    }
+  }
+
+  // ---------- Ausdrücke ----------
+  *evBool(e,env,what){ const v=yield* this.ev(e,env); if(typeof v!=='boolean') this.err((what?what+': ':'')+'Bedingung muss boolean sein, gefunden '+typeName(v),e.line); return v; }
+  *evNum(e,env){ const v=yield* this.ev(e,env); if(typeof v!=='number') this.err('Zahl erwartet, gefunden '+typeName(v)+(typeof v==='string'?' (für Zeichen rank(c) verwenden)':''),e.line); return v; }
+  *evInt(e,env){ const v=yield* this.evNum(e,env); return Number.isInteger(v)?v:Math.floor(v+0.5); }
+  *evRef(e,env){ this.lq=null; const v=yield* this.ev(e,env); const q=(e.k==='id'||e.k==='dot'||e.k==='new'||e.k==='this'||e.k==='qua'||e.k==='cond')?this.lq:null; return [v,q]; }
+  *ev(e,env){
+    switch(e.k){
+      case 'num': return e.v;
+      case 'str': { if(e.v.length===0) return TRef.notext(); if(!e.f) e.f=new TextFrame(Array.from(e.v),true); return new TRef(e.f,0,e.v.length,1); }
+      case 'chr': return e.v;
+      case 'bool': return e.v;
+      case 'none': this.lq=null; return null;
+      case 'notext': return TRef.notext();
+      case 'id': {
+        const b=this.lookup(env,e.name);
+        if(!b) this.err('Unbekannter Bezeichner „'+e.name+'“',e.line);
+        return yield* this.useB(b,e.args,env,e.line,e.name);
+      }
+      case 'dot': {
+        const [o,q]=yield* this.evRef(e.obj,env);
+        if(o instanceof TRef) return yield* this.textMethod(o,e.name,e.args,env,e.line);
+        if(o===null) this.err('Zugriff auf Attribut „'+e.name+'“ über none',e.line);
+        if(o instanceof FileObj){ const b=this.fileBinding(o,e.name); if(!b) this.err('Datei '+o.label+' hat kein Attribut „'+e.name+'“',e.line); return yield* this.useB(b,e.args,env,e.line,e.name); }
+        if(!(o instanceof SObj)) this.err('Punktnotation „.'+e.name+'“ ist nur bei Objekten und Texten möglich, nicht bei '+typeName(o),e.line);
+        const lvl=this.qualLevel(o,q);
+        const b=this.objLookup(o,lvl,e.name,false,env,e.line);
+        if(!b) this.noAttr(o,lvl,e.name,e.line);
+        return yield* this.useB(b,e.args,env,e.line,e.name);
+      }
+      case 'new': {
+        const b=this.lookup(env,e.cls);
+        if(!b||b.k!=='class') this.err('new: „'+e.cls+'“ ist keine Klasse',e.line);
+        const obj=yield* this.newObj(b.ci,this.actuals(e.args,env),env,e.line);
+        if(obj instanceof FileObj){ this.lq=null; return obj; }
+        obj.gen=this.objBody(obj); obj.state='angehängt'; obj.caller=this.cur; obj.cont=obj;
+        this.transfer(obj,'new',obj,e.line);
+        yield SWITCH;
+        this.lq=b.ci; return obj;
+      }
+      case 'this': {
+        const ci=this.classByName(env,e.cls,e.line);
+        for(let x=env;x;x=x.parent) if((x.kind==='obj'||x.kind==='conn')&&x.info.obj instanceof SObj&&this.inherits(x.info.obj,ci)){ this.lq=ci; return x.info.obj; }
+        this.err('this '+e.cls+': nicht innerhalb eines '+e.cls+'-Objekts',e.line);
+      }
+      case 'qua': {
+        const v=yield* this.ev(e.e,env);
+        const ci=this.classByName(env,e.cls,e.line);
+        if(v!==null){
+          if(!isObj(v)) this.err('qua: Objektreferenz erwartet, '+typeName(v)+' gefunden',e.line);
+          if(!this.inherits(v,ci)) this.err('qua: Objekt '+v.label+' ist keine Instanz von '+ci.name+' (falscher qua-Typ)',e.line);
+        }
+        this.lq=ci; return v;
+      }
+      case 'cond': { const c=yield* this.evBool(e.c,env,'if-Ausdruck'); return yield* this.ev(c?e.a:e.b,env); }
+      case 'is': case 'in': {
+        const v=yield* this.ev(e.e,env); const ci=this.classByName(env,e.cls,e.line);
+        if(v===null) return false;
+        if(!isObj(v)) this.err(e.k+': Objektreferenz erwartet, '+typeName(v)+' gefunden',e.line);
+        return e.k==='is' ? v.cls===ci : this.inherits(v,ci);
+      }
+      case 'un': {
+        const a=yield* this.ev(e.a,env);
+        if(e.op==='not'){ if(typeof a!=='boolean') this.err('not verlangt boolean',e.line); return !a; }
+        if(typeof a!=='number') this.err('Vorzeichen '+e.op+' verlangt eine Zahl'+(typeof a==='string'?' (für Zeichen rank(c))':''),e.line);
+        return e.op==='-'?-a:a;
+      }
+      case 'bin': return yield* this.evBin(e,env);
+    }
+    this.err('Unbekannter Ausdruck',e.line);
+  }
+  *useB(b,args,env,line,name){
+    switch(b.k){
+      case 'var': if(args) this.err('„'+name+'“ ist weder Feld noch Prozedur',line); if(b.ty.t==='ref') this.lq=this.resolveQ(b); return b.v;
+      case 'arr': {
+        if(!args) return b;
+        const idx=[]; for(const a of args) idx.push(yield* this.evInt(a,env));
+        const o=b.a.off(idx,name,this,line);
+        if(b.ty.t==='ref') this.lq=this.resolveQ(b);
+        return b.a.d[o];
+      }
+      case 'proc': case 'native': return yield* this.invoke(b,this.actuals(args,env),env,line,name);
+      case 'result': return yield* this.invoke(b.proc,this.actuals(args,env),env,line,name);
+      case 'name': {
+        if(args){ const d=this.deref(b); if(d.k==='name') this.err('name-Parameter „'+name+'“ ist weder Feld noch Prozedur',line); return yield* this.useB(d,args,env,line,name); }
+        if(b.kind==='array'||b.kind==='proc'){ const d=this.deref(b); if(d.k!=='name') return yield* this.useB(d,null,env,line,name); }
+        const v=yield* this.ev(b.expr,b.env);
+        if(b.ty&&b.kind==='simple'&&b.ty.t!=='text'&&b.ty.t!=='ref') return this.conv(v,b.ty,line,'name-Parameter „'+name+'“');
+        return v;
+      }
+      case 'class': this.err('„'+name+'“ ist eine Klasse – Objekte entstehen mit „new '+name+'“',line);
+      case 'label': case 'switch': return b;
+    }
+    this.err('„'+name+'“ kann hier nicht verwendet werden',line);
+  }
+  *evBin(e,env){
+    const op=e.op;
+    if(op==='andthen'){ if(!(yield* this.evBool(e.a,env,'and then'))) return false; return yield* this.evBool(e.b,env,'and then'); }
+    if(op==='orelse'){ if(yield* this.evBool(e.a,env,'or else')) return true; return yield* this.evBool(e.b,env,'or else'); }
+    const a=yield* this.ev(e.a,env), b=yield* this.ev(e.b,env);
+    const num=()=>{ if(typeof a!=='number'||typeof b!=='number') this.err('Operator '+op+' verlangt Zahlen, gefunden '+typeName(a)+' und '+typeName(b)+((typeof a==='string'||typeof b==='string')?' (für Zeichen rank(c) verwenden)':'')+((a instanceof TRef||b instanceof TRef)&&op==='+'?' (Texte werden mit & verkettet)':''),e.line); };
+    const bool=()=>{ if(typeof a!=='boolean'||typeof b!=='boolean') this.err('Operator '+op+' verlangt boolean-Werte',e.line); };
+    switch(op){
+      case '+': num(); return a+b;
+      case '-': num(); return a-b;
+      case '*': num(); return a*b;
+      case '/': num(); if(b===0) this.err('Division durch Null',e.line); return a/b;
+      case '//': num(); if(!Number.isInteger(a)||!Number.isInteger(b)) this.err('// (ganzzahlige Division) verlangt integer-Werte',e.line); if(b===0) this.err('Division durch Null',e.line); return Math.trunc(a/b);
+      case '**': { num(); if(a===0&&b<=0) this.err('0 ** '+b+' ist nicht definiert',e.line); if(a<0&&!Number.isInteger(b)) this.err('Negative Basis mit gebrochenem Exponenten',e.line); return Math.pow(a,b); }
+      case '&': {
+        const ta= typeof a==='string'?a:(a instanceof TRef?a.str():null), tb= typeof b==='string'?b:(b instanceof TRef?b.str():null);
+        if(ta===null||tb===null) this.err('& verkettet Texte, gefunden '+typeName(a)+' und '+typeName(b),e.line);
+        return mkText(ta+tb);
+      }
+      case 'and': bool(); return a&&b;
+      case 'or': bool(); return a||b;
+      case 'imp': bool(); return !a||b;
+      case 'eqv': bool(); return a===b;
+      case '==': case '=/=': {
+        let r;
+        if(a instanceof TRef||b instanceof TRef){ if(!(a instanceof TRef&&b instanceof TRef)) this.err(op+' zwischen Text und '+typeName(a instanceof TRef?b:a),e.line);
+          r=(a.l===0&&b.l===0)||(a.f===b.f&&a.s===b.s&&a.l===b.l); }
+        else { if(!(a===null||isObj(a))||!(b===null||isObj(b))) this.err(op+' vergleicht Referenzen; für Werte = bzw. <> verwenden',e.line); r=a===b; }
+        return op==='=='?r:!r;
+      }
+    }
+    // Vergleiche
+    let x=a,y=b;
+    if(typeof a==='number'&&typeof b==='number'){}
+    else if(typeof a==='string'&&typeof b==='string'){ x=a.charCodeAt(0); y=b.charCodeAt(0); }
+    else if(a instanceof TRef&&b instanceof TRef){ x=a.str(); y=b.str(); }
+    else if(typeof a==='boolean'&&typeof b==='boolean'){ if(op!=='='&&op!=='<>') this.err('boolean-Werte nur mit = und <> vergleichbar',e.line); }
+    else if(isObj(a)||isObj(b)||a===null||b===null) this.err('Referenzen werden mit == und =/= verglichen, nicht mit '+op,e.line);
+    else this.err('Vergleich '+op+' zwischen '+typeName(a)+' und '+typeName(b)+' nicht möglich',e.line);
+    switch(op){ case '=': return x===y; case '<>': return x!==y; case '<': return x<y; case '<=': return x<=y; case '>': return x>y; case '>=': return x>=y; }
+  }
+}
+
+// ===== Simula-Werkbank: Standardprozeduren, Texte, Ein-/Ausgabe, Koroutinen =====
+const STATE_DE={attached:'angehängt',detached:'losgelöst',resumed:'fortgesetzt',terminated:'beendet'};
+
+function fmtInt(i){ return String(Math.round(i)); }
+function fmtFix(r,n){ n=Math.max(0,Math.round(n)); let s=r.toFixed(n); if(/^-0(\.0*)?$/.test(s)) s=s.slice(1); return s; }
+function fmtReal(r,n){
+  n=Math.max(1,Math.round(n));
+  if(!isFinite(r)) return String(r);
+  let s=r.toExponential(n-1); const m=/^(-?[\d.]+)e([+-])(\d+)$/.exec(s);
+  return m[1]+'&'+m[2]+m[3].padStart(3,'0');
+}
+function fmtFrac(i,n){
+  i=Math.round(i); n=Math.max(0,Math.round(n)); const neg=i<0; let d=String(Math.abs(i)).padStart(n+1,'0');
+  const ip=d.slice(0,d.length-n), fp=d.slice(d.length-n);
+  const g=ip.replace(/\B(?=(\d{3})+(?!\d))/g,' ');
+  const fg=fp.replace(/(\d{3})(?=\d)/g,'$1 ');
+  return (neg?'-':'')+g+(n>0?'.'+fg:'');
+}
+function fitField(s,w){ if(w===0) return s; const aw=Math.abs(w); if(s.length>aw) return '*'.repeat(aw); return w>0? s.padStart(aw,' ') : s.padEnd(aw,' '); }
+
+Object.assign(Machine.prototype,{
+  nat(name,modes,fn,gen){ this.baseEnv.vars.set(name,{k:'native',name,modes,fn,gen:!!gen}); },
+  installNatives(){
+    const M=this;
+    const num=(v,nm)=>{ if(typeof v!=='number') M.err(nm+': Zahl erwartet, '+typeName(v)+' gefunden'); return v; };
+    const txt=(v,nm)=>{ if(!(v instanceof TRef)) M.err(nm+': Text erwartet, '+typeName(v)+' gefunden'); return v; };
+    const chr=(v,nm)=>{ if(typeof v!=='string') M.err(nm+': Zeichen erwartet, '+typeName(v)+' gefunden'); return v; };
+    const int=v=>Number.isInteger(v)?v:Math.floor(v+0.5);
+    // Mathematik
+    this.nat('abs','v',([x])=>Math.abs(num(x,'abs')));
+    this.nat('sign','v',([x])=>Math.sign(num(x,'sign')));
+    this.nat('sqrt','v',([x])=>{ num(x,'sqrt'); if(x<0) M.err('sqrt einer negativen Zahl ('+x+')'); return Math.sqrt(x); });
+    for(const f of ['sin','cos','tan','sinh','cosh','tanh','exp']) this.nat(f,'v',([x])=>Math[f](num(x,f)));
+    this.nat('arctan','v',([x])=>Math.atan(num(x,'arctan')));
+    this.nat('arcsin','v',([x])=>Math.asin(num(x,'arcsin')));
+    this.nat('arccos','v',([x])=>Math.acos(num(x,'arccos')));
+    this.nat('ln','v',([x])=>{ num(x,'ln'); if(x<=0) M.err('ln einer Zahl ≤ 0 ('+x+')'); return Math.log(x); });
+    this.nat('log10','v',([x])=>{ num(x,'log10'); if(x<=0) M.err('log10 einer Zahl ≤ 0'); return Math.log10(x); });
+    this.nat('entier','v',([x])=>Math.floor(num(x,'entier')));
+    this.nat('mod','vv',([i,j])=>{ i=int(num(i,'mod')); j=int(num(j,'mod')); if(j===0) M.err('mod(i,0)'); return i-Math.floor(i/j)*j; });
+    this.nat('rem','vv',([i,j])=>{ i=int(num(i,'rem')); j=int(num(j,'rem')); if(j===0) M.err('rem(i,0)'); return i-Math.trunc(i/j)*j; });
+    const mm=(nm,f)=>this.nat(nm,null,(a)=>{ if(a.length<2) M.err(nm+': mindestens zwei Parameter'); if(a.every(x=>typeof x==='number')) return f(...a);
+      if(a.every(x=>typeof x==='string')) return String.fromCharCode(f(...a.map(c=>c.charCodeAt(0))));
+      if(a.every(x=>x instanceof TRef)){ const s=a.map(t=>t.str()); let k=0; s.forEach((v,i)=>{ if(nm==='max'?v>s[k]:v<s[k]) k=i; }); return a[k]; }
+      M.err(nm+': Parameter müssen gleichen Typs sein'); });
+    mm('max',Math.max); mm('min',Math.min);
+    this.nat('addepsilon','v',([x])=>x+Number.EPSILON*Math.max(1,Math.abs(x)));
+    this.nat('subepsilon','v',([x])=>x-Number.EPSILON*Math.max(1,Math.abs(x)));
+    // Zeichen
+    this.nat('char','v',([i])=>{ i=int(num(i,'char')); if(i<0||i>255) M.err('char('+i+'): Code außerhalb 0..255'); return String.fromCharCode(i); });
+    this.nat('isochar','v',([i])=>{ i=int(num(i,'isochar')); if(i<0||i>255) M.err('isochar('+i+'): außerhalb 0..255'); return String.fromCharCode(i); });
+    this.nat('rank','v',([c])=>chr(c,'rank').charCodeAt(0));
+    this.nat('isorank','v',([c])=>chr(c,'isorank').charCodeAt(0));
+    this.nat('digit','v',([c])=>/[0-9]/.test(chr(c,'digit')));
+    this.nat('letter','v',([c])=>/[A-Za-zÄÖÜäöüß]/.test(chr(c,'letter')));
+    // Texte
+    this.nat('copy','v',([t])=>mkText(txt(t,'copy').str()));
+    this.nat('blanks','v',([n])=>{ n=int(num(n,'blanks')); if(n<0) M.err('blanks('+n+'): negative Länge'); if(n>100000) M.err('blanks: zu lang'); return mkText(' '.repeat(n)); });
+    const caseT=(nm,f)=>this.nat(nm,'v',([t])=>{ txt(t,nm); if(t.f&&t.f.constant) M.err(nm+': Textkonstante kann nicht verändert werden'); for(let i=0;i<t.l;i++) t.f.c[t.s+i]=f(t.f.c[t.s+i]); t.p=1; return t; });
+    caseT('upcase',c=>c.toUpperCase()); caseT('lowcase',c=>c.toLowerCase());
+    // Felder
+    this.nat('lowerbound','av',([a,i])=>{ i=int(num(i,'lowerbound')); if(i<1||i>a.a.lo.length) M.err('lowerbound: Dimension '+i+' gibt es nicht'); return a.a.lo[i-1]; });
+    this.nat('upperbound','av',([a,i])=>{ i=int(num(i,'upperbound')); if(i<1||i>a.a.hi.length) M.err('upperbound: Dimension '+i+' gibt es nicht'); return a.a.hi[i-1]; });
+    // Zufallszahlen: multiplikativer Kongruenzgenerator 5^13 mod 2^31 über die Saat-Variable U
+    const rnd=(L,nm)=>{ let u=L.get(); if(typeof u!=='number') M.err(nm+': Saat muss eine integer-Variable sein'); u=Math.abs(int(u))%2147483648; if(u%2===0) u=u+1; u=Math.imul(u,1220703125)&0x7fffffff; L.set(u); if(L.cell) M.changed.add(L.cell); return u/2147483648; };
+    this.nat('uniform','vvn',([a,b,U])=>{ num(a,'uniform'); num(b,'uniform'); if(b<a) M.err('uniform(a,b,U): b < a'); return a+(b-a)*rnd(U,'uniform'); });
+    this.nat('randint','vvn',([a,b,U])=>{ a=int(num(a,'randint')); b=int(num(b,'randint')); if(b<a) M.err('randint(a,b,U): b < a'); return a+Math.floor(rnd(U,'randint')*(b-a+1)); });
+    this.nat('negexp','vn',([a,U])=>{ num(a,'negexp'); if(a<=0) M.err('negexp(a,U): Rate a muss > 0 sein'); return -Math.log(rnd(U,'negexp'))/a; });
+    this.nat('normal','vvn',([m,s,U])=>{ num(m,'normal'); num(s,'normal'); const u1=rnd(U,'normal'), u2=rnd(U,'normal'); return m+s*Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2); });
+    this.nat('draw','vn',([a,U])=>rnd(U,'draw')<num(a,'draw'));
+    this.nat('poisson','vn',([a,U])=>{ num(a,'poisson'); const L=Math.exp(-a); let k=0,p=1; do{ k++; p*=rnd(U,'poisson'); }while(p>L&&k<100000); return k-1; });
+    this.nat('erlang','vvn',([a,b,U])=>{ num(a,'erlang'); num(b,'erlang'); if(a<=0||b<=0) M.err('erlang: a und b müssen > 0 sein'); const k=Math.ceil(b); let s=0; for(let i=0;i<k;i++) s+=-Math.log(rnd(U,'erlang')); return s*a/k; });
+    this.nat('discrete','an',([A,U])=>{ const r=rnd(U,'discrete'); const d=A.a.d; for(let i=0;i<d.length;i++) if(r<d[i]) return A.a.lo[0]+i; return A.a.hi[0]+1; });
+    this.nat('linear','aan',([A,B,U])=>{ const r=rnd(U,'linear'); const a=A.a.d,b=B.a.d; for(let i=1;i<a.length;i++) if(r<=a[i]) return b[i-1]+(b[i]-b[i-1])*(r-a[i-1])/((a[i]-a[i-1])||1); return b[b.length-1]; });
+    this.nat('histo','aavv',([A,B,c,d])=>{ const b=B.a.d; let i=0; while(i<b.length&&c>b[i]) i++; A.a.d[i]+=d; M.changed.add(A); });
+    // Sonstiges
+    this.nat('sourceline','',()=>M.curLine);
+    this.nat('cputime','',()=>performance.now()/1000);
+    this.nat('clocktime','',()=>{ const d=new Date(); return d.getHours()*3600+d.getMinutes()*60+d.getSeconds(); });
+    this.nat('datetime','',()=>mkText(new Date().toISOString().replace('T',' ').slice(0,19)));
+    this.nat('error','v',([t])=>M.err('error: '+(t instanceof TRef?t.str():String(t))));
+    this.nat('terminate_program','',()=>{ M.flushOut(); throw new TermSig(); });
+    this.nat('maxint','',()=>2147483647);
+    this.nat('minint','',()=>-2147483648);
+    this.nat('maxreal','',()=>Number.MAX_VALUE);
+    this.nat('minreal','',()=>-Number.MAX_VALUE);
+    this.nat('simulaid','',()=>mkText('SIMULA-WERKBANK!!!JavaScript!!!2026'));
+    // Koroutinen
+    this.nat('detach','',function*(a,env,line){ yield* M.opDetach(env,line); },true);
+    this.nat('resume','v',function*([x],env,line){ yield* M.opResume(x,line); },true);
+    this.nat('call','v',function*([x],env,line){ yield* M.opCall(x,line); },true);
+    // Dateien
+    this.baseEnv.vars.set('sysout',{k:'native',name:'sysout',modes:'',fn:()=>{ M.lq=null; return M.sysout; }});
+    this.baseEnv.vars.set('sysin',{k:'native',name:'sysin',modes:'',fn:()=>{ M.lq=null; return M.sysin; }});
+    for(const n of ['infile','outfile','printfile','directfile']) this.baseEnv.vars.set(n,{k:'class',ci:this.nativeCI[n]});
+    // Unqualifizierte Ein-/Ausgabe: wie "inspect sysin do inspect sysout do <Programm>"
+    const outNames=['outtext','outint','outfix','outreal','outfrac','outchar','outimage','outrecord','breakoutimage','eject','setpos','pos','more','length','image','line','spacing','linesperpage'];
+    const inNames=['inimage','inint','inreal','intext','inchar','infrac','lastitem','endfile','inrecord'];
+    for(const n of outNames){ const b=this.fileBinding(this.sysout,n); if(b) this.baseEnv.vars.set(n,b); }
+    for(const n of inNames){ const b=this.fileBinding(this.sysin,n); if(b) this.baseEnv.vars.set(n,b); }
+  },
+
+  // ---------- Koroutinen ----------
+  *opDetach(env,line){
+    const o=this.thisObj(env);
+    if(!o) this.err('detach außerhalb eines Klassenrumpfs',line);
+    if(o.cls.pblock) this.err('detach in einem Präfixblock wird nicht unterstützt',line);
+    if(o.state==='angehängt'){ o.state='losgelöst'; o.cont=this.cur; this.transfer(o.caller,'detach',o,line); yield SWITCH; }
+    else if(o.state==='fortgesetzt'){ o.state='losgelöst'; o.cont=this.cur; this.transfer(this.mainComp.cont,'detach',o,line); yield SWITCH; }
+    else this.err('detach: Objekt '+o.label+' ist weder angehängt noch fortgesetzt (Zustand: '+o.state+')',line);
+  },
+  *opResume(x,line){
+    if(x===null) this.err('resume(none)',line);
+    if(!(x instanceof SObj)) this.err('resume: Objektreferenz erwartet, '+typeName(x)+' gefunden',line);
+    if(x.state==='fortgesetzt') return;
+    if(x.state!=='losgelöst') this.err('resume: Objekt '+x.label+' ist nicht losgelöst (Zustand: '+x.state+')',line);
+    let h=this.cur; while(h.state==='angehängt') h=h.caller;
+    h.cont=this.cur; if(!h.isMain) h.state='losgelöst';
+    x.state='fortgesetzt';
+    this.transfer(x.cont,'resume',x,line);
+    yield SWITCH;
+  },
+  *opCall(x,line){
+    if(x===null) this.err('call(none)',line);
+    if(!(x instanceof SObj)) this.err('call: Objektreferenz erwartet',line);
+    if(x.state!=='losgelöst') this.err('call: Objekt '+x.label+' ist nicht losgelöst (Zustand: '+x.state+')',line);
+    x.state='angehängt'; x.caller=this.cur;
+    this.transfer(x.cont,'call',x,line);
+    yield SWITCH;
+  },
+
+  // ---------- Textattribute ----------
+  *textMethod(t,name,args,env,line){
+    const M=this; const a=[]; for(const e of args||[]) a.push(yield* this.ev(e,env));
+    const need=n=>{ if(a.length!==n) M.err('Text.'+name+': '+n+' Parameter erwartet, '+a.length+' angegeben',line); };
+    const n0=()=>need(0);
+    const nonconst=()=>{ if(t.f&&t.f.constant) M.err('Text.'+name+': Textkonstante kann nicht verändert werden',line); if(!t.f) M.err('Text.'+name+': notext kann nicht beschrieben werden',line); };
+    const put=s=>{ nonconst(); if(s.length>t.l) s='*'.repeat(t.l); s=s.padStart(t.l,' '); for(let i=0;i<t.l;i++) t.f.c[t.s+i]=s[i]; t.p=t.l+1; };
+    const deedit=(re,nm)=>{
+      let s=t.str(), i=0; while(i<s.length&&s[i]===' ') i++;
+      const m=re.exec(s.slice(i)); if(!m) M.err('Text.'+nm+': kein gültiges Zahlenfeld in „'+s+'“',line);
+      t.p=i+m[0].length+1; return m[0];
+    };
+    switch(name){
+      case 'length': n0(); return t.l;
+      case 'pos': n0(); return t.p;
+      case 'more': n0(); return t.p<=t.l;
+      case 'start': n0(); return t.s+1;
+      case 'constant': n0(); return !t.f||t.f.constant;
+      case 'setpos': need(1); { const i=Math.round(a[0]); t.p=(i>=1&&i<=t.l+1)?i:t.l+1; } return;
+      case 'getchar': n0(); if(t.p>t.l) M.err('getchar: Position '+t.p+' liegt hinter dem Textende (Länge '+t.l+')',line); return t.f.c[t.s+(t.p++)-1];
+      case 'putchar': need(1); if(typeof a[0]!=='string') M.err('putchar: Zeichen erwartet',line); nonconst(); if(t.p>t.l) M.err('putchar: Position '+t.p+' liegt hinter dem Textende (Länge '+t.l+')',line); t.f.c[t.s+(t.p++)-1]=a[0]; return;
+      case 'sub': { need(2); const i=Math.round(a[0]), n=Math.round(a[1]); if(i<1||n<0||i+n-1>t.l) M.err('sub('+i+','+n+'): Bereich liegt außerhalb des Textes (Länge '+t.l+')',line); if(n===0) return TRef.notext(); return new TRef(t.f,t.s+i-1,n,1); }
+      case 'main': n0(); if(!t.f) return TRef.notext(); return new TRef(t.f,0,t.f.c.length,1);
+      case 'strip': { n0(); let n=t.l; while(n>0&&t.f.c[t.s+n-1]===' ') n--; if(n===0) return TRef.notext(); return new TRef(t.f,t.s,n,1); }
+      case 'getint': n0(); return parseInt(deedit(/^[+-]?\s*\d+/,'getint').replace(/\s/g,''),10);
+      case 'getreal': n0(); return parseFloat(deedit(/^[+-]?\s*(\d+(\.\d*)?|\.\d+)(&&?[+-]?\d+)?/,'getreal').replace(/\s/g,'').replace(/&&?/,'e'));
+      case 'getfrac': n0(); return parseInt(deedit(/^[+-]?[\d ]*\.?[\d ]*\d/,'getfrac').replace(/[\s.]/g,''),10);
+      case 'putint': need(1); put(fmtInt(a[0])); return;
+      case 'putfix': need(2); put(fmtFix(a[0],a[1])); return;
+      case 'putreal': need(2); put(fmtReal(a[0],a[1])); return;
+      case 'putfrac': need(2); put(fmtFrac(a[0],a[1])); return;
+    }
+    this.err('Texte haben kein Attribut „'+name+'“',line);
+  },
+
+  // ---------- Dateien ----------
+  fileBinding(f,name){
+    const M=this; const isOut=f.cls.name!=='infile';
+    const N=(modes,fn,gen)=>({k:'native',name,modes,fn,gen:!!gen});
+    switch(name){
+      case 'image': return {k:'var',ty:{t:'text'},get v(){ return f.image; },set v(x){ f.image=x; },name:'image'};
+      case 'open': return N('v',([t])=>{ if(f.isOpen) return false; if(!(t instanceof TRef)) M.err('open: Text als Bildpuffer erwartet'); f.image=t; f.isOpen=true; f.endfile=false; if(!isOut){ const src=M.vfs[f.title]; if(src===undefined){ f.isOpen=false; return false; } f.lines=src.split('\n'); if(f.lines.length&&f.lines[f.lines.length-1]==='') f.lines.pop(); f.lp=0; t.p=t.l+1; } else { f.out=[]; t.p=1; } return true; });
+      case 'close': return N('',()=>{ if(!f.isOpen) return false; if(isOut){ if(f.image.p>1) M.outimage(f); M.vfs[f.title]=f.out.join('\n')+(f.out.length?'\n':''); if(M.onFile) M.onFile(f.title); } f.isOpen=false; f.image=TRef.notext(); return true; });
+      case 'isopen': return N('',()=>f.isOpen);
+      case 'setpos': return N('v',([i])=>{ i=Math.round(i); f.image.p=(i>=1&&i<=f.image.l+1)?i:f.image.l+1; });
+      case 'pos': return N('',()=>f.image.p);
+      case 'more': return N('',()=>f.image.p<=f.image.l);
+      case 'length': return N('',()=>f.image.l);
+    }
+    if(isOut) switch(name){
+      case 'outimage': case 'breakoutimage': case 'outrecord': return N('',()=>{ M.outimage(f); });
+      case 'outtext': return N('v',([t])=>{ if(typeof t==='string') t=mkText(t); if(!(t instanceof TRef)) M.err('outtext: Text erwartet, '+typeName(t)+' gefunden'); M.outStr(f,t.str()); });
+      case 'outchar': return N('v',([c])=>{ if(typeof c!=='string') M.err('outchar: Zeichen erwartet, '+typeName(c)+' gefunden'); M.outStr(f,c); });
+      case 'outint': return N('vv',([i,w])=>{ if(typeof i!=='number') M.err('outint: Zahl erwartet, '+typeName(i)+' gefunden'); M.outField(f,fmtInt(i),Math.round(w)); });
+      case 'outfix': return N('vvv',([r,n,w])=>{ if(typeof r!=='number') M.err('outfix: Zahl erwartet, '+typeName(r)+' gefunden'); M.outField(f,fmtFix(r,n),Math.round(w)); });
+      case 'outreal': return N('vvv',([r,n,w])=>{ if(typeof r!=='number') M.err('outreal: Zahl erwartet'); M.outField(f,fmtReal(r,n),Math.round(w)); });
+      case 'outfrac': return N('vvv',([i,n,w])=>{ if(typeof i!=='number') M.err('outfrac: Zahl erwartet'); M.outField(f,fmtFrac(i,n),Math.round(w)); });
+      case 'eject': return N('v',([n])=>{ if(f.image.p>1) M.outimage(f); if(f===M.sysout) M.emit('\f'); else f.out.push(''); });
+      case 'line': return N('',()=>M.outLines.length+1);
+      case 'spacing': return N('v',()=>{});
+      case 'linesperpage': return N('v',()=>{});
+    }
+    else switch(name){
+      case 'inimage': case 'inrecord': return N('',function*(){ yield* M.inimage(f); },true);
+      case 'endfile': return N('',()=>f.endfile);
+      case 'inchar': return N('',function*(){ return yield* M.inchar(f); },true);
+      case 'lastitem': return N('',function*(){ return yield* M.lastitem(f); },true);
+      case 'inint': return N('',function*(){ const s=yield* M.inItem(f,'inint'); if(!/^[+-]?\d+$/.test(s)) M.err('inint: „'+s+'“ ist keine ganze Zahl'); return parseInt(s,10); },true);
+      case 'inreal': return N('',function*(){ const s=yield* M.inItem(f,'inreal'); const v=Number(s.replace(/&&?/,'e')); if(!/^[+-]?(\d+\.?\d*|\.\d+)(&&?[+-]?\d+)?$/.test(s)||isNaN(v)) M.err('inreal: „'+s+'“ ist keine Zahl'); return v; },true);
+      case 'infrac': return N('',function*(){ const s=yield* M.inItem(f,'infrac'); return parseInt(s.replace(/[.\s]/g,''),10); },true);
+      case 'intext': return N('v',function*([w]){ w=Math.round(w); const t=mkText(' '.repeat(Math.max(0,w))); for(let i=0;i<w;i++) t.f.c[i]=yield* M.inchar(f); return t; },true);
+    }
+    return undefined;
+  },
+  emit(line){ this.outLines.push(line); if(this.onOut) this.onOut(line); },
+  outimage(f){
+    if(!f.isOpen) this.err('outimage: Datei '+f.label+' ist nicht geöffnet');
+    const line=f.image.str().replace(/\s+$/,'');
+    if(f===this.sysout) this.emit(line); else f.out.push(line);
+    for(let i=0;i<f.image.l;i++) f.image.f.c[f.image.s+i]=' ';
+    f.image.p=1;
+  },
+  outStr(f,s){
+    if(!f.isOpen) this.err('Ausgabe auf nicht geöffnete Datei '+f.label);
+    const im=f.image;
+    if(im.p+s.length-1>im.l&&im.p>1) this.outimage(f);
+    while(s.length>im.l){ this.outStr(f,s.slice(0,im.l)); this.outimage(f); s=s.slice(im.l); }
+    for(let i=0;i<s.length;i++) im.f.c[im.s+im.p-1+i]=s[i];
+    im.p+=s.length;
+  },
+  outField(f,s,w){ this.outStr(f,fitField(s,w)); },
+  *readLine(f){
+    if(f!==this.sysin){ if(f.lp>=f.lines.length) return null; return f.lines[f.lp++]; }
+    while(this.inPtr>=this.inLines.length){
+      if(this.inEOF) return null;
+      this.waitingInput=true; yield {t:'input'};
+    }
+    const l=this.inLines[this.inPtr++];
+    if(this.onEcho) this.onEcho(l);
+    return l;
+  },
+  *inimage(f){
+    if(!f.isOpen) this.err('inimage: Datei '+f.label+' ist nicht geöffnet');
+    if(f.endfile) this.err('inimage: Dateiende von '+f.label+' war bereits erreicht');
+    const line=yield* this.readLine(f);
+    const im=f.image;
+    if(line===null){ f.endfile=true; for(let i=0;i<im.l;i++) im.f.c[im.s+i]= i===0?'\x19':' '; im.p=1; return; }
+    const s=line.replace(/\r$/,'');
+    if(s.length>im.l) this.err('inimage: Zeile hat '+s.length+' Zeichen, Bildpuffer nur '+im.l);
+    for(let i=0;i<im.l;i++) im.f.c[im.s+i]= i<s.length?s[i]:' ';
+    im.p=1;
+  },
+  *inchar(f){
+    const im=f.image;
+    if(im.p>im.l){ yield* this.inimage(f); }
+    if(f.endfile) this.err('inchar: Dateiende erreicht');
+    return im.f.c[im.s+(im.p++)-1];
+  },
+  *lastitem(f){
+    for(;;){
+      const im=f.image;
+      while(im.p<=im.l&&(im.f.c[im.s+im.p-1]===' '||im.f.c[im.s+im.p-1]==='\t')) im.p++;
+      if(f.endfile) return true;
+      if(im.p<=im.l) return false;
+      yield* this.inimage(f);
+    }
+  },
+  *inItem(f,nm){
+    if(yield* this.lastitem(f)) this.err(nm+': Dateiende erreicht, keine weiteren Daten');
+    const im=f.image; let s='';
+    while(im.p<=im.l&&im.f.c[im.s+im.p-1]!==' '){ s+=im.f.c[im.s+im.p-1]; im.p++; }
+    return s;
+  }
+});
+
+// ===== Simula-Werkbank: Beispielprogramme =====
+const EXAMPLES = [
+{ id:'hallo', title:'01 Hallo Welt', input:'', src:
+`! Das kleinste Simula-Programm: ein Block mit einer Ausgabe;
+begin
+   outtext("Hallo Welt aus Simula 67!");
+   outimage;
+   outtext("Heute rechnen wir: 6 * 7 = ");
+   outint(6 * 7, 0);
+   outimage
+end`},
+
+{ id:'punkt', title:'02 Klasse Punkt', input:'', src:
+`! Eine erste Klasse: Attribute, Rumpf als Initialisierung,
+  Prozeduren als Methoden, Referenzen mit :- und ==;
+begin
+   class Punkt(x, y); real x, y;
+   begin
+      real procedure abstand(p); ref(Punkt) p;
+         abstand := sqrt((x - p.x)**2 + (y - p.y)**2);
+      procedure verschiebe(dx, dy); real dx, dy;
+      begin x := x + dx; y := y + dy end;
+      procedure zeige;
+      begin
+         outtext("("); outfix(x, 1, 0); outtext(", ");
+         outfix(y, 1, 0); outtext(")")
+      end;
+      ! Klassenrumpf: laeuft einmal bei new;
+      Anzahl := Anzahl + 1
+   end Punkt;
+
+   integer Anzahl;
+   ref(Punkt) a, b, c;
+
+   a :- new Punkt(0, 0);
+   b :- new Punkt(3, 4);
+   outtext("a = "); a.zeige; outtext("  b = "); b.zeige; outimage;
+   outtext("Abstand a-b: "); outfix(a.abstand(b), 3, 0); outimage;
+
+   c :- b;                          ! c zeigt auf dasselbe Objekt;
+   c.verschiebe(1, 1);
+   outtext("nach c.verschiebe(1,1) ist b = "); b.zeige; outimage;
+   if c == b then outtext("c == b: dieselbe Referenz") ; outimage;
+   c :- new Punkt(4, 5);
+   if c =/= b then outtext("c =/= b: anderes Objekt, gleiche Werte"); outimage;
+   outtext("Erzeugte Punkte: "); outint(Anzahl, 0); outimage
+end`},
+
+{ id:'figuren', title:'03 Figuren (virtual)', input:'', src:
+`! Figurenhierarchie mit virtueller Flaechenberechnung,
+  inner, qua, in, is und inspect;
+begin
+   class Figur;
+      virtual: real procedure flaeche;
+   begin
+      text bez;
+      procedure beschreibe;
+      begin
+         outtext(bez); setpos(14);
+         outtext("Flaeche ="); outfix(flaeche, 3, 10); outimage
+      end;
+      inner;
+      Gesamt := Gesamt + flaeche
+   end Figur;
+
+   Figur class Kreis(r); real r;
+   begin
+      real procedure flaeche; flaeche := 3.14159265 * r ** 2;
+      bez :- "Kreis";
+   end Kreis;
+
+   Figur class Rechteck(a, b); real a, b;
+   begin
+      real procedure flaeche; flaeche := a * b;
+      bez :- "Rechteck";
+   end Rechteck;
+
+   Rechteck class Quadrat;
+   begin
+      bez :- "Quadrat";
+   end Quadrat;
+
+   real Gesamt;
+   integer i;
+   ref(Figur) array f(1:4);
+
+   f(1) :- new Kreis(1);
+   f(2) :- new Rechteck(2, 3);
+   f(3) :- new Quadrat(2, 2);
+   f(4) :- new Kreis(0.5);
+
+   for i := 1 step 1 until 4 do f(i).beschreibe;
+   outtext("Summe aller Flaechen:"); outfix(Gesamt, 3, 10); outimage;
+   outimage;
+
+   for i := 1 step 1 until 4 do
+   begin
+      outtext(f(i).bez); setpos(14);
+      if f(i) in Rechteck then outtext("ist ein Rechteck ");
+      if f(i) is Rechteck then outtext("(genau Rechteck) ");
+      inspect f(i)
+         when Quadrat  do begin outtext("Kante "); outfix(a, 1, 0) end
+         when Rechteck do begin outtext("Seiten "); outfix(a, 1, 0);
+                                outtext(" x "); outfix(b, 1, 0) end
+         when Kreis    do begin outtext("Radius "); outfix(r, 2, 0) end;
+      outimage
+   end;
+   outtext("Radius von f(4) per qua: ");
+   outfix(f(4) qua Kreis.r, 2, 0); outimage
+end`},
+
+{ id:'konto', title:'04 Bankkonto', input:'', src:
+`! Bankkonto mit Unterklassen, inner, protected und virtual;
+begin
+   class Konto(nummer, inhaber); integer nummer; text inhaber;
+      protected saldo;
+      virtual: boolean procedure darfAbheben;
+   begin
+      real saldo;
+      boolean procedure darfAbheben(betrag); real betrag;
+         darfAbheben := saldo >= betrag;
+      procedure einzahlen(betrag); real betrag;
+         saldo := saldo + betrag;
+      procedure abheben(betrag); real betrag;
+         if darfAbheben(betrag) then saldo := saldo - betrag
+         else begin
+            outtext("  ! Abhebung abgelehnt: "); outfix(betrag, 2, 0);
+            outtext(" von "); outtext(inhaber); outimage
+         end;
+      real procedure stand; stand := saldo;
+      procedure auszug;
+      begin
+         outint(nummer, 6); outtext("  "); outtext(inhaber);
+         setpos(30); outfix(saldo, 2, 12); outimage
+      end;
+      outtext("Konto "); outint(nummer, 0); outtext(" eroeffnet");
+      inner;
+      outimage
+   end Konto;
+
+   Konto class Sparkonto(zins); real zins;
+   begin
+      procedure verzinsen; einzahlen(stand * zins / 100);
+      outtext(" als Sparkonto ("); outfix(zins, 1, 0); outtext(" %)")
+   end;
+
+   Konto class Girokonto(dispo); real dispo;
+   begin
+      boolean procedure darfAbheben(betrag); real betrag;
+         darfAbheben := stand + dispo >= betrag;
+      outtext(" als Girokonto (Dispo "); outfix(dispo, 0, 0); outtext(")")
+   end;
+
+   ref(Konto) k1, k2;
+   k1 :- new Sparkonto(1001, "Ada Lovelace", 2.5);
+   k2 :- new Girokonto(1002, "Kristen Nygaard", 500);
+   k1.einzahlen(1000); k2.einzahlen(100);
+   k1.abheben(1200);           ! wird abgelehnt;
+   k2.abheben(450);            ! erlaubt dank Dispo;
+   k1 qua Sparkonto.verzinsen;
+   outimage;
+   outtext("Nummer Inhaber"); setpos(36); outtext("Saldo"); outimage;
+   k1.auszug; k2.auszug;
+   ! Ein Zugriff k1.saldo von hier aus wuerde einen Fehler melden (protected);
+end`},
+
+{ id:'liste', title:'05 Liste mit SIMSET', input:'', src:
+`! Verkettete Liste mit der Systemklasse SIMSET:
+  head = Listenkopf, link = Element;
+SIMSET begin
+   link class Person(nm, alter); text nm; integer alter;
+   begin
+      procedure zeige;
+      begin outtext(nm); setpos(12); outint(alter, 3); outimage end;
+   end;
+
+   ref(head) Liste;
+   ref(Person) p, q;
+
+   procedure einsortieren(neu); ref(Person) neu;
+   begin ref(Person) x;
+      ! nach Alter sortiert einfuegen;
+      x :- Liste.first;
+      while x =/= none and then x.alter <= neu.alter do x :- x.suc;
+      if x == none then neu.into(Liste) else neu.precede(x)
+   end;
+
+   procedure drucke;
+   begin
+      p :- Liste.first;
+      while p =/= none do begin p.zeige; p :- p.suc end;
+      outtext("Anzahl: "); outint(Liste.cardinal, 0); outimage; outimage
+   end;
+
+   Liste :- new head;
+   einsortieren(new Person("Kristen", 75));
+   einsortieren(new Person("Ole-Johan", 71));
+   einsortieren(new Person("Bjarne", 32));
+   einsortieren(new Person("Alan", 33));
+   drucke;
+
+   q :- Liste.last;
+   outtext("Letzter: "); outtext(q.nm); outimage;
+   outtext("Vorgaenger des Letzten: "); outtext(q.pred qua Person.nm); outimage;
+   Liste.first.out;               ! das erste Element entfernen;
+   outtext("Nach out:"); outimage;
+   drucke;
+   Liste.clear;
+   if Liste.empty then outtext("Liste ist leer");
+   outimage
+end`},
+
+{ id:'generator', title:'06 Generator (detach/call)', input:'', src:
+`! Ein Objekt mit eigenem Ablauf: ein Fibonacci-Generator.
+  detach gibt die Kontrolle zurueck, call holt sie wieder;
+begin
+   class Fibonacci;
+   begin
+      integer a, b, t, wert;
+      a := 0; b := 1;
+      detach;                    ! zurueck zum Erzeuger;
+      while true do
+      begin
+         wert := a;
+         t := a + b; a := b; b := t;
+         detach                  ! zurueck zu dem, der call ausfuehrte;
+      end
+   end Fibonacci;
+
+   class Zaehler(start, schritt); integer start, schritt;
+   begin
+      integer n;
+      n := start;
+      detach;
+      while true do begin n := n + schritt; detach end
+   end;
+
+   ref(Fibonacci) f;
+   ref(Zaehler) z;
+   integer i;
+
+   f :- new Fibonacci;
+   z :- new Zaehler(100, 7);
+   outtext("Fibonacci: ");
+   for i := 1 step 1 until 12 do begin call(f); outint(f.wert, 5) end;
+   outimage;
+   outtext("Zaehler:   ");
+   for i := 1 step 1 until 6 do begin outint(z.n, 5); call(z) end;
+   outimage;
+   ! resume statt call: Kontrolle kehrt beim detach ins Hauptprogramm zurueck;
+   resume(f); outtext("nach resume(f): "); outint(f.wert, 0); outimage
+end`},
+
+{ id:'koroutinen', title:'07 Erzeuger/Verbraucher', input:'', src:
+`! Zwei Koroutinen reichen sich mit resume die Kontrolle weiter.
+  Keines der Objekte ist "Hauptprogramm" des anderen;
+begin
+   integer Puffer;
+   boolean Fertig;
+   ref(Erzeuger) E;
+   ref(Verbraucher) V;
+
+   class Erzeuger;
+   begin
+      integer i;
+      detach;
+      for i := 1 step 1 until 6 do
+      begin
+         Puffer := i * i;
+         outtext("Erzeuger:    lege "); outint(Puffer, 3);
+         outtext(" in den Puffer"); outimage;
+         resume(V)
+      end;
+      Fertig := true;
+      resume(V)
+   end;
+
+   class Verbraucher;
+   begin
+      integer Summe;
+      detach;
+      while not Fertig do
+      begin
+         outtext("Verbraucher: nehme"); outint(Puffer, 3);
+         Summe := Summe + Puffer;
+         outtext(", Summe ="); outint(Summe, 4); outimage;
+         resume(E)
+      end;
+      outtext("Verbraucher: fertig, Summe der Quadrate = ");
+      outint(Summe, 0); outimage
+   end;          ! Ende eines fortgesetzten Objekts: zurueck ins Hauptprogramm;
+
+   E :- new Erzeuger;
+   V :- new Verbraucher;
+   resume(E);
+   outtext("Hauptprogramm: wieder am Zug, Ende."); outimage
+end`},
+
+{ id:'waschanlage', title:'08 Autowaschanlage', input:'', src:
+`! Die Autowaschanlage, frei nach G. Birtwistle u. a.: "SIMULA BEGIN".
+  Autos kommen im Mittel alle 11 Minuten, eine Waesche dauert 10 Minuten.
+  Freie Waescher warten im Pausenraum (TeaRoom);
+Simulation begin
+   ref(head) TeaRoom, WaitingLine;
+   integer U, NoOfCars, NoOfWashers, i;
+   real ThroughTime, SimPeriod, MaxWait;
+
+   process class Car;
+   begin
+      real ArrivalTime, Wait;
+      ArrivalTime := time;
+      into(WaitingLine);
+      if not TeaRoom.empty then activate TeaRoom.first;
+      passivate;                         ! warten, bis gewaschen;
+      NoOfCars := NoOfCars + 1;
+      ThroughTime := ThroughTime + time - ArrivalTime;
+   end Car;
+
+   process class CarWasher;
+   begin
+      ref(Car) Served;
+      while true do
+      begin
+         out;                            ! raus aus dem Pausenraum;
+         while not WaitingLine.empty do
+         begin
+            Served :- WaitingLine.first;
+            Served.out;
+            if time - Served.ArrivalTime > MaxWait then
+               MaxWait := time - Served.ArrivalTime;
+            hold(10);                    ! waschen;
+            activate Served;             ! Auto faehrt weg;
+         end;
+         wait(TeaRoom);                  ! Pause, bis ein Auto kommt;
+      end
+   end CarWasher;
+
+   process class CarGen;
+   begin
+      while time < SimPeriod do
+      begin
+         activate new Car;
+         hold(negexp(1/11, U));
+      end
+   end CarGen;
+
+   U := 5;                               ! fester Startwert;
+   NoOfWashers := 1;
+   SimPeriod := 200;
+   TeaRoom :- new head; WaitingLine :- new head;
+   for i := 1 step 1 until NoOfWashers do new CarWasher.into(TeaRoom);
+   activate new CarGen;
+   hold(SimPeriod + 100);               ! Nachlauf: letzte Autos fertig waschen;
+
+   outtext("Autowaschanlage mit "); outint(NoOfWashers, 0);
+   outtext(" Waescher(n), Simulationsdauer "); outfix(SimPeriod, 0, 0); outimage;
+   outtext("Gewaschene Autos:        "); outint(NoOfCars, 6); outimage;
+   outtext("Mittlere Durchlaufzeit:  "); outfix(ThroughTime / NoOfCars, 2, 6);
+   outtext(" min"); outimage;
+   outtext("Laengste Wartezeit:      "); outfix(MaxWait, 2, 6);
+   outtext(" min"); outimage;
+end`},
+
+{ id:'kasse', title:'09 Supermarktkasse', input:'', src:
+`! Warteschlange an zwei Supermarktkassen mit Auswertung der Wartezeiten.
+  Kunden kommen im Mittel alle 1,5 Minuten (negexp),
+  Bedienzeit normalverteilt um 2,5 Minuten. Feste Startwerte:
+  U fuer die Ankuenfte, V fuer die Bedienzeiten;
+Simulation begin
+   ref(head) Schlange, Frei;
+   integer U, V, Kunden, i, Kassen;
+   real Warte, MaxWarte, Ende;
+   real LenInt, LenZeit, LenAkt;       ! fuer accum: mittlere Laenge;
+   integer array Hist(0:7);            ! Wartezeiten in 1-Minuten-Klassen;
+
+   process class Kunde;
+   begin real Ankunft, Beginn, w;
+      Ankunft := time;
+      into(Schlange);
+      accum(LenInt, LenZeit, LenAkt, 1);
+      if not Frei.empty then activate Frei.first;   ! freie Kasse wecken;
+      passivate;                          ! warten bis bezahlt;
+      w := Beginn - Ankunft;              ! Wartezeit bis zur Bedienung;
+      Warte := Warte + w; Kunden := Kunden + 1;
+      if w > MaxWarte then MaxWarte := w;
+      Hist(if w >= 7 then 7 else entier(w)) := Hist(if w >= 7 then 7 else entier(w)) + 1;
+   end;
+
+   process class Kasse(Nr); integer Nr;
+   begin ref(Kunde) k; real dauer;
+      while true do
+      begin
+         out;                             ! raus aus der Liste "Frei";
+         while not Schlange.empty do
+         begin
+            k :- Schlange.first; k.out;
+            accum(LenInt, LenZeit, LenAkt, -1);
+            k.Beginn := time;               ! Wartezeit endet jetzt;
+            dauer := normal(2.5, 0.5, V);
+            if dauer < 0.5 then dauer := 0.5;
+            hold(dauer);                    ! kassieren;
+            activate k                      ! Kunde verlaesst den Laden;
+         end;
+         wait(Frei)                       ! nichts zu tun: warten;
+      end
+   end;
+
+   process class Eingang;
+   begin
+      while time < Ende do
+      begin
+         activate new Kunde;
+         hold(negexp(1/1.5, U))
+      end
+   end;
+
+   U := 1986; V := 67; Kassen := 2; Ende := 120;
+   Schlange :- new head; Frei :- new head;
+   for i := 1 step 1 until Kassen do new Kasse(i).into(Frei);
+   activate new Eingang;
+   hold(Ende + 30);
+
+   accum(LenInt, LenZeit, LenAkt, 0);
+   outtext("Supermarkt: "); outint(Kassen, 0); outtext(" Kassen, ");
+   outfix(Ende, 0, 0); outtext(" Minuten Oeffnungszeit"); outimage;
+   outtext("Bediente Kunden:          "); outint(Kunden, 6); outimage;
+   outtext("Mittlere Wartezeit:       "); outfix(Warte / Kunden, 2, 6);
+   outtext(" min"); outimage;
+   outtext("Laengste Wartezeit:       "); outfix(MaxWarte, 2, 6);
+   outtext(" min"); outimage;
+   outtext("Mittlere Schlangenlaenge: "); outfix(LenInt / time, 2, 6); outimage;
+   outimage;
+   outtext("Verteilung der Wartezeiten:"); outimage;
+   for i := 0 step 1 until 7 do
+   begin integer j;
+      if i < 7 then begin outint(i, 2); outtext("-"); outint(i+1, 0);
+                          outtext(" min ") end
+      else outtext(" >=7 min ");
+      outint(Hist(i), 4); outtext(" ");
+      for j := 1 step 1 until Hist(i) do outchar('*');
+      outimage
+   end
+end`},
+
+{ id:'texte', title:'10 Texte und Eingabe', input:'Simula   1967\n3 14 15 92\n', src:
+`! Texte: Referenzen, Unterstrings, Positionen, Edit-Funktionen.
+  Dazu Eingabe ueber sysin (Feld "Eingabe (sysin)");
+begin
+   text t, w, s;
+   integer i, n, summe;
+   character c;
+
+   t :- copy("Simula ist die erste objektorientierte Sprache");
+   outtext(t); outimage;
+   outtext("Laenge: "); outint(t.length, 0); outimage;
+   w :- t.sub(1, 6);                 ! Unterstring teilt den Speicher;
+   w := "SIMULA";                     ! aendert auch t;
+   outtext(t); outimage;
+
+   ! Zeichen zaehlen mit getchar und Position;
+   t.setpos(1); n := 0;
+   while t.more do begin c := t.getchar; if c = 'e' then n := n + 1 end;
+   outtext("Anzahl 'e': "); outint(n, 0); outimage;
+
+   ! Edit-Funktionen schreiben Zahlen in Texte;
+   s :- blanks(10);
+   s.putfix(3.14159, 3); outtext("["); outtext(s); outtext("]"); outimage;
+   s.putint(1967);       outtext("["); outtext(s); outtext("]"); outimage;
+   outtext("zurueckgelesen + 1 = "); outint(s.getint + 1, 0); outimage;
+   outtext("strip: ["); outtext(s.strip); outtext("]"); outimage;
+   outtext(upcase(copy("klein")) & " & " & "Verkettung"); outimage;
+
+   ! Eingabe: erste Zeile als Text, dann Zahlen bis Dateiende;
+   inimage;
+   outtext("Gelesen: "); outtext(sysin.image.strip); outimage;
+   inimage;                          ! naechste Zeile holen;
+   summe := 0; i := 0;
+   while not lastitem do begin summe := summe + inint; i := i + 1 end;
+   outtext("Summe der "); outint(i, 0); outtext(" Zahlen: ");
+   outint(summe, 0); outimage
+end`},
+
+{ id:'praefix', title:'11 Präfixblock', input:'', src:
+`! Eine eigene Klasse als Umgebung eines ganzen Programmteils.
+  So funktionieren auch SIMSET und SIMULATION;
+begin
+   class Geometrie;
+   begin
+      real pi;
+      real procedure grad(r); real r; grad := r * 180 / pi;
+      procedure linie(n); integer n;
+      begin integer i; for i := 1 step 1 until n do outchar('-'); outimage end;
+      pi := 4 * arctan(1);
+      outtext("Geometrie-Umgebung bereit"); outimage;
+      inner;
+      linie(30);
+      outtext("Geometrie-Umgebung beendet"); outimage
+   end;
+
+   Geometrie begin
+      ! hier sind pi, grad und linie direkt sichtbar;
+      linie(30);
+      outtext("pi = "); outfix(pi, 6, 0); outimage;
+      outtext("1 Radiant = "); outfix(grad(1), 4, 0); outtext(" Grad"); outimage
+   end
+end`}
+];
+if(typeof module!=='undefined') module.exports=EXAMPLES;
+
+// ===== Simula-Werkbank: Hilfe =====
+const HELP_HTML = `
+<h3>Bedienung</h3>
+<p><b>Start</b> übersetzt und führt aus; <b>Schritt</b> führt genau eine Anweisung aus (die Zeile wird gelb markiert, im Reiter <i>Trace</i> stehen Aufrufstapel und sichtbare Variablen, geänderte gelb). <b>Nächstes Ereignis</b> läuft bis die Simulationsuhr springt oder ein anderer Prozess aktiv wird. Ein Klick in die Zeilennummern setzt einen <b>Haltepunkt</b>. Das Tempo regelt, wie oft die Ansichten während des Laufs aufgefrischt werden. Programme werden als <code>.sim</code>-Datei geladen und gespeichert; im Browser selbst wird nichts gespeichert.</p>
+
+<h3>Programmaufbau</h3>
+<pre>begin
+   integer i; real x; text t; ref(Punkt) p;   ! Deklarationen zuerst;
+   ...Anweisungen, getrennt durch ;...
+end</pre>
+<p>Groß-/Kleinschreibung ist egal (<code>Punkt</code> = <code>PUNKT</code>), daher dürfen Klasse und Variable nicht gleich heißen. Kommentare: <code>! … ;</code>, <code>comment … ;</code> und alles nach <code>end</code> bis zum nächsten <code>;</code>, <code>end</code>, <code>else</code>, <code>when</code> oder <code>otherwise</code>.</p>
+
+<h3>Schlüsselwörter</h3>
+<table>
+<tr><td class="m">integer real boolean character text ref(K)</td><td>Typen (<code>short integer</code>, <code>long real</code> werden angenommen)</td></tr>
+<tr><td class="m">array  procedure  class  switch</td><td>Felder <code>integer array A(1:10)</code>, Prozeduren, Klassen</td></tr>
+<tr><td class="m">value  name</td><td>Übergabearten; Standard ist Wert für einfache Typen, Referenz für text, ref, Felder</td></tr>
+<tr><td class="m">:=  :-</td><td>Wertzuweisung / Referenzzuweisung</td></tr>
+<tr><td class="m">=  &lt;&gt;  &lt;  &lt;=  &gt;  &gt;=</td><td>Wertvergleich (auch für Texte und Zeichen)</td></tr>
+<tr><td class="m">==  =/=</td><td>Referenzvergleich (Objekte, Texte)</td></tr>
+<tr><td class="m">+ - * / // **  &amp;</td><td>Arithmetik (<code>//</code> ganzzahlig), Textverkettung</td></tr>
+<tr><td class="m">and or not imp eqv  and then  or else</td><td>Logik, <code>and then</code>/<code>or else</code> verkürzt ausgewertet</td></tr>
+<tr><td class="m">if then else · while do · for step until · goto</td><td>Steuerung wie ALGOL 60</td></tr>
+<tr><td class="m">new K(…)  this K  none  notext</td><td>Objekt erzeugen, eigenes Objekt, leere Referenz, leerer Text</td></tr>
+<tr><td class="m">x qua K · x in K · x is K</td><td>Umqualifizieren, „ist K oder Unterklasse“, „ist genau K“</td></tr>
+<tr><td class="m">inspect x when K do … otherwise …</td><td>Typprüfung und Verbindung (Attribute direkt sichtbar)</td></tr>
+<tr><td class="m">P class K; virtual: … ; hidden protected a;</td><td>Unterklasse mit Präfix P, virtuelle Spezifikation, Sichtbarkeit</td></tr>
+<tr><td class="m">inner</td><td>Stelle im Klassenrumpf, an der die Rümpfe der Unterklassen laufen</td></tr>
+<tr><td class="m">K begin … end</td><td>Präfixblock: Block mit Klasse K als Umgebung (<code>Simulation begin</code>)</td></tr>
+<tr><td class="m">detach  resume(x)  call(x)</td><td>Koroutinen (siehe unten)</td></tr>
+<tr><td class="m">activate reactivate … at/delay [prior] · before/after</td><td>Prozesse planen (nur in SIMULATION)</td></tr>
+</table>
+
+<h3>Koroutinen</h3>
+<table>
+<tr><td class="m">new K</td><td>Objekt ist <i>angehängt</i> und läuft sofort bis zum ersten <code>detach</code> oder Rumpfende.</td></tr>
+<tr><td class="m">detach</td><td>angehängtes Objekt: Kontrolle zurück an den, der <code>new</code>/<code>call</code> ausführte; fortgesetztes Objekt: zurück ans Hauptprogramm. Danach <i>losgelöst</i>.</td></tr>
+<tr><td class="m">resume(x)</td><td>x (losgelöst) wird <i>fortgesetzt</i> und läuft dort weiter, wo es zuletzt stand; der Aufrufer wird losgelöst.</td></tr>
+<tr><td class="m">call(x)</td><td>x (losgelöst) wird wieder angehängt; sein nächstes <code>detach</code> kehrt zum Aufrufer zurück.</td></tr>
+<tr><td class="m">Rumpfende</td><td>Objekt ist <i>beendet</i>; angehängt → zurück zum Aufrufer, fortgesetzt → zum Hauptprogramm.</td></tr>
+</table>
+
+<h3>Texte</h3>
+<p>Ein Text ist eine Referenz auf einen Zeichenbereich mit eigener Position <code>pos</code>. <code>t :- copy("abc")</code> legt Speicher an, <code>t :- blanks(10)</code> zehn Leerzeichen, <code>t := "xy"</code> kopiert Zeichen hinein (Rest wird mit Leerzeichen gefüllt; zu lang = Fehler).</p>
+<table>
+<tr><td class="m">t.length t.pos t.more t.setpos(i)</td><td>Länge, Position (1…length+1), noch Zeichen da?, Position setzen</td></tr>
+<tr><td class="m">t.getchar t.putchar(c)</td><td>Zeichen lesen/schreiben an pos, pos+1</td></tr>
+<tr><td class="m">t.sub(i,n) t.main t.start t.strip</td><td>Unterstring (teilt Speicher!), ganzer Rahmen, Startindex, ohne Endleerzeichen</td></tr>
+<tr><td class="m">t.getint t.getreal t.getfrac</td><td>Zahl aus dem Text lesen (De-Editieren)</td></tr>
+<tr><td class="m">t.putint(i) t.putfix(r,n) t.putreal(r,n) t.putfrac(i,n)</td><td>Zahl rechtsbündig in den Text schreiben (Editieren)</td></tr>
+<tr><td class="m">copy blanks upcase lowcase &amp; t.constant</td><td>Standardprozeduren und Verkettung</td></tr>
+<tr><td class="m">char(i) rank(c) digit(c) letter(c)</td><td>Zeichen ↔ Code, Klassifikation</td></tr>
+</table>
+
+<h3>Ein- und Ausgabe</h3>
+<p>Das Programm läuft wie in <code>inspect sysin do inspect sysout do …</code>: Die Prozeduren beider Dateien sind direkt sichtbar. Ausgabe sammelt sich in einer Druckzeile (<code>image</code>, 132 Zeichen) und wird mit <code>outimage</code> gedruckt.</p>
+<table>
+<tr><td class="m">outtext(t) outchar(c) outint(i,w) outfix(r,n,w) outreal(r,n,w) outfrac(i,n,w)</td><td>w = Feldbreite (0 = so schmal wie möglich, negativ = linksbündig); zu kleines Feld = Sternchen</td></tr>
+<tr><td class="m">outimage  eject(n)  setpos(i)  pos</td><td>Zeile drucken, Seitenvorschub, Druckposition</td></tr>
+<tr><td class="m">inimage inint inreal intext(n) inchar lastitem endfile</td><td>Lesen aus sysin (80 Zeichen je Karte); <code>lastitem</code> ist true, wenn nur noch Leerraum bis Dateiende folgt</td></tr>
+<tr><td class="m">sysin.image  sysout.image</td><td>die Puffer als Text</td></tr>
+<tr><td class="m">new outfile("n") · open(blanks(80)) · close</td><td>virtuelle Dateien (Reiter <i>Dateien</i>); entsprechend <code>new infile("n")</code></td></tr>
+</table>
+
+<h3>SIMSET</h3>
+<table>
+<tr><td class="m">head</td><td>Listenkopf: <code>first last empty cardinal clear</code></td></tr>
+<tr><td class="m">link</td><td>Element: <code>suc pred out into(h) precede(x) follow(x)</code></td></tr>
+<tr><td class="m">linkage</td><td>gemeinsamer Präfix von head und link (<code>suc pred prev</code>)</td></tr>
+</table>
+
+<h3>SIMULATION (Präfix SIMSET)</h3>
+<table>
+<tr><td class="m">process</td><td>Unterklasse von link; Attribute <code>idle terminated evtime nextev</code></td></tr>
+<tr><td class="m">time current main</td><td>Simulationsuhr, aktiver Prozess, Hauptprogramm als Prozess</td></tr>
+<tr><td class="m">hold(t)</td><td>aktiver Prozess pausiert t Zeiteinheiten</td></tr>
+<tr><td class="m">passivate · wait(h) · cancel(x)</td><td>aus der Ereignisliste nehmen; wait hängt sich vorher in h ein</td></tr>
+<tr><td class="m">activate x [at t | delay t] [prior] · before y · after y</td><td>x planen; bei bereits geplantem x wirkungslos (dann <code>reactivate</code>)</td></tr>
+<tr><td class="m">accum(a,b,c,d)</td><td>Zeitintegral: a := a + c·(time−b); b := time; c := c + d</td></tr>
+</table>
+
+<h3>Zufallszahlen</h3>
+<p><code>uniform(a,b,U) randint(a,b,U) negexp(rate,U) normal(m,s,U) draw(p,U) poisson(m,U) erlang(m,k,U) discrete(A,U) histo(A,B,c,d)</code>. U ist eine integer-Variable (Saat), die bei jedem Aufruf fortgeschrieben wird – mit festem Startwert ist jeder Lauf exakt wiederholbar.</p>
+
+<h3>Abweichungen vom Simula Standard (offen gesagt)</h3>
+<ul>
+<li>Interpreter statt Compiler: Typen werden größtenteils erst <b>zur Laufzeit</b> geprüft. Fehler, die ein echter Compiler beim Übersetzen meldet (z. B. Zugriff auf ein Attribut, das die Qualifikation nicht kennt), erscheinen hier erst beim Ausführen.</li>
+<li><code>integer</code> und <code>real</code> sind beide IEEE-Doppelzahlen; integer wird beim Zuweisen gerundet, Überlauf wird nicht geprüft. <code>short integer</code> und <code>long real</code> werden auf integer/real abgebildet.</li>
+<li>Zeichensatz ist Unicode/ISO-8859-1 statt des jeweiligen Maschinenzeichensatzes; Umlaute in Texten gehen.</li>
+<li>Es gibt genau ein quasi-paralleles System (das Hauptprogramm). Verschachtelte Systeme in Klassenrümpfen oder Blöcken vereinfacht der Interpreter: Ein fortgesetztes Objekt kehrt bei <code>detach</code> immer zum Hauptprogramm zurück.</li>
+<li><code>detach</code> in Präfixblöcken, <code>external</code>, getrennte Übersetzung, <code>directfile</code>/<code>bytefile</code> und Prozeduren mit <code>is</code>-Spezifikation fehlen. Marken nur an Anweisungen direkt in einem Block; Sprünge in Blöcke hinein gehen nicht.</li>
+<li>Deklarationen dürfen auch zwischen Anweisungen stehen, werden aber alle beim Blockeintritt angelegt.</li>
+<li>Die Zufallsgeneratoren nutzen 5<sup>13</sup>·U mod 2<sup>31</sup>. Die Norm legt den Generator nicht bitgenau fest; Cim, GNU Cim, DEC-10- oder IBM-Simula liefern andere Folgen, das Prinzip (U als fortgeschriebene Saat) ist gleich.</li>
+<li><code>outreal</code> schreibt den Exponenten dreistellig (<code>1.235&amp;+003</code>); historische Compiler unterschieden sich hier ebenso wie bei <code>outfrac</code>.</li>
+<li>Die Reihenfolge von <code>hidden/protected</code> und <code>virtual:</code> im Klassenkopf ist frei.</li>
+<li>SIMSET und SIMULATION sind (wie in der Norm) in Simula selbst geschrieben, die Ereignisliste ist eine sortierte Kette statt eines Baums; Hilfsattribute enden auf <code>_</code>.</li>
+</ul>
+<p>Zum Artikel: <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a></p>
+`;
+
+// ===== Simula-Werkbank: Oberfläche =====
+(function(){
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const srcEl=$('src'), gut=$('gutter'), hl=$('hl'), paper=$('paper');
+let M=null, state='idle', timer=null, bps=new Set(), curTab='printer', fileName='programm.sim';
+let pendingOut=[], vfs={}, lastErrLine=0, viewDirty=true, lastViewT=0;
+
+// ---------- Beispiele ----------
+const exsel=$('exsel');
+EXAMPLES.forEach((e,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=e.title; exsel.appendChild(o); });
+function loadExample(i){ const e=EXAMPLES[i]; srcEl.value=e.src; $('sysin').value=e.input||''; fileName=e.id+'.sim'; resetRun(); updGutter(); renderClasses(); }
+exsel.onchange=()=>loadExample(+exsel.value);
+
+// ---------- Editor ----------
+function updGutter(){
+  const n=srcEl.value.split('\n').length; let h='';
+  for(let i=1;i<=n;i++) h+='<div'+(bps.has(i)?' class="bp"':'')+' data-l="'+i+'">'+i+'</div>';
+  gut.innerHTML=h; gut.scrollTop=srcEl.scrollTop; placeHL();
+}
+function placeHL(){
+  const line = M&&M.error ? M.error.line : (M&&state!=='idle'&&M.curLine) ? M.curLine : (lastErrLine||0);
+  if(!line||state==='idle'&&!lastErrLine){ hl.style.display='none'; return; }
+  hl.style.display='block'; hl.className= (M&&M.error)||lastErrLine ? 'err':'';
+  hl.style.top=((line-1)*19-srcEl.scrollTop)+'px';
+}
+function showLine(line){
+  const top=(line-1)*19, h=srcEl.clientHeight;
+  if(top<srcEl.scrollTop||top>srcEl.scrollTop+h-40) srcEl.scrollTop=Math.max(0,top-h/3);
+  placeHL();
+}
+srcEl.addEventListener('scroll',()=>{ gut.scrollTop=srcEl.scrollTop; placeHL(); });
+srcEl.addEventListener('input',()=>{ if(state!=='idle') resetRun(); lastErrLine=0; updGutter(); clearTimeout(srcEl._t); srcEl._t=setTimeout(renderClasses,500); });
+srcEl.addEventListener('keyup',posInfo); srcEl.addEventListener('click',posInfo);
+srcEl.addEventListener('keydown',e=>{ if(e.key==='Tab'){ e.preventDefault(); const s=srcEl.selectionStart; srcEl.setRangeText('   ',s,srcEl.selectionEnd,'end'); srcEl.dispatchEvent(new Event('input')); } });
+function posInfo(){ const l=srcEl.value.slice(0,srcEl.selectionStart).split('\n').length; $('posInfo').textContent='Zeile '+l; }
+gut.addEventListener('click',e=>{ const d=e.target.closest('div[data-l]'); if(!d) return; const l=+d.dataset.l; if(bps.has(l)) bps.delete(l); else bps.add(l); updGutter(); });
+
+// ---------- Datei laden/speichern ----------
+$('bNew').onclick=()=>{ srcEl.value='begin\n   \nend'; $('sysin').value=''; fileName='programm.sim'; resetRun(); updGutter(); renderClasses(); };
+$('bSave').onclick=()=>download(fileName,srcEl.value);
+$('bLoad').onclick=()=>{ $('fileIn').dataset.mode='prog'; $('fileIn').click(); };
+$('fileIn').onchange=e=>{ const f=e.target.files[0]; if(!f) return; const r=new FileReader();
+  r.onload=()=>{ if($('fileIn').dataset.mode==='vfs'){ vfs[f.name]=r.result; renderFiles(); } else { srcEl.value=r.result; fileName=f.name; resetRun(); updGutter(); renderClasses(); } e.target.value=''; };
+  r.readAsText(f); };
+function download(name,text){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'text/plain'})); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); },500); }
+
+// ---------- Drucker ----------
+function addLine(text,cls){ const d=document.createElement('div'); d.className='ln'+(cls?' '+cls:''); d.textContent=text; paper.appendChild(d); }
+function flushOut(){
+  if(!pendingOut.length) return;
+  const frag=document.createDocumentFragment();
+  for(const [t,c] of pendingOut){ const d=document.createElement('div'); d.className=t==='\f'?'ln ff':'ln'+(c?' '+c:''); if(t!=='\f') d.textContent=t; frag.appendChild(d); }
+  pendingOut=[]; paper.appendChild(frag);
+  while(paper.childNodes.length>6000) paper.removeChild(paper.firstChild);
+  const p=$('printer'); if(curTab==='printer') p.scrollTop=p.scrollHeight;
+}
+function jobHeader(){
+  paper.innerHTML='';
+  const d=new Date(), ts=d.toLocaleDateString('de-DE')+' '+d.toLocaleTimeString('de-DE');
+  addLine('*** SIMULA-WERKBANK *** JOB '+fileName.toUpperCase()+' *** '+ts,'bar');
+  addLine('','bar');
+}
+
+// ---------- Lauf ----------
+function lamps(){
+  $('lReady').classList.toggle('on',state==='idle'||state==='paused');
+  $('lRun').classList.toggle('on',state==='running');
+  $('lWait').classList.toggle('on',state==='input');
+  $('lErr').classList.toggle('on',state==='error');
+  $('cnt').textContent=(M?M.steps:0).toLocaleString('de-DE')+' Schritte';
+  $('bPause').disabled=state!=='running';
+  $('bStop').disabled=state==='idle';
+  $('term').classList.toggle('on',state==='input');
+}
+function resetRun(){ stopTimer(); M=null; state='idle'; lamps(); placeHL(); }
+function stopTimer(){ if(timer){ clearTimeout(timer); cancelAnimationFrame(timer); timer=null; } }
+function compile(){
+  lastErrLine=0; jobHeader(); pendingOut=[];
+  try{
+    M=new Machine(srcEl.value,{input:$('sysin').value,vfs});
+  }catch(e){
+    M=null; state='error'; lastErrLine=e.sline||1;
+    addLine('ÜBERSETZUNGSFEHLER in Zeile '+(e.sline||'?')+': '+e.message,'errl');
+    if(!(e instanceof SimErr)) console.error(e);
+    lamps(); showLine(lastErrLine); setTab('printer'); return false;
+  }
+  M.onOut=t=>pendingOut.push([t]);
+  M.onFile=()=>{ if(curTab==='files') renderFiles(); };
+  state='paused'; lamps(); renderClasses(); return true;
+}
+function ensure(){ if(!M||M.finished) return compile(); return true; }
+function afterRun(r){
+  flushOut();
+  if(r==='end'){ state='end'; M.flushOut(); flushOut(); addLine(''); addLine('*** ENDE DES LAUFS *** '+M.steps.toLocaleString('de-DE')+' Anweisungen'+(M.simObj&&M.lastSimT>=0?' *** SIMULATIONSZEIT '+fmtNum(M.lastSimT):''),'bar'); stopTimer(); }
+  else if(r==='error'){ state='error'; M.flushOut(); flushOut(); addLine('LAUFZEITFEHLER in Zeile '+M.error.line+': '+M.error.msg,'errl'); if(M.error.stack) console.error(M.error.stack); showLine(M.error.line); stopTimer(); setTab('printer'); }
+  else if(r==='input'){ state='input'; stopTimer(); setTimeout(()=>$('termIn').focus(),30); }
+  else if(r==='pause'){ state='paused'; stopTimer(); showLine(M.curLine); }
+  lamps(); placeHL(); refreshView(true);
+  const p=$('printer'); if(curTab==='printer') p.scrollTop=p.scrollHeight;
+}
+function bpStop(){ let first=true; return s=>{ if(first){ first=false; return false; } return bps.has(s.s.line); }; }
+function loop(){
+  const sp=$('speed').value;
+  if(sp==='max'||sp==='fast'){
+    const n= sp==='max'? 25000 : 300;
+    const r=M.run(n,bps.size?bpStop():null);
+    flushOut();
+    if(r!=='running'){ afterRun(r); return; }
+    lamps(); if(sp==='fast'){ showLine(M.curLine); } refreshView(false);
+    timer=requestAnimationFrame(loop);
+  } else {
+    const r=M.run(1,bps.size?bpStop():null);
+    flushOut();
+    if(r!=='running'){ afterRun(r); return; }
+    lamps(); showLine(M.curLine); refreshView(true);
+    timer=setTimeout(loop, sp==='slow'?120:900);
+  }
+}
+$('bRun').onclick=()=>{
+  if(state==='running') return;
+  if(state==='idle'||state==='end'||state==='error'){ if(!compile()) return; }
+  if(state==='input') return;
+  state='running'; lamps(); loop();
+};
+$('bPause').onclick=()=>{ if(state==='running'){ stopTimer(); state='paused'; lamps(); showLine(M.curLine); refreshView(true); } };
+$('bStop').onclick=()=>{ stopTimer(); if(M&&!M.finished){ M.flushOut(); flushOut(); addLine('*** LAUF ABGEBROCHEN ***','bar'); } M=null; state='idle'; lastErrLine=0; lamps(); placeHL(); refreshView(true); };
+$('bStep').onclick=()=>{
+  if(state==='running'||state==='input') return;
+  if(state==='idle'||state==='end'||state==='error'){ if(!compile()) return; }
+  const r=M.run(1); flushOut();
+  if(r==='running'){ state='paused'; lamps(); showLine(M.curLine); refreshView(true); if(curTab==='printer') setTab('trace'); }
+  else afterRun(r);
+};
+$('bEvent').onclick=()=>{
+  if(state==='running'||state==='input') return;
+  if(state==='idle'||state==='end'||state==='error'){ if(!compile()) return; }
+  const t0=M.simTime(), c0=M.simCurrent(); let first=true;
+  const r=M.run(2000000,s=>{ if(first){ first=false; return false; } if(!M.simObj) return false; const t=M.simTime(), c=M.simCurrent(); return (t0===null&&t!==null)||t!==t0||c!==c0||bps.has(s.s.line); });
+  flushOut();
+  if(r==='running'){ state='paused'; lamps(); showLine(M.curLine); refreshView(true); }
+  else afterRun(r);
+  if(curTab==='printer'&&M&&M.simObj) setTab('sim');
+};
+function termSend(){ if(!M||state!=='input') return; const v=$('termIn').value; $('termIn').value=''; pendingOut.push(['› '+v,'echo']); M.provideInput(v); state='running'; lamps(); loop(); }
+$('termSend').onclick=termSend; $('termIn').addEventListener('keydown',e=>{ if(e.key==='Enter') termSend(); });
+$('termEof').onclick=()=>{ if(!M||state!=='input') return; pendingOut.push(['› [Dateiende]','echo']); M.setEOF(); state='running'; lamps(); loop(); };
+
+// ---------- Reiter ----------
+function setTab(t){ curTab=t; document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('act',b.dataset.t===t)); document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('act',p.id===t)); refreshView(true); if(t==='printer'){ const p=$('printer'); p.scrollTop=p.scrollHeight; } }
+$('tabs').onclick=e=>{ const b=e.target.closest('button'); if(b) setTab(b.dataset.t); };
+function refreshView(force){
+  const now=performance.now();
+  if(!force&&now-lastViewT<250) return; lastViewT=now;
+  try{
+    if(curTab==='trace') renderTrace();
+    else if(curTab==='heap') renderHeap();
+    else if(curTab==='coro') renderCoro();
+    else if(curTab==='sim') renderSim();
+    else if(curTab==='files') renderFiles();
+  }catch(e){ console.error(e); }
+}
+
+// ---------- Wertdarstellung ----------
+function fmtNum(v){ return Number.isInteger(v)? String(v) : (Math.abs(v)>=1e6||Math.abs(v)<1e-4&&v!==0? v.toExponential(4) : String(+v.toFixed(5))); }
+function fmtVal(v,b){
+  if(b&&b.k==='arr'){ const a=b.a; const dims=a.lo.map((l,i)=>l+':'+a.hi[i]).join(','); const n=a.d.length;
+    const show=a.d.slice(0,8).map(x=>fmtVal(x)).join(' '); return 'Feld('+dims+') ['+show+(n>8?' …':'')+']'; }
+  if(v===null) return 'none';
+  if(v===undefined) return '–';
+  if(typeof v==='number') return fmtNum(v);
+  if(typeof v==='boolean') return v?'true':'false';
+  if(typeof v==='string') return charShow(v);
+  if(v instanceof TRef){ if(v.l===0) return 'notext'; let s=v.str(); if(s.length>40) s=s.slice(0,40)+'…'; return '"'+s+'" (L'+v.l+',P'+v.p+')'; }
+  if(v instanceof SObj||v instanceof FileObj) return '→ '+v.label;
+  return String(v);
+}
+function bindingRows(map,chg,filterSys){
+  let h='';
+  for(const [nm,b] of map){
+    if(filterSys&&/_$/.test(nm)) continue;
+    let v;
+    if(b.k==='var') v=fmtVal(b.v);
+    else if(b.k==='arr') v=fmtVal(null,b);
+    else if(b.k==='result') v=fmtVal(b.cell.v)+'  (Funktionswert)';
+    else if(b.k==='name') v='name-Parameter → '+(b.expr.k==='id'?b.expr.name:'Ausdruck');
+    else continue;
+    const c=chg&&(chg.has(b)||(b.k==='result'&&chg.has(b.cell)));
+    h+='<tr'+(c?' class="chg"':'')+'><td class="m">'+esc(dn(nm))+'</td><td class="m">'+esc(v)+'</td></tr>';
+  }
+  return h;
+}
+
+// ---------- Trace ----------
+function srcLine(n){ return (srcEl.value.split('\n')[n-1]||'').trim(); }
+function renderTrace(){
+  const el=$('trace');
+  if(!M){ el.innerHTML='<p class="small">Noch kein Lauf. Mit <b>Schritt</b> geht es Anweisung für Anweisung, mit <b>Start</b> durch bis zum Ende oder bis zu einem Haltepunkt (Klick in die Zeilennummern).</p>'; return; }
+  const st=M.lastStep, chg=M.lastChanged;
+  let h='<div class="sec">Aktuelle Anweisung</div>';
+  h+='<div class="m">Zeile '+M.curLine+': <b>'+esc(srcLine(M.curLine))+'</b></div>';
+  h+='<div class="small">Kontrolle bei: <b>'+esc(M.cur.label)+'</b>'+(M.simObj&&M.simTime()!==null?' · Simulationszeit '+fmtNum(M.simTime()):'')+'</div>';
+  h+='<div class="sec">Aufrufstapel ('+esc(M.cur.label)+')</div>';
+  const stk=M.cur.stack.filter(f=>!/_$/.test(f.name)).slice().reverse();
+  h+= stk.length? '<table>'+stk.map(f=>'<tr><td class="m">'+esc(dn(f.name))+'</td><td class="small">aufgerufen in Zeile '+f.line+'</td></tr>').join('')+'</table>' : '<div class="small">(keine Prozedur aktiv)</div>';
+  h+='<div class="sec">Sichtbare Variablen <span class="small">(gelb = von der letzten Anweisung geändert)</span></div>';
+  if(st&&st.env){
+    let n=0;
+    for(let e=st.env;e&&n<10;e=e.parent){
+      let title, rows='';
+      if(e.kind==='obj'){ const o=e.info.obj; if(o.chain[e.info.level].sys&&!o.cls.pblock) continue; title='Objekt '+o.label+' · Ebene '+dn(o.chain[e.info.level].name);
+        for(let l=e.info.level;l>=0;l--) if(!o.chain[l].sys||l===e.info.level) rows+=bindingRows(o.frames[l],chg,true); }
+      else if(e.kind==='conn'){ const o=e.info.obj; title='inspect-Verbindung zu '+o.label; if(o instanceof SObj) rows=bindingRows(o.frames[e.info.level],chg,true); }
+      else if(e.kind==='proc'){ title='Prozedur '+dn(e.info.decl.name); rows=bindingRows(e.vars,chg); }
+      else if(e.kind==='block'){ if(e===M.sysEnv) break; title=e.info&&e.info.name?e.info.name:'Block (Zeile '+(e.info&&e.info.line||'?')+')'; rows=bindingRows(e.vars,chg); }
+      else continue;
+      if(!rows) continue;
+      h+='<div class="scope"><h4>'+esc(title)+'</h4><table>'+rows+'</table></div>'; n++;
+    }
+  }
+  const sw=M.switchLog.slice(-8).reverse();
+  if(sw.length){ h+='<div class="sec">Letzte Objektwechsel</div><table>'+sw.map(x=>'<tr><td class="m">'+esc(x.op)+'</td><td class="m">'+esc(x.from)+' → '+esc(x.to)+'</td><td class="small">Z. '+x.line+'</td></tr>').join('')+'</table>'; }
+  el.innerHTML=h;
+}
+
+// ---------- Heap ----------
+let showSys=false;
+function renderHeap(){
+  const el=$('heap');
+  if(!M){ el.innerHTML='<p class="small">Der Heap zeigt nach dem Start alle Objekte mit ihren Präfixebenen.</p>'; return; }
+  let objs=M.objs.filter(o=>showSys||!o.chain.some(c=>c.sys&&(c.name==='event_notice'||c.name==='main_program')));
+  const total=objs.length; objs=objs.slice(-60);
+  let h='<div class="small" style="margin-bottom:6px"><label><input type="checkbox" id="hsys"'+(showSys?' checked':'')+'> Systemobjekte zeigen (Ereignisnotizen, main)</label> · '+total+' Objekte'+(total>60?', die letzten 60 gezeigt':'')+' · Pfeile = Referenzen</div><div class="heap" id="heapbox">';
+  for(const o of objs){
+    h+='<div class="obj'+(o===M.cur||M.cur.cont===o?' cur':'')+'" id="ob'+o.id+'"><div class="hd"><b>'+esc(o.label)+'</b><span class="st st-'+o.state+'">'+esc(o.state)+'</span></div>';
+    for(let l=0;l<o.chain.length;l++){
+      const c=o.chain[l]; let rows='';
+      for(const [nm,b] of o.frames[l]){
+        if(b.k==='var'){ const isR=b.v instanceof SObj; rows+='<div class="at'+(isR?' ref':'')+'"'+(isR?' data-to="'+b.v.id+'"':'')+'><span>'+esc(dn(nm))+'</span><span class="v">'+esc(isR?'●':fmtVal(b.v))+'</span></div>'; }
+        else if(b.k==='arr'){ rows+='<div class="at"><span>'+esc(dn(nm))+'</span><span class="v">'+esc(fmtVal(null,b))+'</span></div>'; }
+      }
+      h+='<div class="lv"><div class="lvn">'+(c.pblock?'Präfixblock':'Ebene '+l+': '+esc(dn(c.name)))+'</div>'+rows+'</div>';
+    }
+    h+='</div>';
+  }
+  h+='</div>';
+  el.innerHTML=h;
+  $('hsys').onchange=e=>{ showSys=e.target.checked; renderHeap(); };
+  drawArrows();
+}
+function drawArrows(){
+  const box=$('heapbox'); if(!box) return;
+  const br=box.getBoundingClientRect(); let p='';
+  box.querySelectorAll('.at.ref').forEach(a=>{
+    const t=document.getElementById('ob'+a.dataset.to); if(!t) return;
+    const ar=a.getBoundingClientRect(), tr=t.getBoundingClientRect();
+    const x1=ar.right-br.left-4, y1=ar.top+ar.height/2-br.top;
+    let x2=tr.left-br.left, y2=tr.top-br.top+10;
+    if(tr.left<ar.right&&tr.right>ar.left) x2=tr.left-br.left+tr.width/2, y2=(tr.top>ar.top? tr.top-br.top : tr.bottom-br.top);
+    const mx=(x1+x2)/2+30;
+    p+='<path d="M'+x1+' '+y1+' C'+(x1+40)+' '+y1+','+mx+' '+y2+','+x2+' '+y2+'" fill="none" stroke="#1f3a5a" stroke-width="1.4" marker-end="url(#ah)" opacity=".75"/>';
+  });
+  box.insertAdjacentHTML('beforeend','<svg class="arrows" width="'+box.scrollWidth+'" height="'+box.scrollHeight+'"><defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="#1f3a5a"/></marker></defs>'+p+'</svg>');
+}
+
+// ---------- Koroutinen ----------
+function renderCoro(){
+  const el=$('coro');
+  if(!M){ el.innerHTML='<p class="small">Hier erscheint nach dem Start, welches Objekt die Kontrolle hat und wie sie über new, detach, resume und call weitergereicht wurde.</p>'; return; }
+  let h='<div class="sec">Kontrolle hat jetzt</div><div class="big">'+esc(M.cur.label)+'</div>';
+  if(M.cur!==M.mainComp) h+=' <span class="small">Zustand: '+esc(M.cur.state)+'</span>';
+  const comps=M.objs.filter(o=>o.state!=='Präfixblock'&&!(o.cls.pblock)&&!o.chain.some(c=>c.sys&&c.name==='event_notice'));
+  h+='<div class="sec">Objekte als Komponenten</div><table><tr><th>Objekt</th><th>Zustand</th><th>angehängt an / zuletzt bei</th></tr>';
+  h+='<tr><td class="m">Hauptprogramm</td><td><span class="st st-Hauptprogramm">'+(M.finished?'beendet':'Hauptprogramm')+'</span></td><td class="m">'+(M.mainComp.cont!==M.mainComp?'wartet in '+esc(M.mainComp.cont.label):'')+'</td></tr>';
+  for(const o of comps.slice(-80)) h+='<tr'+(o===M.cur?' class="chg"':'')+'><td class="m">'+esc(o.label)+'</td><td><span class="st st-'+o.state+'">'+esc(o.state)+'</span></td><td class="m">'+(o.state==='angehängt'&&o.caller?esc(o.caller.label):(o.cont&&o.cont!==o&&o.state!=='beendet'?'Fortsetzung in '+esc(o.cont.label):''))+'</td></tr>';
+  h+='</table>';
+  const log=M.switchLog.slice(-150).reverse();
+  h+='<div class="sec">Weg der Kontrolle (neueste zuerst)</div><table><tr><th>Schritt</th><th>Operation</th><th>von → nach</th><th>Zeile</th>'+(M.simObj?'<th>Zeit</th>':'')+'</tr>';
+  for(const x of log) h+='<tr><td class="m">'+x.step+'</td><td class="m">'+esc(x.op)+(x.op==='detach'||x.op==='Ende'?' '+esc(x.obj):'')+'</td><td class="m">'+esc(x.from)+' → '+esc(x.to)+'</td><td class="m">'+x.line+'</td>'+(M.simObj?'<td class="m">'+(x.t===null?'':fmtNum(x.t))+'</td>':'')+'</tr>';
+  h+='</table>';
+  el.innerHTML=h;
+}
+
+// ---------- Simulation ----------
+function renderSim(){
+  const el=$('sim');
+  if(!M||!M.simObj){ el.innerHTML='<p class="small">Diese Ansicht füllt sich, sobald ein Programm mit <b>Simulation begin … end</b> läuft: Simulationsuhr, Ereignisliste (SQS), Prozesszustände, Zeitachse und Warteschlangenlängen.</p>'; return; }
+  const t=M.simTime(), cur=M.simCurrent(), sqs=M.sqsList();
+  let h='<div class="sec">Simulationszeit</div><div class="big">'+(t===null?'–':fmtNum(t))+'</div> <span class="small">aktiver Prozess: <b>'+(cur?esc(cur.label):'–')+'</b></span>';
+  h+='<div class="sec">Ereignisliste SQS ('+sqs.length+' Einträge)</div><table><tr><th>#</th><th>Zeit</th><th>Prozess</th></tr>';
+  sqs.slice(0,40).forEach((e,i)=>{ h+='<tr'+(i===0?' class="chg"':'')+'><td class="m">'+(i+1)+'</td><td class="m">'+fmtNum(e.t)+'</td><td class="m">'+esc(e.proc?e.proc.label:'?')+(i===0?' (aktiv)':'')+'</td></tr>'; });
+  if(sqs.length>40) h+='<tr><td colspan="3" class="small">… '+(sqs.length-40)+' weitere</td></tr>';
+  h+='</table>';
+  const procs=M.objs.filter(o=>M.isProcess(o));
+  const cnt={aktiv:0,geplant:0,passiv:0,beendet:0};
+  const rows=procs.map(o=>{ const pi=M.procInfo(o); const s= o===cur?'aktiv': pi.term?'beendet': pi.event?'geplant':'passiv'; cnt[s]++; return {o,s,ev:pi.event}; });
+  h+='<div class="sec">Prozesse – aktiv '+cnt.aktiv+' · geplant '+cnt.geplant+' · passiv '+cnt.passiv+' · beendet '+cnt.beendet+'</div><table><tr><th>Prozess</th><th>Zustand</th><th>geplant für</th></tr>';
+  rows.filter(r=>r.s!=='beendet').slice(-40).forEach(r=>{ h+='<tr><td class="m">'+esc(r.o.label)+'</td><td><span class="st st-'+r.s+'">'+r.s+'</span></td><td class="m">'+(r.ev?fmtNum(r.ev.frames[0].get('evtime').v):'')+'</td></tr>'; });
+  h+='</table>';
+  h+='<div class="sec">Zeitachse: wer war wann aktiv</div>'+timelineSVG();
+  h+='<div class="sec">Warteschlangen (head-Objekte des Simulationsblocks) über der Zeit</div>'+queueSVG();
+  el.innerHTML=h;
+}
+function timelineSVG(){
+  const tl=M.timeline; if(!tl.length) return '<div class="small">noch keine Ereignisse</div>';
+  const W=640, tmax=Math.max(1,tl[tl.length-1].t), tmin=tl[0].t;
+  const keyOf=e=>e.cls==='main_program'?'main':e.cls?dn(e.cls):e.proc;
+  const keys=[]; tl.forEach(e=>{ const k=keyOf(e); if(!keys.includes(k)) keys.push(k); });
+  const RH=18, L=120, H=keys.length*RH+28;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;background:#fbfaf4;border:1px solid #c6c0ae">';
+  keys.forEach((k,i)=>{ s+='<text x="4" y="'+(i*RH+14)+'" font-family="IBM Plex Mono,monospace" font-size="11">'+esc(k)+'</text><line x1="'+L+'" x2="'+(W-6)+'" y1="'+(i*RH+10)+'" y2="'+(i*RH+10)+'" stroke="#e1dccd"/>'; });
+  const X=t=>L+(W-L-8)*(t-tmin)/((tmax-tmin)||1);
+  for(let i=0;i<tl.length;i++){ const e=tl[i], k=keys.indexOf(keyOf(e)); const x=X(e.t), x2=i+1<tl.length?X(tl[i+1].t):x+2; s+='<rect x="'+x.toFixed(1)+'" y="'+(k*RH+4)+'" width="'+Math.max(1.5,x2-x).toFixed(1)+'" height="12" fill="'+(e.cls==='main_program'?'#8d897d':'#1f3a5a')+'" opacity=".8"/>'; }
+  const yb=keys.length*RH+6; s+='<line x1="'+L+'" x2="'+(W-6)+'" y1="'+yb+'" y2="'+yb+'" stroke="#5b5d58"/>';
+  for(let j=0;j<=5;j++){ const tt=tmin+(tmax-tmin)*j/5; s+='<text x="'+X(tt)+'" y="'+(yb+16)+'" font-size="10" text-anchor="middle" font-family="IBM Plex Mono,monospace">'+fmtNum(+tt.toFixed(1))+'</text>'; }
+  return s+'</svg><div class="small">Balken: Zeitspanne, in der ein Prozess der Klasse aktiv war (grau = Hauptprogramm). Die letzten '+tl.length+' Wechsel.</div>';
+}
+function queueSVG(){
+  if(!M.qSamples.size) return '<div class="small">keine Warteschlangen (head-Variablen) im Simulationsblock gefunden</div>';
+  const cols=['#1f3a5a','#b8332a','#3f8a4b','#e8a33a','#7b3d9a'];
+  let tmax=0,nmax=1; for(const a of M.qSamples.values()) for(const p of a){ tmax=Math.max(tmax,p.t); nmax=Math.max(nmax,p.n); }
+  const tnow=Math.max(tmax,M.lastSimT||0), W=640,H=180,L=34,B=22;
+  const X=t=>L+(W-L-10)*t/(tnow||1), Y=n=>H-B-(H-B-10)*n/nmax;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" style="max-width:'+W+'px;background:#fbfaf4;border:1px solid #c6c0ae">';
+  for(let n=0;n<=nmax;n+=Math.max(1,Math.ceil(nmax/5))) s+='<line x1="'+L+'" x2="'+(W-8)+'" y1="'+Y(n)+'" y2="'+Y(n)+'" stroke="#e1dccd"/><text x="'+(L-4)+'" y="'+(Y(n)+4)+'" font-size="10" text-anchor="end" font-family="IBM Plex Mono,monospace">'+n+'</text>';
+  for(let j=0;j<=5;j++){ const tt=tnow*j/5; s+='<text x="'+X(tt)+'" y="'+(H-6)+'" font-size="10" text-anchor="middle" font-family="IBM Plex Mono,monospace">'+fmtNum(+tt.toFixed(1))+'</text>'; }
+  let leg='', stats='<table><tr><th>Warteschlange</th><th>max. Länge</th><th>zeitgemittelte Länge</th><th>jetzt</th></tr>', i=0;
+  for(const [nm,a] of M.qSamples){
+    const c=cols[i++%cols.length]; let d='', area=0, mx=0;
+    a.forEach((p,k)=>{ const nx=k+1<a.length?a[k+1].t:tnow; d+=(k?'L':'M')+X(p.t).toFixed(1)+' '+Y(p.n).toFixed(1)+' L'+X(nx).toFixed(1)+' '+Y(p.n).toFixed(1)+' '; area+=p.n*(nx-p.t); mx=Math.max(mx,p.n); });
+    s+='<path d="'+d+'" fill="none" stroke="'+c+'" stroke-width="1.6"/>';
+    leg+='<span class="m" style="color:'+c+';margin-right:12px">■ '+esc(dn(nm))+'</span>';
+    stats+='<tr><td class="m">'+esc(dn(nm))+'</td><td class="m">'+mx+'</td><td class="m">'+(tnow?(area/tnow).toFixed(2):'0')+'</td><td class="m">'+(a.length?a[a.length-1].n:0)+'</td></tr>';
+  }
+  return s+'</svg><div>'+leg+'</div>'+stats+'</table>';
+}
+
+// ---------- Dateien ----------
+function renderFiles(){
+  const el=$('files');
+  const names=Object.keys(vfs);
+  let h='<p class="small">Virtuelle Dateien für <b>infile</b>/<b>outfile</b>. Was ein Programm mit outfile schreibt und mit close abschließt, landet hier; mit infile kann ein Programm diese Dateien lesen. Nichts wird im Browser gespeichert – zum Aufheben herunterladen.</p>';
+  h+='<button id="vUp">Datei hinzufügen</button>';
+  h+='<table style="margin-top:8px"><tr><th>Name</th><th>Zeilen</th><th></th></tr>';
+  for(const n of names) h+='<tr><td class="m">'+esc(n)+'</td><td class="m">'+vfs[n].split('\n').filter((x,i,a)=>i<a.length-1||x).length+'</td><td><button data-dl="'+esc(n)+'">Herunterladen</button> <button data-rm="'+esc(n)+'">Löschen</button></td></tr>';
+  if(!names.length) h+='<tr><td colspan="3" class="small">(keine Dateien)</td></tr>';
+  h+='</table>';
+  if(names.length){ h+='<div class="sec">Inhalt</div>'; for(const n of names) h+='<div class="m small"><b>'+esc(n)+'</b></div><pre class="m" style="background:#fbfaf4;border:1px solid #c6c0ae;padding:6px;max-height:200px;overflow:auto">'+esc(vfs[n])+'</pre>'; }
+  el.innerHTML=h;
+  $('vUp').onclick=()=>{ $('fileIn').dataset.mode='vfs'; $('fileIn').click(); };
+  el.querySelectorAll('[data-dl]').forEach(b=>b.onclick=()=>download(b.dataset.dl,vfs[b.dataset.dl]));
+  el.querySelectorAll('[data-rm]').forEach(b=>b.onclick=()=>{ delete vfs[b.dataset.rm]; renderFiles(); });
+}
+
+// ---------- Klassen (aus dem Quelltext) ----------
+function collectClasses(node,out,sys){
+  if(!node||typeof node!=='object') return;
+  if(Array.isArray(node)){ node.forEach(n=>collectClasses(n,out,sys)); return; }
+  if(node.k==='class'){ out.push({d:node,sys}); }
+  for(const k of ['decls','stmts','body','block','th','el','doBody','otherwise','whens']) if(node[k]) collectClasses(node[k],out,sys);
+}
+function usesPrefix(node,names){
+  let found=false;
+  (function walk(n){ if(found||!n||typeof n!=='object') return; if(Array.isArray(n)){ n.forEach(walk); return; }
+    if((n.k==='pblock'&&names.includes(n.prefix.name))||(n.k==='class'&&names.includes(n.prefix))) found=true;
+    for(const k in n) if(k!=='line'&&n[k]&&typeof n[k]==='object'&&!(n[k] instanceof Set)) walk(n[k]); })(node);
+  return found;
+}
+function specStr(sp){ if(!sp) return '?'; const t=sp.ty?(sp.ty.t==='ref'?'ref('+dn(sp.ty.q)+')':sp.ty.t):''; return (t+' '+(sp.kind==='array'?'array':sp.kind==='proc'?'procedure':sp.kind==='label'?'label':'')).trim(); }
+function renderClasses(){
+  const el=$('classes'); let ast;
+  try{ DISP.clear(); ast=parseProgram(srcEl.value); }catch(e){ el.innerHTML='<p class="small">Das Programm lässt sich gerade nicht übersetzen (Zeile '+(e.sline||'?')+': '+esc(e.message)+'). Die Klassenansicht erscheint, sobald es fehlerfrei ist.</p>'; return; }
+  if(!PRELUDE_AST){ lex.sys=true; PRELUDE_AST=parseProgram(PRELUDE_SRC); lex.sys=false; markSys(PRELUDE_AST); }
+  const list=[]; collectClasses(ast,list,false);
+  const useSim=usesPrefix(ast,['simulation']), useSet=useSim||usesPrefix(ast,['simset','head','link','linkage']);
+  if(useSet){ const sysl=[]; collectClasses(PRELUDE_AST,sysl,true); sysl.forEach(c=>{ if(useSim||!['simulation','event_notice','process','main_program'].includes(c.d.name)) list.push(c); }); }
+  if(!list.length){ el.innerHTML='<p class="small">Dieses Programm deklariert keine Klassen.</p>'; return; }
+  const byName={}; list.forEach(c=>{ (byName[c.d.name]=byName[c.d.name]||[]).push(c); });
+  const kids=new Map(); const roots=[];
+  list.forEach(c=>{ const p=c.d.prefix&&byName[c.d.prefix]?byName[c.d.prefix][0]:null; if(p){ if(!kids.has(p)) kids.set(p,[]); kids.get(p).push(c); } else roots.push(c); });
+  const virtOf=c=>{ const v=[]; for(let x=c;x;x=x.d.prefix&&byName[x.d.prefix]?byName[x.d.prefix][0]:null) x.d.virtuals.forEach(s=>v.push(s.name)); return v; };
+  function card(c){
+    const d=c.d, body=d.body&&d.body.k==='block'?d.body:{decls:[]};
+    const inh=virtOf(c);
+    let h='<div class="cls'+(c.sys?' sys':'')+'"><div class="hd">'+(d.prefix?'<small>'+esc(dn(d.prefix))+' </small>':'')+'class '+esc(dn(d.name))+(d.params.length?'('+d.params.map(dn).join(', ')+')':'')+(c.sys?' <small>· Systemklasse</small>':'')+'</div><div class="bd">';
+    d.params.forEach(p=>h+='<div>⟨Parameter⟩ '+esc(specStr(d.specs[p]))+' '+esc(dn(p))+'</div>');
+    body.decls.forEach(x=>{
+      const hid=d.hidden.has(x.name||''), pro=d.prot.has(x.name||'');
+      if(x.k==='var') x.names.forEach(n=>{ if(c.sys&&/_$/.test(n)) return; h+='<div>'+esc(x.ty.t==='ref'?'ref('+dn(x.ty.q)+')':x.ty.t)+' '+esc(dn(n))+(d.prot.has(n)?' <i>'+(d.hidden.has(n)?'hidden ':'')+'protected</i>':'')+'</div>'; });
+      else if(x.k==='arr') x.segs.forEach(sg=>sg.names.forEach(n=>h+='<div>'+esc((x.ty.t==='ref'?'ref('+dn(x.ty.q)+')':x.ty.t)+' array '+dn(n))+'</div>'));
+      else if(x.k==='proc'){ if(c.sys&&/_$/.test(x.name)) return; const isV=inh.includes(x.name); h+='<div'+(isV?' class="virt"':'')+'>'+esc((x.ty?(x.ty.t==='ref'?'ref('+dn(x.ty.q)+') ':x.ty.t+' '):'')+'procedure '+dn(x.name)+(x.params.length?'('+x.params.map(dn).join(', ')+')':''))+(isV?' ◆ bindet virtuell':'')+(pro?' <i>'+(hid?'hidden ':'')+'protected</i>':'')+'</div>'; }
+      else if(x.k==='class') h+='<div class="small">enthält Klasse '+esc(dn(x.name))+'</div>';
+    });
+    d.virtuals.forEach(v=>h+='<div class="virt">virtual: '+esc(specStr(v)+' '+dn(v.name))+'</div>');
+    if(!d.params.length&&!body.decls.length&&!d.virtuals.length) h+='<div class="small">(keine eigenen Attribute – erbt alles vom Präfix)</div>';
+    h+='</div></div>';
+    const ks=kids.get(c)||[];
+    return '<li>'+h+(ks.length?'<ul>'+ks.map(card).join('')+'</ul>':'')+'</li>';
+  }
+  el.innerHTML='<p class="small">Klassenhierarchie aus dem Quelltext: Unterklassen hängen unter ihrem Präfix. <span style="color:#7b3d9a">Violett</span> = virtuelle Spezifikationen und die Prozeduren, die sie binden (spätes Binden).</p><div class="tree"><ul>'+roots.sort((a,b)=>a.sys-b.sys).map(card).join('')+'</ul></div>';
+}
+
+// ---------- Hilfe ----------
+$('help').innerHTML=HELP_HTML;
+
+// ---------- Start ----------
+loadExample(0); lamps(); renderTrace();
+window.addEventListener('resize',()=>{ placeHL(); if(curTab==='heap') renderHeap(); });
+})();
+
+</script>
+</body>
+</html>
