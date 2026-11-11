@@ -922,6 +922,29 @@
         <input type="number" id="w_osmo" value="0" step="5" min="0" max="100" oninput="calcWasser()">
       </div>
     </div>
+
+    <p class="w-sub">IONENTAUSCHER (VOR DEM VERSCHNITT)</p>
+    <p class="calc-hint">Leitfähigkeit des Leitungswassers vor und nach dem Anionen-/Kationentauscher messen (gleiche Temperatur bzw. temperaturkompensiert). Die prozentuale Abnahme wird auf alle Ionen übertragen. Ohne Messung lässt sich die Reduktion auch direkt eintragen; 0 % = kein Tauscher.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Leitfähigkeit vorher (µS/cm)</label>
+        <input type="number" id="w_lf_vor" value="" step="1" min="0" placeholder="z. B. 620" oninput="wasserLeitwert()">
+      </div>
+      <div class="field">
+        <label>Leitfähigkeit nachher (µS/cm)</label>
+        <input type="number" id="w_lf_nach" value="" step="1" min="0" placeholder="z. B. 190" oninput="wasserLeitwert()">
+      </div>
+      <div class="field">
+        <label>Ionenreduktion durch Tauscher (%)</label>
+        <input type="number" id="w_tausch" value="0" step="1" min="0" max="100" oninput="wasserTauschManuell()">
+      </div>
+    </div>
+    <div class="result" style="margin-bottom:16px">
+      <div class="result-item"><div class="result-label">Ionen-Restanteil</div><div class="result-value" id="w_tausch_rest">—</div><div class="result-unit">% nach Tauscher</div></div>
+      <div class="result-item"><div class="result-label">RA nach Tauscher</div><div class="result-value" id="w_ra_tausch">—</div><div class="result-unit">°dH</div></div>
+      <div class="result-item"><div class="result-label">Ionen gesamt übrig</div><div class="result-value" id="w_ionen_rest">—</div><div class="result-unit">% nach Tauscher + Verschnitt</div></div>
+    </div>
+
     <div class="result">
       <div class="result-item"><div class="result-label">RA nach Verschnitt</div><div class="result-value" id="w_ra_misch">—</div><div class="result-unit">°dH</div></div>
       <div class="result-item"><div class="result-label">Calcium nach Verschnitt</div><div class="result-value" id="w_ca_misch">—</div><div class="result-unit">mg/L</div></div>
@@ -1600,10 +1623,18 @@ function calcWasser() {
     add('warn', `Gesamthärte aus Ca/Mg (${gh.toFixed(1)} °dH) weicht vom Bericht (${ghBericht} °dH) ab – Eingaben prüfen.`);
   document.getElementById('w_bewertung').innerHTML = items.join('');
 
-  // Aufbereitung: Verschnitt mit Osmosewasser (ionenfrei angenommen), dann Milchsäure
+  // Aufbereitung: erst Ionentauscher (alle Ionen anteilig reduziert, gemessen über die Leitfähigkeit),
+  // dann Verschnitt mit Osmosewasser (ionenfrei angenommen), dann Milchsäure
+  const t      = Math.min(100, Math.max(0, v('w_tausch'))) / 100;
   const f      = Math.min(100, Math.max(0, v('w_osmo'))) / 100;
-  const raMix  = ra * (1 - f);
-  const caMix  = ca * (1 - f);
+  const fac    = (1 - t) * (1 - f);          // verbleibender Ionenanteil gesamt
+  const raT    = ra * (1 - t);
+  const raMix  = ra * fac;
+  const caMix  = ca * fac;
+
+  set('w_tausch_rest', (1 - t) * 100, 0);
+  set('w_ra_tausch', raT, 1);
+  set('w_ionen_rest', fac * 100, 0);
   const ziel   = v('w_ra_ziel');
   const vol    = v('w_vol');
 
@@ -1625,9 +1656,9 @@ function calcWasser() {
     'result-value ' + (konz <= 0.2 ? 'good' : konz <= 0.3 ? 'warn' : 'bad');
 
   const osmoEl = document.getElementById('w_osmo_noetig');
-  if (ra <= ziel) { osmoEl.textContent = '0'; }
+  if (raT <= ziel) { osmoEl.textContent = '0'; }
   else if (ziel <= 0) { osmoEl.textContent = '—'; }
-  else { set('w_osmo_noetig', (1 - ziel / ra) * 100, 0); }
+  else { set('w_osmo_noetig', (1 - ziel / raT) * 100, 0); }
 
   // Hinweise
   const h = [];
@@ -1635,12 +1666,31 @@ function calcWasser() {
   if (ziel <= 0 && ra > 0) h.push('Eine RA ≤ 0 lässt sich durch Verschneiden allein nicht erreichen – Säure ist nötig.');
   if (ms > vol * 0.3) h.push('Viel Milchsäure: ab ca. 3 ml je 10 L Brauwasser (≈ 0,3 g/L) kann sie schmeckbar werden. Teilweise mit Osmosewasser verschneiden.');
   else if (ms > vol * 0.2) h.push('Milchsäure nahe der Geschmacksschwelle – bei sehr feinen Bieren (Pils) lieber teilweise verschneiden.');
-  if (caMix < 50 && f > 0) h.push('Nach dem Verschnitt ist wenig Calcium übrig – etwas CaCl₂ oder CaSO₄ zugeben.');
+  if (caMix < 50 && fac < 1) h.push('Nach Tauscher/Verschnitt ist wenig Calcium übrig – etwas CaCl₂ oder CaSO₄ zugeben.');
+  if (t > 0) h.push('Tauscher: Annahme ist, dass alle Ionen im gleichen Verhältnis abnehmen wie die Leitfähigkeit (Mischbett). Bei reinem Kationentauscher stimmt das nicht genau – dann die KH nachher per Tropftest prüfen.');
+  const lfV = v('w_lf_vor'), lfN = v('w_lf_nach');
+  if (lfV > 0 && lfN > lfV) h.push('Leitfähigkeit nachher ist höher als vorher – Messung prüfen, Tauscher eventuell erschöpft.');
   h.push('Maische-pH zur Kontrolle messen, Ziel 5,4–5,6.');
   document.getElementById('w_hinweis').textContent = h.join(' ');
 
-  calcZusaetze({ ca: caMix, mg: mg * (1 - f), na: na * (1 - f), cl: cl * (1 - f),
-                 so4: so4 * (1 - f), sk: sk * (1 - f), vol, ziel });
+  calcZusaetze({ ca: caMix, mg: mg * fac, na: na * fac, cl: cl * fac,
+                 so4: so4 * fac, sk: sk * fac, vol, ziel });
+}
+
+// Ionentauscher: Reduktion aus Leitfähigkeit vorher/nachher
+function wasserLeitwert() {
+  const vor = v('w_lf_vor'), nach = v('w_lf_nach');
+  if (vor > 0 && nach >= 0 && document.getElementById('w_lf_nach').value !== '') {
+    const red = Math.min(100, Math.max(0, (1 - nach / vor) * 100));
+    document.getElementById('w_tausch').value = red.toFixed(1);
+  }
+  calcWasser();
+}
+// Reduktion direkt eingegeben → Leitwert-Felder leeren, damit nichts widerspricht
+function wasserTauschManuell() {
+  document.getElementById('w_lf_vor').value = '';
+  document.getElementById('w_lf_nach').value = '';
+  calcWasser();
 }
 
 // Brauzusätze: Anteile je g Salz (Massenbruch) bzw. mmol je ml/g Säure
@@ -1759,7 +1809,7 @@ function calcZusaetze(b) {
   if (n.mg > 30) h.push('Magnesium über 30 mg/L kann bitter-adstringierend wirken.');
   if (n.na > 100) h.push('Natrium über 100 mg/L – Bier kann salzig/kratzig werden.');
   if (v('z_natron') > 0) h.push('Natron erhöht die Alkalität – nur für sehr dunkle Biere mit viel Röstmalz sinnvoll.');
-  h.push('Sauermalz wirkt erst in der Maische; die Rechnung behandelt es wie Milchsäure im Wasser.');
+  h.push('Alle Werte in der Spalte „Ausgang“ sind nach Ionentauscher und Verschnitt; die Salze kommen danach dazu. Sauermalz wirkt erst in der Maische; die Rechnung behandelt es wie Milchsäure im Wasser.');
   document.getElementById('z_hinweis').textContent = h.join(' ');
 }
 
