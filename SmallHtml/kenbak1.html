@@ -1,0 +1,2100 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kenbak-Werkbank</title>
+<style>
+:root{--bg:#1c2025;--fg:#e6e2d8;--dim:#98a1aa;--card:#262b32;--line:#39414b;--acc:#f0b54a;--plate:#ece6d6;--ink:#2a2a2a}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:1.4rem}
+header p{margin:2px 0 0;color:var(--dim);font-size:.9rem}
+main{max-width:1200px;margin:0 auto;padding:16px}
+h2{font-size:1rem;margin:0 0 8px;color:var(--acc)}
+.mono,.mem td,.regs td{font-family:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace}
+
+/* ---------- Frontplatte ---------- */
+.kenbak{background:linear-gradient(#36586e,#243d4c);border-radius:10px;padding:14px 16px 20px;box-shadow:0 6px 18px #0008,inset 0 1px 0 #ffffff22;user-select:none;-webkit-user-select:none}
+.brand{color:#e8eef2;font-weight:700;letter-spacing:.35em;font-size:1.05rem;margin:0 0 10px 4px}
+.plate{background:var(--plate);border-radius:4px;padding:12px 16px 10px;color:var(--ink);display:flex;gap:22px;align-items:flex-end;flex-wrap:wrap;justify-content:center;box-shadow:inset 0 0 0 2px #cfc6b0}
+.grp{display:flex;flex-direction:column;align-items:center;gap:6px}
+.lbl{font-size:.66rem;font-weight:700;letter-spacing:.08em}
+.row{display:flex;gap:10px;align-items:flex-start}
+.col{display:flex;flex-direction:column;align-items:center;gap:7px}
+.lamp{width:22px;height:22px;border-radius:50%;background:#4b3b2b;position:relative;box-shadow:inset 0 2px 3px #0009,0 0 0 2px #b9ae95}
+.lamp i{position:absolute;inset:0;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fffbe8,#ffd36b 45%,#e08a1e 82%);opacity:var(--b,0);box-shadow:0 0 calc(var(--b,0)*16px) calc(var(--b,0)*4px) #ffb94a99}
+.key{width:34px;height:34px;border-radius:3px;border:1px solid #7a7466;background:linear-gradient(#fdfcf8,#dcd6c8);box-shadow:0 3px 0 #9a937f,0 4px 6px #0005;cursor:pointer;padding:0;touch-action:manipulation}
+.key:active,.key.down{transform:translateY(2px);box-shadow:0 1px 0 #9a937f,0 2px 3px #0005}
+.key:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+.cap{font-size:.6rem;font-weight:700;letter-spacing:.04em}
+.kh{font-size:.6rem;color:#8a816d;font-family:ui-monospace,Consolas,monospace}
+.sep{width:2px;align-self:stretch;background:#cfc6b0}
+.panelhelp{color:var(--dim);font-size:.82rem;margin:8px 2px 0}
+.panelhelp kbd{background:#333a43;border:1px solid #4a525c;border-radius:3px;padding:0 4px;font-size:.78rem;color:var(--fg)}
+
+/* ---------- Werkbank ---------- */
+.bench{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:16px;margin-top:16px}
+@media (max-width:860px){.bench{grid-template-columns:1fr}}
+.bench>div{min-width:0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.card+.card{margin-top:16px}
+.ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:8px}
+.ctrls label{font-size:.88rem;color:var(--dim);display:flex;align-items:center;gap:5px}
+button.b,select,input[type=number]{background:#323943;color:var(--fg);border:1px solid #4a535e;border-radius:5px;padding:5px 10px;font:inherit;font-size:.88rem}
+button.b{cursor:pointer}
+button.b:hover{border-color:var(--acc)}
+input[type=number]{width:72px}
+select{max-width:100%;min-width:0}
+#demo{width:16em}
+.ctrls label{min-width:0;max-width:100%}
+.status{font-size:.9rem;margin:6px 0 2px}
+.status b{color:var(--acc)}
+.regs{width:100%;border-collapse:collapse;font-size:.88rem}
+.regs td{padding:3px 6px;border-bottom:1px solid #313840;white-space:nowrap}
+.regs td.n{font-family:inherit;color:var(--dim)}
+.regs td.t{font-family:inherit;white-space:normal;color:#cfd6dc}
+.memwrap{overflow-x:auto}
+.mem{border-collapse:collapse;font-size:.84rem;margin:0 auto}
+.mem th{color:var(--dim);font-weight:400;padding:1px 6px;font-family:ui-monospace,Consolas,monospace}
+.mem td{padding:1px 6px;text-align:center;cursor:pointer;border-radius:3px}
+.mem td:hover{background:#3a434e}
+.mem td.sp{color:#9fc6e0}
+.mem td.ad{outline:1px solid #8fb4ff}
+.mem td.pc{background:#6b4a12;color:#fff}
+.legend{font-size:.8rem;color:var(--dim);margin-top:6px}
+.legend span{display:inline-block;padding:0 5px;border-radius:3px;margin-right:6px}
+.mem td.bp{box-shadow:inset 3px 0 0 #e05050}
+.mem td input.ed,.regs td input.ed{width:3.4em;font:inherit;background:#11161b;color:#fff;border:1px solid var(--acc);border-radius:3px;padding:0 2px;text-align:center}
+.regs td.ev{cursor:text}
+.regs td.ev:hover{background:#3a434e}
+.ctrls input.addr{width:4.2em}
+.dis{width:100%;border-collapse:collapse;font-size:.84rem}
+.dis td{padding:1px 6px;white-space:nowrap;font-family:ui-monospace,"Cascadia Mono",Consolas,monospace}
+.dis td.g{width:1.2em;text-align:center;cursor:pointer;color:#555d66}
+.dis td.g:hover{color:#e05050}
+.dis tr.on td.g{color:#e05050}
+.dis tr.cur{background:#6b4a12;color:#fff}
+.dis td.by{color:var(--dim)}
+.dis tr{cursor:default}
+.trace{font:.8rem/1.35 ui-monospace,"Cascadia Mono",Consolas,monospace;white-space:pre;overflow:auto;max-height:340px;background:#1f242a;border:1px solid #333b44;border-radius:5px;padding:6px 8px;color:#cfd6dc}
+.hint{font-size:.8rem;color:var(--dim);margin-top:6px}
+.asmsrc{width:100%;min-height:340px;resize:vertical;background:#161b20;color:#e6e2d8;border:1px solid #3a434e;border-radius:5px;padding:8px;font:.85rem/1.4 ui-monospace,"Cascadia Mono",Consolas,monospace;tab-size:8}
+.asmsrc:focus{outline:1px solid var(--acc)}
+.listing{font:.8rem/1.35 ui-monospace,"Cascadia Mono",Consolas,monospace;white-space:pre;overflow:auto;max-height:380px;background:#1f242a;border:1px solid #333b44;border-radius:5px;padding:6px 8px;color:#cfd6dc}
+.listing .err{color:#ff8a7a}
+.listing .ok{color:#9fd49f}
+.eintipp{max-height:380px;overflow:auto;border:1px solid #333b44;border-radius:5px}
+.eintipp table{width:100%;border-collapse:collapse;font-size:.84rem}
+.eintipp td{padding:3px 8px;border-bottom:1px solid #313840;vertical-align:top}
+.eintipp td.nr{color:var(--dim);text-align:right;width:2.5em}
+.eintipp tr.done td{color:#7d8790}
+.eintipp tr.now{background:#4a3a14}
+.eintipp .kk{display:inline-block;min-width:1.6em;padding:0 4px;margin:1px 2px;border:1px solid #6a6457;border-radius:3px;background:#efe9da;color:#222;font:700 .72rem system-ui;text-align:center}
+.eintipp .kk.f{background:#3a414b;color:#eee;border-color:#58616c}
+.two{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+@media (max-width:860px){.two{grid-template-columns:1fr}}
+.two>div{min-width:0}
+/* ---------- Schieberegister ---------- */
+.srwrap{display:grid;grid-template-columns:minmax(0,420px) minmax(0,1fr);gap:16px;align-items:start}
+@media (max-width:860px){.srwrap{grid-template-columns:1fr}}
+.srwrap>div{min-width:0}
+.srcv{width:100%;max-width:420px;aspect-ratio:1;display:block;margin:0 auto;cursor:crosshair}
+.srinfo{font-size:.88rem}
+.srinfo .big{font:1.05rem ui-monospace,Consolas,monospace;color:var(--acc)}
+.srlog{font:.8rem/1.4 ui-monospace,"Cascadia Mono",Consolas,monospace;white-space:pre;overflow:auto;max-height:260px;background:#1f242a;border:1px solid #333b44;border-radius:5px;padding:6px 8px;color:#cfd6dc;margin-top:6px}
+.srlog .now{background:#4a3a14;color:#fff}
+.srlog .w{color:#9fc6e0}
+.srtip{font-size:.82rem;color:var(--dim);min-height:1.3em;margin-top:4px;text-align:center}
+.info{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:18px}
+@media (max-width:860px){.info{grid-template-columns:1fr}}
+.info p{margin:0 0 8px}
+.info dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:.88rem}
+.info dt{color:var(--dim)}
+.info dd{margin:0}
+.info a{color:var(--acc)}
+.info ul{margin:4px 0 0;padding-left:18px;font-size:.86rem}
+footer{max-width:1200px;margin:10px auto 30px;padding:0 16px;color:var(--dim);font-size:.85rem}
+footer a{color:var(--acc)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kenbak-Werkbank</h1>
+  <p>Emulator des KENBAK-1 (John Blankenbaker, 1971) – Rechenwerk, Frontplatte, Speicher, Debugger, Assembler, Eintipp-Hilfe, Schieberegister-Ansicht, Beispielprogramme · <a href="#ueber" style="color:var(--acc)">Über den KENBAK-1</a></p>
+</header>
+
+<main>
+  <section class="kenbak" aria-label="Frontplatte KENBAK-1">
+    <div class="brand">KENBAK-1</div>
+    <div class="plate" id="plate"></div>
+  </section>
+  <p class="panelhelp">
+    Tastatur: <kbd>1</kbd>–<kbd>8</kbd> Datentaster (links → rechts, Bit 7 … 0) ·
+    <kbd>C</kbd> CLEAR · <kbd>D</kbd> DISPLAY ADDRESS · <kbd>A</kbd> SET ADDRESS ·
+    <kbd>R</kbd> READ MEMORY · <kbd>S</kbd> STORE MEMORY · <kbd>G</kbd>/<kbd>Enter</kbd> START ·
+    <kbd>H</kbd>/<kbd>Esc</kbd> STOP · <kbd>H</kbd> halten + <kbd>G</kbd> = ein Befehl (wie STOP gedrückt halten und START) · <kbd>T</kbd> Einzelschritt · <kbd>U</kbd> Unterprogramm überspringen
+  </p>
+
+  <div class="bench">
+    <div>
+      <div class="card">
+        <h2>Steuerung</h2>
+        <div class="ctrls">
+          <button class="b" id="bRun">Start</button>
+          <button class="b" id="bStop">Stop</button>
+          <button class="b" id="bStep" title="Taste T">Einzelschritt</button>
+          <button class="b" id="bOver" title="Wie Einzelschritt, führt aber ein Unterprogramm (JMD/JMI) ganz aus – Taste U">Überspringen</button>
+          <button class="b" id="bClr">Speicher löschen</button>
+        </div>
+        <div class="ctrls">
+          <label><input type="radio" name="tempo" value="orig" checked> Originaltempo</label>
+          <label><input type="radio" name="tempo" value="fast"> Schnell</label>
+          <label title="Original: RC-Multivibrator, Grundtakt 1 MHz (1 Bitzeit = 1 µs, 1 Bytezeit = 8 µs, ein Speicherumlauf = 1,024 ms)">Takt <input type="number" id="khz" value="1000" min="1" max="100000" step="50"> kHz</label>
+        </div>
+        <div class="ctrls">
+          <label>Zahlen <select id="base"><option value="8">oktal</option><option value="16">hex</option><option value="10">dezimal</option></select></label>
+          <label><input type="checkbox" id="klick"> Tasterklicken</label>
+          <label><input type="range" id="glow" min="10" max="250" value="80" style="width:90px"> Nachglühen</label>
+        </div>
+        <div class="ctrls">
+          <label>Beispiel <select id="demo"></select></label>
+          <button class="b" id="bDemo">Laden</button>
+        </div>
+        <div class="hint" id="demoInfo" style="margin:-2px 0 8px"></div>
+        <div class="ctrls">
+          <button class="b" id="bSave">Zustand speichern …</button>
+          <button class="b" id="bLoad">Zustand laden …</button>
+          <input type="file" id="file" accept=".json,.bin,.kbk,application/json" hidden>
+        </div>
+        <div class="ctrls">
+          <button class="b" id="bCircPut" title="Speicher in kenbak1.circ oder kenbak1_logisim_web.html eintragen und die geänderte Datei herunterladen">Speicher → Logisim-Schaltung …</button>
+          <button class="b" id="bCircGet" title="Speicherinhalt aus kenbak1.circ oder kenbak1_logisim_web.html übernehmen">Logisim-Schaltung → Speicher …</button>
+          <input type="file" id="circFile" accept=".circ,.html,.htm" hidden>
+        </div>
+        <div class="status" id="status"></div>
+      </div>
+
+      <div class="card">
+        <h2>Register</h2>
+        <table class="regs"><tbody id="regs"></tbody></table>
+        <div class="hint">Doppelklick auf einen Wert ändert ihn (Eingabe in der gewählten Zahlenbasis, <span class="mono">0x…</span> hex, <span class="mono">#…</span> dezimal).</div>
+      </div>
+
+      <div class="card">
+        <h2>Programm (Disassembler)</h2>
+        <div class="ctrls">
+          <label>ab <input type="text" class="addr mono" id="disFrom" value="004"></label>
+          <label><input type="checkbox" id="disFollow" checked> folgt P</label>
+          <button class="b" id="bBpClr">Alle Breakpoints löschen</button>
+        </div>
+        <table class="dis"><tbody id="dis"></tbody></table>
+        <div class="hint">Klick auf ○ setzt/löscht einen Breakpoint · Doppelklick auf eine Zeile setzt P dorthin · Der Rechner hält an, bevor der Befehl an einem Breakpoint ausgeführt wird.</div>
+      </div>
+    </div>
+
+    <div>
+    <div class="card">
+      <h2>Speicher (256 Byte)</h2>
+      <div class="memwrap"><table class="mem" id="mem"></table></div>
+      <div class="legend">
+        <span style="background:#6b4a12;color:#fff">P</span>nächster Befehl
+        <span style="outline:1px solid #8fb4ff">Adr</span>Adressregister der Frontplatte
+        <span style="box-shadow:inset 3px 0 0 #e05050">BP</span>Breakpoint
+        <span style="color:#9fc6e0">blau</span>Register/E-A-Adressen
+      </div>
+      <div class="hint">Klick setzt das Adressregister · Doppelklick ändert den Inhalt (Enter springt zur nächsten Zelle) · Rechtsklick setzt/löscht einen Breakpoint.</div>
+    </div>
+
+    <div class="card">
+      <h2>Trace (letzte Befehle)</h2>
+      <div class="ctrls">
+        <label>zeigen <select id="trN"><option>16</option><option selected>64</option><option>256</option></select></label>
+        <label><input type="checkbox" id="trOn" checked> aufzeichnen</label>
+        <button class="b" id="bTrClr">Leeren</button>
+      </div>
+      <div class="trace" id="trace"></div>
+      <div class="hint">Neuester Befehl oben · Register nach dem Befehl · BZ = Bytezeiten (je 8 µs bei 1 MHz).</div>
+    </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Umlaufspeicher: die zwei Schieberegister</h2>
+    <div class="srwrap">
+      <div>
+        <canvas class="srcv" id="srCv" width="420" height="420" aria-label="Die zwei Schieberegister des Speichers als Ringe"></canvas>
+        <div class="srtip" id="srTip">Maus über einen Platz: Adresse, Inhalt und Wartezeit bis zum Lesekopf</div>
+      </div>
+      <div class="srinfo">
+        <div class="ctrls">
+          <label><input type="radio" name="srView" value="rot" checked> Daten laufen am Lesekopf vorbei</label>
+          <label><input type="radio" name="srView" value="fix"> Speicher fest, Lesekopf läuft</label>
+        </div>
+        <div class="ctrls">
+          <button class="b" id="bSrSlow">Letzten Befehl in Zeitlupe</button>
+          <label><input type="range" id="srSlowLen" min="2" max="20" value="6" style="width:90px"> Dauer</label>
+        </div>
+        <div id="srNow"></div>
+        <div class="srlog" id="srLog">Noch kein Befehl ausgeführt – Einzelschritt drücken.</div>
+        <div class="hint">Wie im Original (Theory of Operation): zwei MOS-Schieberegister zu je 1024 Bit laufen ständig um.
+          Innerer Ring = Umlauf 0 (Adressen 000–177), äußerer Ring = Umlauf 1 (200–377), je Platz 8 Bit (Bit 7 außen).
+          Beide Ringe liegen gleichzeitig am Lesekopf; Adressbit 7 wählt den Ring. Ein Platz kommt alle 128 Bytezeiten
+          (1,024 ms bei 1 MHz) vorbei – darum wartet der Rechner in jedem Suchzustand auf seinen Platz.
+          Markiert: <span style="color:#f0b54a">■</span> nächster Befehl (P), <span style="color:#7fc4ff">●</span> Plätze, die der letzte Befehl gesucht hat (mit Reihenfolge).</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Assembler (Schreibweise des Programming Reference Manual)</h2>
+    <div class="two">
+      <div>
+        <textarea class="asmsrc" id="asmSrc" spellcheck="false"></textarea>
+        <div class="ctrls" style="margin-top:8px">
+          <button class="b" id="bAsm">Assemblieren und laden</button>
+          <button class="b" id="bAsmChk">Nur prüfen</button>
+          <label><input type="checkbox" id="asmSetP" checked> P auf Start setzen</label>
+          <label><input type="checkbox" id="asmClr"> Speicher vorher löschen</label>
+        </div>
+        <div class="ctrls">
+          <label>Speicher → Quelltext von <input type="text" class="addr mono" id="m2sFrom" value="004"></label>
+          <label>bis <input type="text" class="addr mono" id="m2sTo" value="037"></label>
+          <button class="b" id="bMem2Src">Holen</button>
+          <button class="b" id="bSrcSave">Quelltext speichern …</button>
+          <button class="b" id="bSrcLoad">Quelltext laden …</button>
+          <input type="file" id="srcFile" accept=".asm,.txt,.kbk" hidden>
+        </div>
+      </div>
+      <div>
+        <div class="listing" id="asmOut">(noch nicht assembliert)</div>
+        <details class="hint" style="margin-top:8px">
+          <summary>Kurzreferenz</summary>
+          <div class="mono" style="white-space:pre;font-size:.78rem;line-height:1.35;margin-top:6px;overflow-x:auto">Zahlen oktal (Handbuch), #12 dezimal, 0x0A hex, * = aktuelle Adresse
+Marke am Zeilenanfang (mit oder ohne :), Kommentar nach ;
+ORG 004   NAME EQU 200   DB 001, 002, ZAHL+1
+
+ADD|SUB|LOAD|STORE  A|B|X  Operand
+AND|OR|LNEG  [A]  Operand
+  Operand:  C=wert  adr  (adr)  adr,X  (adr),X
+JPD|JPI|JMD|JMI  Bedingung  Ziel
+  Bedingung: UNC, A≠0 (A!=0, ANZ), A=0 (AZ),
+             A&lt;0 (ANEG), A≥0 (A&gt;=0, APOS), A&gt;0 (APNZ)
+  Ziel in (…) bei JPD/JMD → indirekt
+SKP 0|1  b0…b7  adr      SET 0|1  b0…b7  adr
+SFTL|SFTR|ROTL|ROTR  A|B  [1…4]
+NOOP   HALT
+Vordefiniert: A=000 B=001 X=002 P=003 OUTPUT=200
+              OCA=201 OCB=202 OCX=203 INPUT=377</div>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:16px">
+    <h2>Eintipp-Hilfe: welche Taster am Original?</h2>
+    <div class="ctrls">
+      <label><input type="radio" name="eiQ" value="asm" checked> zuletzt assembliertes Programm</label>
+      <label><input type="radio" name="eiQ" value="mem"> Speicher von <input type="text" class="addr mono" id="eiFrom" value="003"></label>
+      <label>bis <input type="text" class="addr mono" id="eiTo" value="017"></label>
+      <label><input type="checkbox" id="eiCheck"> Kontrolllesen anhängen</label>
+      <button class="b" id="bEi">Liste erstellen</button>
+    </div>
+    <div class="ctrls">
+      <button class="b" id="bEiStep">Nächsten Schritt an der Frontplatte ausführen</button>
+      <button class="b" id="bEiPlay">Alles vorführen</button>
+      <button class="b" id="bEiReset">Von vorn</button>
+      <label><input type="range" id="eiSpeed" min="60" max="600" value="220" style="width:100px"> Tempo</label>
+    </div>
+    <div class="eintipp"><table><tbody id="eiList"><tr><td>Noch keine Liste.</td></tr></tbody></table></div>
+    <div class="hint" id="eiSum">Die Liste folgt dem Ablauf von PR-23: Adresse mit CLEAR, Datentastern und SET einstellen, dann je Byte CLEAR, Datentaster, STORE (die Adresse zählt selbst weiter).</div>
+  </div>
+  <div class="card" style="margin-top:16px" id="ueber">
+    <h2>Über den KENBAK-1</h2>
+    <div class="info">
+      <div>
+        <p>Der KENBAK-1 gilt als erster Personal Computer. John V. Blankenbaker (Jahrgang 1929) entwarf ihn 1970 nahezu allein;
+          seine Garage war der Firmensitz der Kenbak Corporation. Anfang 1971 kam der Rechner für 750 Dollar auf den Markt –
+          als fertiges Gerät, nicht als Bausatz, beworben für technisch interessierte Leute, die zum ersten Mal mit einem Computer arbeiten.</p>
+        <p>Einen Mikroprozessor gab es noch nicht zu kaufen: Das Rechenwerk besteht aus TTL-Bausteinen der 7400-Reihe,
+          die 256 Byte Speicher stecken in zwei umlaufenden MOS-Schieberegistern (Intel 1404A). Der Grundtakt beträgt 1 MHz,
+          weil jeder Speicherzugriff auf seinen Platz im Umlauf warten muss, schafft der Rechner aber nur einige hundert Befehle je Sekunde.
+          Ein- und Ausgabe sind acht Taster und acht Lämpchen.</p>
+        <p>Es wurden etwa 50 Geräte gebaut und rund 40 bis 44 verkauft. 1973 gab die Firma auf; CTI Education Products übernahm
+          den Restbestand und bot ihn als „5050“ an. 1986 kürte das Computer Museum in Boston den KENBAK-1 in seinem Wettbewerb
+          „What Was The First PC?“ zum ersten Personal Computer.</p>
+        <p>Mehr dazu im Artikel auf <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal</a> <!-- Platzhalter: Link zum Kenbak-Artikel eintragen, sobald er erschienen ist --> (folgt).</p>
+      </div>
+      <div>
+        <dl>
+          <dt>Hersteller</dt><dd>Kenbak Corporation</dd>
+          <dt>Erscheinen</dt><dd>Anfang 1971</dd>
+          <dt>Preis</dt><dd>750 US-Dollar</dd>
+          <dt>Stückzahl</dt><dd>ca. 50 gebaut, ca. 40–44 verkauft</dd>
+          <dt>Logik</dt><dd>TTL (7400-Reihe), kein Mikroprozessor</dd>
+          <dt>Speicher</dt><dd>256 Byte in 2 × 1024 Bit Schieberegister</dd>
+          <dt>Takt</dt><dd>1 MHz, Bytezeit 8 µs</dd>
+          <dt>Tempo</dt><dd>einige hundert Befehle/s</dd>
+          <dt>Ein-/Ausgabe</dt><dd>8 Taster, 8 Lämpchen</dd>
+        </dl>
+        <ul>
+          <li><a href="https://www.computerhistory.org/revolution/story/297" target="_blank" rel="noopener">Computer History Museum: What Was The First PC?</a></li>
+          <li><a href="https://en.wikipedia.org/wiki/Kenbak-1" target="_blank" rel="noopener">Wikipedia: Kenbak-1</a></li>
+          <li><a href="https://www.kenbak-1.net/" target="_blank" rel="noopener">kenbak-1.net – Handbücher und Geschichte</a></li>
+          <li><a href="https://www.kenbak.com/" target="_blank" rel="noopener">kenbak.com</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Kenbak-Werkbank · <a href="kenbak1_logisim_web.html">Schaltung aus Gattern (Logisim Web)</a> · mehr auf <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a>
+</footer>
+
+<script>
+"use strict";
+/* =====================================================================
+   KENBAK-1 – Rechenwerk
+   Alle Register liegen im Speicher:
+   000 A · 001 B · 002 X · 003 P · 200 Ausgabe (Lämpchen)
+   201/202/203 Übertrag (Bit 1) und Überlauf (Bit 0) zu A/B/X · 377 Eingabe (Taster)
+   ===================================================================== */
+const A = 0, B = 1, X = 2, P = 3, OUT = 0o200, OCA = 0o201, INP = 0o377;
+const mem = new Uint8Array(256);
+const S = {
+  addr: 0,          // Adressregister der Frontplatte
+  latch: 0,         // zuletzt gelesener/gespeicherter Wert (Anzeige MEMORY)
+  mode: 'input',    // input | address | memory | out
+  running: false,
+  stopHeld: false,
+  inputHeld: false,  // Daten-/CLEAR-Taster gerade gedrückt (Anzeige im Lauf, PR-20)
+  halt: false, haltAt: -1,
+  steps: 0
+};
+
+/* ---------------------------------------------------------------------
+   Zeitmodell nach „Theory of Operation“:
+   Der Speicher besteht aus zwei umlaufenden Schieberegistern zu je 1024 Bit
+   (128 Byte): Adressen 000–177 und 200–377. Beide laufen gleichzeitig um,
+   jede Bytezeit (8 Bitzeiten) kommt der nächste Platz an den Lesekopf.
+   Ein Zustand „Suche“ wartet, bis der gewünschte Platz als Nächstes vorbeikommt
+   (mindestens 1, höchstens 128 Bytezeiten); alle übrigen Zustände dauern
+   genau eine Bytezeit. T zählt die Bytezeiten seit dem Einschalten.
+   --------------------------------------------------------------------- */
+let T = 0;
+/* Für die Schieberegister-Ansicht wird die Zustandsfolge des letzten Befehls
+   mitgeschrieben (Adresse, Beginn, Dauer; Adresse −1 = Lese-/Schreibzustand). */
+const SRL = new Int32Array(240); let srN = 0;
+const srLast = { valid: false, p: 0, op: 0, b2: 0, t0: 0, t1: 0, n: 0, log: SRL };
+function srch(a) { const m = (a - T) & 127, w = m || 128; if (srN < 237) { SRL[srN++] = a & 255; SRL[srN++] = T; SRL[srN++] = w; } T += w; }   // Suchzustand
+function st() { if (srN < 237) { SRL[srN++] = -1; SRL[srN++] = T; SRL[srN++] = 1; } T++; }                                       // 1-Bytezeit-Zustand
+
+function shift1(v, left, rot) {
+  if (left) return rot ? ((v << 1) | (v >> 7)) & 255 : (v << 1) & 255;
+  return rot ? ((v >> 1) | ((v & 1) << 7)) : ((v >> 1) | (v & 0x80));
+}
+
+/* Führt einen Befehl aus (Zustände SA … SY). Rückgabe: Dauer in Bytezeiten. */
+function step() {
+  const t0 = T;
+  S.halt = false;
+  srch(P); st();                              // SA: P suchen, SB: P lesen
+  const p = mem[P];
+  srch(p); st();                              // SC: Befehl suchen, SD: 1. Byte lesen
+  const op = mem[p], lo = op & 7;
+  let len = 2, jumpTo = -1;
+
+  if (lo <= 1) {                              // Einbytebefehle: HALT, NOOP, Schieben
+    len = 1;
+    const r = (op & 0x20) ? B : A;
+    srch(r); st();                            // SU, SV
+    if (lo === 0) {
+      if (!(op & 0x80)) { S.halt = true; S.haltAt = p; }
+    } else {
+      // Kodierung nach PR-24: 1. Oktalziffer 0 = SFTR, 1 = ROTR, 2 = SFTL, 3 = ROTL
+      const left = op & 0x80, rot = op & 0x40;
+      let n = (op >> 3) & 3; if (!n) n = 4;
+      let v = mem[r];
+      for (let i = 0; i < n; i++) v = shift1(v, left, rot);
+      st();                                   // SW: schieben
+      srch(r); st();                          // SX, SY: zurückschreiben
+      mem[r] = v;
+    }
+  } else {
+    st();                                     // SE: 2. Byte lesen
+    const b2 = mem[(p + 1) & 255];
+    if (lo === 2) {                           // SET 0/1, SKP 0/1 (nur Speicheradressierung)
+      const bit = (op >> 3) & 7, val = (op >> 6) & 1;
+      srch(b2); st();                         // SK, SL
+      if (op & 0x80) { if (((mem[b2] >> bit) & 1) === val) len = 4; }
+      else mem[b2] = val ? (mem[b2] | (1 << bit)) : (mem[b2] & ~(1 << bit));
+    }
+    else if (op & 0x20) {                     // JPD, JPI, JMD, JMI
+      const reg = (op >> 6) & 3, ind = op & 0x08, mark = op & 0x10;
+      let t = b2;
+      if (ind) { srch(t); st(); t = mem[t]; } // SF, SG
+      srch(reg < 3 ? reg : A); st();          // SM, SZ (unbedingt: A wird gesucht)
+      let ok = true;
+      if (reg < 3) {
+        const v = mem[reg];
+        switch (lo) {
+          case 3: ok = v !== 0; break;
+          case 4: ok = v === 0; break;
+          case 5: ok = (v & 0x80) !== 0; break;
+          case 6: ok = (v & 0x80) === 0; break;
+          default: ok = v !== 0 && (v & 0x80) === 0;
+        }
+      }
+      if (ok) {
+        srch(P);                              // ST
+        if (mark) {
+          st(); srch(t); st();                // SQ, SR, SS
+          // SQ: P ← Ziel, Erhöhung 1 vormerken; SS: Rücksprungadresse ins Ziel.
+          // Reihenfolge wie in der Hardware – wichtig, wenn das Ziel 003 (P selbst) ist.
+          mem[P] = t; mem[t] = (p + 2) & 255; len = 1;
+        } else { st(); jumpTo = t; }          // SN
+      }
+    }
+    else {                                    // ADD SUB LOAD STORE / OR AND LNEG
+      const reg = (op >> 6) & 3, f = (op >> 3) & 3;
+      const isStore = reg < 3 && f === 3;
+      let e = (p + 1) & 255;                  // unmittelbar: Platz des 2. Bytes
+      if (lo !== 3) {
+        e = b2;
+        if (lo === 5 || lo === 7) { srch(e); st(); e = mem[e]; }      // SF, SG
+        if (lo >= 6) { srch(X); st(); e = (e + mem[X]) & 255; }       // SH, SJ
+      }
+      if (isStore) {
+        srch(reg); st();                      // SM, SP
+        srch(e); st();                        // SR, SS
+        mem[e] = mem[reg];
+      } else {
+        if (lo !== 3) { srch(e); st(); }      // SK, SL: Operand holen
+        const w = mem[e];
+        const tr = reg < 3 ? reg : A;
+        srch(tr); st();                       // SM, SN
+        if (reg < 3) {
+          const a = mem[reg];
+          if (f === 2) mem[reg] = w;
+          else {
+            let res, c, v;
+            if (f === 0) { const s = a + w; res = s & 255; c = s > 255; v = ((~(a ^ w)) & (a ^ res) & 0x80) !== 0; }
+            else { res = (a - w) & 255; c = a < w; v = ((a ^ w) & (a ^ res) & 0x80) !== 0; }   // Carry = Borgen
+            mem[reg] = res; mem[OCA + reg] = (c ? 2 : 0) | (v ? 1 : 0);
+          }
+        } else {
+          if (f === 0) mem[A] |= w;           // OR
+          else if (f === 2) mem[A] &= w;      // AND
+          else if (f === 3) mem[A] = (-w) & 255;   // LNEG, Überlauf wird nicht gemeldet
+          // f === 1: NOOP (zwei Byte)
+        }
+      }
+    }
+  }
+  // Die Hardware erhöht P erst im Zustand SB des nächsten Befehls – also um
+  // den dann in 003 stehenden Wert. Darum springt STORE A P nach A+2 (PR-16).
+  mem[P] = jumpTo >= 0 ? jumpTo : (mem[P] + len) & 255;
+  if (S.halt) { srch(P); st(); }              // SA/SB laufen noch, dann Halt-Zustand
+  S.steps++;
+  return T - t0;
+}
+
+/* =====================================================================
+   Zahlen & Disassembler (vorläufige Schreibweise, Stufe 3 übernimmt die
+   Notation des Programming Reference Manual)
+   ===================================================================== */
+let BASE = 8;
+function fmt(v) {
+  if (BASE === 16) return v.toString(16).toUpperCase().padStart(2, '0');
+  if (BASE === 10) return v.toString(10).padStart(3, '\u2007');
+  return v.toString(8).padStart(3, '0');
+}
+const bin = v => v.toString(2).padStart(8, '0');
+const CND = ['', '', '', '≠0', '=0', '<0', '≥0', '>0'];
+const RN = ['A', 'B', 'X'];
+
+/* Schreibweise nach PR-14: Operation, Einzelheit (Register/Stellen), Operand.
+   Konstante „C=…“, Speicher „adr“, indirekt „(adr)“, indiziert „adr,X“. */
+function dis(p) { return disOp(mem[p], mem[(p + 1) & 255]); }
+function disOp(op, b) {
+  const lo = op & 7;
+  if (lo === 0) return { len: 1, t: (op & 0x80) ? 'NOOP' : 'HALT' };
+  if (lo === 1) {
+    const n = ((op >> 3) & 3) || 4;
+    return { len: 1, t: ((op & 0x40) ? 'ROT' : 'SFT') + ((op & 0x80) ? 'L ' : 'R ') + ((op & 0x20) ? 'B' : 'A') + n };
+  }
+  if (lo === 2) return { len: 2, t: ((op & 0x80) ? 'SKP ' : 'SET ') + ((op >> 6) & 1) + ' b' + ((op >> 3) & 7) + ' ' + fmt(b) };
+  if (op & 0x20) {
+    const reg = (op >> 6) & 3, m = ['JPD', 'JPI', 'JMD', 'JMI'][(op >> 3) & 3];
+    const opd = (op & 0x08) ? '(' + fmt(b) + ')' : fmt(b);
+    return { len: 2, t: m + ' ' + (reg < 3 ? RN[reg] + CND[lo] : 'UNC') + ' ' + opd };
+  }
+  const reg = (op >> 6) & 3, f = (op >> 3) & 3;
+  const opd = [, , , 'C=' + fmt(b), fmt(b), '(' + fmt(b) + ')', fmt(b) + ',X', '(' + fmt(b) + '),X'][lo];
+  if (reg < 3) return { len: 2, t: ['ADD', 'SUB', 'LOAD', 'STORE'][f] + ' ' + RN[reg] + ' ' + opd };
+  return { len: 2, t: ['OR', 'NOOP', 'AND', 'LNEG'][f] + (f === 1 ? '' : ' A ' + opd) };
+}
+
+/* =====================================================================
+   Frontplatte
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const plate = $('#plate');
+const dataLamps = [], modeLamps = {}, keyEls = {};
+const KEYHINT = { clear: 'C', disp: 'D', set: 'A', read: 'R', store: 'S', start: 'G', stop: 'H' };
+
+function mkLamp() { const l = document.createElement('div'); l.className = 'lamp'; l.appendChild(document.createElement('i')); return l; }
+function mkKey(id, title) {
+  const k = document.createElement('button'); k.className = 'key'; k.title = title; k.dataset.k = id;
+  keyEls[id] = k; return k;
+}
+
+(function buildPanel() {
+  const g = document.createElement('div'); g.className = 'grp';
+  const r = document.createElement('div'); r.className = 'row';
+  for (let bit = 7; bit >= 0; bit--) {
+    const c = document.createElement('div'); c.className = 'col';
+    const n = document.createElement('div'); n.className = 'lbl'; n.textContent = bit;
+    const l = mkLamp(); dataLamps[bit] = l;
+    const k = mkKey('b' + bit, 'Datentaster Bit ' + bit + ' (Taste ' + (8 - bit) + ')');
+    const h = document.createElement('div'); h.className = 'kh'; h.textContent = 8 - bit;
+    c.append(n, l, k, h); r.appendChild(c);
+  }
+  g.appendChild(r); plate.appendChild(g);
+
+  const groups = [
+    ['INPUT', 'input', [['clear', 'CLEAR']]],
+    ['ADDRESS', 'address', [['disp', 'DISPLAY'], ['set', 'SET']]],
+    ['MEMORY', 'memory', [['read', 'READ'], ['store', 'STORE']]],
+    ['RUN', 'run', [['start', 'START'], ['stop', 'STOP']]]
+  ];
+  for (const [name, id, keys] of groups) {
+    const s = document.createElement('div'); s.className = 'sep'; plate.appendChild(s);
+    const gg = document.createElement('div'); gg.className = 'grp';
+    const lb = document.createElement('div'); lb.className = 'lbl'; lb.textContent = name;
+    const l = mkLamp(); modeLamps[id] = l;
+    const rr = document.createElement('div'); rr.className = 'row';
+    for (const [kid, cap] of keys) {
+      const c = document.createElement('div'); c.className = 'col';
+      const k = mkKey(kid, cap + ' (Taste ' + KEYHINT[kid] + ')');
+      const t = document.createElement('div'); t.className = 'cap'; t.textContent = cap;
+      const h = document.createElement('div'); h.className = 'kh'; h.textContent = KEYHINT[kid];
+      c.append(k, t, h); rr.appendChild(c);
+    }
+    gg.append(lb, l, rr); plate.appendChild(gg);
+  }
+})();
+
+let dirty = true, budget = 0;
+
+function press(k) {
+  click();
+  if (k[0] === 'b' && k.length === 2) {
+    mem[INP] |= 1 << +k[1];
+    if (!S.running) S.mode = 'input';
+  } else switch (k) {
+    case 'clear': mem[INP] = 0; if (!S.running) S.mode = 'input'; break;
+    case 'disp': if (!S.running) S.mode = 'address'; break;
+    case 'set': if (!S.running) { S.addr = mem[INP]; S.mode = 'address'; } break;
+    case 'read': if (!S.running) { S.latch = mem[S.addr]; S.addr = (S.addr + 1) & 255; S.mode = 'memory'; } break;
+    case 'store': if (!S.running) { mem[S.addr] = mem[INP]; S.latch = mem[S.addr]; S.addr = (S.addr + 1) & 255; S.mode = 'memory'; } break;
+    case 'start':
+      if (S.stopHeld) singleStep();
+      else if (!S.running) { S.running = true; S.mode = 'out'; budget = 0; S.stopReason = ''; }
+      break;
+    case 'stop': S.running = false; S.mode = 'out'; break;
+    case 'step': S.running = false; S.stopReason = ''; singleStep(); break;
+  }
+  dirty = true;
+}
+function singleStep() { exec1(); S.mode = 'out'; dirty = true; }
+
+/* =====================================================================
+   Debugger: Breakpoints, Überspringen, Trace
+   ===================================================================== */
+const bps = new Set();        // Adressen, vor deren Ausführung angehalten wird
+let tempBp = -1;              // einmaliger Haltepunkt für „Überspringen“
+S.stopReason = '';
+
+const TR_N = 256;
+const trP = new Uint8Array(TR_N), trOp = new Uint8Array(TR_N), trB2 = new Uint8Array(TR_N),
+      trA = new Uint8Array(TR_N), trB = new Uint8Array(TR_N), trX = new Uint8Array(TR_N),
+      trD = new Uint16Array(TR_N), trNo = new Float64Array(TR_N);
+let trI = 0, trCount = 0, trEnabled = true;
+
+/* Ein Befehl mit Trace-Aufzeichnung. Rückgabe wie step(): Bytezeiten. */
+function exec1() {
+  const p = mem[P], op = mem[p], b2 = mem[(p + 1) & 255];
+  srN = 0; const t0 = T;
+  const d = step();
+  srLast.p = p; srLast.op = op; srLast.b2 = b2; srLast.t0 = t0; srLast.t1 = T; srLast.n = srN; srLast.valid = true;
+  if (trEnabled) {
+    const k = trI;
+    trP[k] = p; trOp[k] = op; trB2[k] = b2;
+    trA[k] = mem[A]; trB[k] = mem[B]; trX[k] = mem[X];
+    trD[k] = Math.min(d, 65535); trNo[k] = S.steps;
+    trI = (trI + 1) % TR_N; if (trCount < TR_N) trCount++;
+  }
+  return d;
+}
+/* Nach jedem Befehl im Lauf: Breakpoint am nächsten Befehl erreicht? */
+function checkBreak() {
+  const np = mem[P];
+  if (np === tempBp) { tempBp = -1; S.running = false; S.mode = 'out'; S.stopReason = 'Unterprogramm zurück bei ' + fmt(np); dirty = true; return true; }
+  if (bps.has(np)) { S.running = false; S.mode = 'out'; S.stopReason = 'Breakpoint bei ' + fmt(np); dirty = true; return true; }
+  return false;
+}
+/* Überspringen: Jump-and-Mark ganz ausführen, sonst normaler Einzelschritt */
+function stepOver() {
+  const p = mem[P], op = mem[p];
+  const isMark = (op & 7) >= 3 && (op & 0x30) === 0x30;
+  if (!isMark) { press('step'); return; }
+  click();
+  tempBp = (p + 2) & 255;
+  S.stopReason = ''; S.running = true; S.mode = 'out'; budget = 0; dirty = true;
+}
+function toggleBp(a) { if (bps.has(a)) bps.delete(a); else bps.add(a); dirty = true; }
+function clearTrace() { trI = 0; trCount = 0; dirty = true; }
+
+function flashKey(id) {
+  const k = keyEls[id]; if (!k) return;
+  k.classList.add('down'); setTimeout(() => k.classList.remove('down'), 110);
+}
+
+// Maus/Touch: STOP wirkt beim Drücken und gilt als gehalten, solange der Finger/die Maustaste unten ist
+plate.addEventListener('pointerdown', e => {
+  const k = e.target.closest('.key'); if (!k) return;
+  e.preventDefault();
+  if (k.dataset.k === 'stop') S.stopHeld = true;
+  if (k.dataset.k === 'clear' || /^b\d$/.test(k.dataset.k)) S.inputHeld = true;
+  press(k.dataset.k);
+});
+const release = e => { S.inputHeld = false; const k = e.target.closest && e.target.closest('.key'); if (k && k.dataset.k === 'stop') S.stopHeld = false; };
+plate.addEventListener('pointerup', release);
+plate.addEventListener('pointercancel', release);
+plate.addEventListener('pointerout', release);
+
+const KEYMAP = { c: 'clear', backspace: 'clear', delete: 'clear', d: 'disp', a: 'set', r: 'read', s: 'store', g: 'start', enter: 'start', h: 'stop', escape: 'stop', t: 'step' };
+document.addEventListener('keydown', e => {
+  if (e.target.closest && e.target.closest('input,select,textarea')) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const key = e.key.toLowerCase();
+  if (/^[1-8]$/.test(key)) {
+    e.preventDefault(); S.inputHeld = true; if (e.repeat) return;
+    const id = 'b' + (8 - +key); flashKey(id); press(id); return;
+  }
+  if (key === 'u') { e.preventDefault(); if (!e.repeat) { flashKey('start'); stepOver(); } return; }
+  const k = KEYMAP[key]; if (!k) return;
+  e.preventDefault();
+  if (key === 'h') { S.stopHeld = true; }
+  if (k === 'clear') S.inputHeld = true;
+  if (e.repeat) return;
+  flashKey(k === 'step' ? 'start' : k); press(k);
+});
+document.addEventListener('keyup', e => { if (e.key.toLowerCase() === 'h') S.stopHeld = false; S.inputHeld = false; });
+window.addEventListener('blur', () => { S.stopHeld = false; S.inputHeld = false; });
+
+/* Tasterklicken */
+let ac = null;
+function click() {
+  if (!$('#klick').checked) return;
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    const n = (ac.sampleRate * 0.012) | 0, buf = ac.createBuffer(1, n, ac.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 3);
+    const src = ac.createBufferSource(); src.buffer = buf;
+    const f = ac.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 1800;
+    const g = ac.createGain(); g.gain.value = 0.5;
+    src.connect(f).connect(g).connect(ac.destination); src.start();
+  } catch (err) { /* ohne Ton weiter */ }
+}
+
+/* =====================================================================
+   Werkbank-Anzeige
+   ===================================================================== */
+const memTable = $('#mem'), memCells = [], memRowHead = [];
+(function buildMem() {
+  const head = document.createElement('tr'); head.appendChild(document.createElement('th'));
+  for (let c = 0; c < 8; c++) { const th = document.createElement('th'); th.textContent = '+' + c; head.appendChild(th); }
+  memTable.appendChild(head);
+  for (let r = 0; r < 32; r++) {
+    const tr = document.createElement('tr'), th = document.createElement('th');
+    memRowHead[r] = th; tr.appendChild(th);
+    for (let c = 0; c < 8; c++) {
+      const i = r * 8 + c, td = document.createElement('td');
+      td.dataset.i = i;
+      if (i <= 3 || (i >= OUT && i <= 0o203) || i === INP) td.classList.add('sp');
+      memCells[i] = td; tr.appendChild(td);
+    }
+    memTable.appendChild(tr);
+  }
+  memTable.addEventListener('click', e => {
+    const td = e.target.closest('td'); if (!td || editing) return;
+    S.addr = +td.dataset.i; if (!S.running) S.mode = 'address'; dirty = true;
+  });
+  memTable.addEventListener('dblclick', e => {
+    const td = e.target.closest('td'); if (!td) return;
+    editMemCell(+td.dataset.i);
+  });
+  memTable.addEventListener('contextmenu', e => {
+    const td = e.target.closest('td'); if (!td) return;
+    e.preventDefault(); toggleBp(+td.dataset.i);
+  });
+})();
+
+/* ---------- Werte direkt bearbeiten ---------- */
+let editing = false;
+function parseNum(s) {
+  s = s.trim(); let v;
+  if (/^0x[0-9a-f]+$/i.test(s)) v = parseInt(s.slice(2), 16);
+  else if (/^#\d+$/.test(s)) v = parseInt(s.slice(1), 10);
+  else if (BASE === 8 && /^[0-7]+$/.test(s)) v = parseInt(s, 8);
+  else if (BASE === 16 && /^[0-9a-f]+$/i.test(s)) v = parseInt(s, 16);
+  else if (BASE === 10 && /^\d+$/.test(s)) v = parseInt(s, 10);
+  return (Number.isInteger(v) && v >= 0 && v <= 255) ? v : null;
+}
+function inlineEdit(td, value, onSet, onNext) {
+  if (td.querySelector('input')) return;
+  editing = true;
+  const inp = document.createElement('input');
+  inp.className = 'ed'; inp.value = fmt(value).trim();
+  td.textContent = ''; td.appendChild(inp); inp.focus(); inp.select();
+  let done = false;
+  const fin = (ok, next) => {
+    if (done) return; done = true;
+    if (ok) { const v = parseNum(inp.value); if (v !== null) onSet(v); }
+    editing = false; dirty = true; renderBench();
+    if (next && onNext) onNext();
+  };
+  inp.addEventListener('keydown', e => {
+    e.stopPropagation();
+    if (e.key === 'Enter') { e.preventDefault(); fin(true, true); }
+    else if (e.key === 'Tab') { e.preventDefault(); fin(true, true); }
+    else if (e.key === 'Escape') { e.preventDefault(); fin(false, false); }
+  });
+  inp.addEventListener('blur', () => fin(true, false));
+}
+function editMemCell(i) {
+  inlineEdit(memCells[i], mem[i], v => { mem[i] = v; }, () => editMemCell((i + 1) & 255));
+}
+$('#regs').addEventListener('dblclick', e => {
+  const td = e.target.closest('td.ev'); if (!td) return;
+  const r = td.dataset.r;
+  if (r === 'ar') inlineEdit(td, S.addr, v => { S.addr = v; });
+  else { const a = +r; inlineEdit(td, mem[a], v => { mem[a] = v; }); }
+});
+
+function flags(v) { return 'Übertrag ' + ((v >> 1) & 1) + ' · Überlauf ' + (v & 1); }
+
+function renderBench() {
+  if (editing) return;
+  for (let r = 0; r < 32; r++) memRowHead[r].textContent = fmt(r * 8);
+  const pc = mem[P];
+  for (let i = 0; i < 256; i++) {
+    const td = memCells[i], t = fmt(mem[i]);
+    if (td.textContent !== t) td.textContent = t;
+    td.classList.toggle('pc', i === pc);
+    td.classList.toggle('ad', i === S.addr);
+    td.classList.toggle('bp', bps.has(i));
+  }
+  const rows = [
+    ['A', 0, mem[A], ''], ['B', 1, mem[B], ''], ['X', 2, mem[X], ''],
+    ['P', 3, mem[P], dis(mem[P]).t],
+    ['Ausgabe', OUT, mem[OUT], 'Lämpchen beim Lauf'],
+    ['Ü/Ü A', 0o201, mem[0o201], flags(mem[0o201])],
+    ['Ü/Ü B', 0o202, mem[0o202], flags(mem[0o202])],
+    ['Ü/Ü X', 0o203, mem[0o203], flags(mem[0o203])],
+    ['Eingabe', INP, mem[INP], 'Datentaster'],
+    ['Adressreg.', -1, S.addr, 'Frontplatte']
+  ];
+  $('#regs').innerHTML = rows.map(([n, a, v, t]) =>
+    `<tr><td class="n">${n}</td><td>${a < 0 ? '—' : fmt(a)}</td><td class="ev" data-r="${a < 0 ? 'ar' : a}" title="Doppelklick zum Ändern">${fmt(v)}</td><td>${bin(v)}</td><td class="t">${t}</td></tr>`).join('');
+  let st;
+  if (S.running) st = '<b>Läuft</b> · ' + ips + ' Befehle/s';
+  else if (S.halt) st = '<b>HALT</b> bei ' + fmt(S.haltAt) + ' · START setzt bei ' + fmt(mem[P]) + ' fort';
+  else st = '<b>Angehalten</b>' + (S.stopReason ? ' (' + S.stopReason + ')' : '') + ' · nächster Befehl bei ' + fmt(mem[P]) + ': ' + dis(mem[P]).t;
+  $('#status').innerHTML = st + ' · ' + S.steps + ' Befehle insgesamt';
+  renderDis();
+  renderTrace();
+}
+
+/* ---------- Disassembler-Liste ---------- */
+let disStart = 0o004;
+const DIS_LINES = 24;
+function disLines(start) {
+  const out = []; let a = start;
+  for (let n = 0; n < DIS_LINES; n++) { const d = dis(a); out.push([a, d]); a = (a + d.len) & 255; }
+  return out;
+}
+function renderDis() {
+  if ($('#disFollow').checked) {
+    const pc = mem[P];
+    if (!disLines(disStart).slice(0, DIS_LINES - 4).some(([a]) => a === pc)) disStart = pc;
+    const fi = $('#disFrom'); if (document.activeElement !== fi) fi.value = fmt(disStart).trim();
+  }
+  const pc = mem[P];
+  $('#dis').innerHTML = disLines(disStart).map(([a, d]) => {
+    const by = fmt(mem[a]) + (d.len === 2 ? ' ' + fmt(mem[(a + 1) & 255]) : '');
+    const cls = (a === pc ? 'cur ' : '') + (bps.has(a) ? 'on' : '');
+    return `<tr class="${cls}" data-a="${a}"><td class="g" title="Breakpoint">${bps.has(a) ? '●' : '○'}</td><td>${fmt(a)}</td><td class="by">${by}</td><td>${d.t}</td></tr>`;
+  }).join('');
+}
+$('#dis').addEventListener('click', e => {
+  const g = e.target.closest('td.g'); if (!g) return;
+  toggleBp(+g.parentNode.dataset.a);
+});
+$('#dis').addEventListener('dblclick', e => {
+  const tr = e.target.closest('tr'); if (!tr || e.target.closest('td.g')) return;
+  if (S.running) return;
+  mem[P] = +tr.dataset.a; S.halt = false; S.stopReason = ''; dirty = true;
+});
+$('#disFrom').addEventListener('change', e => {
+  const v = parseNum(e.target.value);
+  if (v !== null) { disStart = v; $('#disFollow').checked = false; }
+  dirty = true;
+});
+$('#disFollow').onchange = () => { dirty = true; };
+$('#bBpClr').onclick = () => { bps.clear(); dirty = true; };
+
+/* ---------- Trace ---------- */
+function renderTrace() {
+  const n = Math.min(+$('#trN').value, trCount);
+  const lines = [];
+  for (let j = 0; j < n; j++) {
+    const k = (trI - 1 - j + TR_N) % TR_N;
+    const t = disOp(trOp[k], trB2[k]).t;
+    lines.push(String(trNo[k]).padStart(7) + '  ' + fmt(trP[k]) + '  ' + t.padEnd(18) +
+      '  A=' + fmt(trA[k]) + ' B=' + fmt(trB[k]) + ' X=' + fmt(trX[k]) + '  ' + String(trD[k]).padStart(4) + ' BZ');
+  }
+  $('#trace').textContent = lines.length ? lines.join('\n') : '(noch keine Befehle ausgeführt)';
+}
+$('#trN').onchange = () => { dirty = true; };
+$('#trOn').onchange = e => { trEnabled = e.target.checked; };
+$('#bTrClr').onclick = clearTrace;
+
+/* =====================================================================
+   Takt, Lämpchen mit Nachglühen
+   ===================================================================== */
+const bright = new Float32Array(8), modeBright = { input: 0, address: 0, memory: 0, run: 0 };
+let last = performance.now(), benchT = 0, ips = 0, ipsN = 0, ipsT = last;
+
+function displayValue() {
+  if (S.running || S.mode === 'out') return mem[OUT];
+  if (S.mode === 'input') return mem[INP];
+  if (S.mode === 'address') return S.addr;
+  return S.latch;
+}
+function isFast() { return document.querySelector('input[name=tempo]:checked').value === 'fast'; }
+function byteUs() { const v = parseFloat($('#khz').value); return 8000 / (v > 0 ? v : 1000); }   // µs je Bytezeit
+
+function frame(t) {
+  const dt = Math.min(t - last, 100); last = t;
+  const onW = [0, 0, 0, 0, 0, 0, 0, 0]; let totW = 0;
+  const run1 = () => {
+    const acc = exec1(), o = mem[OUT];
+    for (let i = 0; i < 8; i++) if ((o >> i) & 1) onW[i] += acc;
+    totW += acc; ipsN++;
+    if (S.halt) { S.running = false; S.mode = 'out'; dirty = true; tempBp = -1; }
+    else checkBreak();
+    return acc;
+  };
+  if (S.running) {
+    if (isFast()) {
+      const end = performance.now() + 10;
+      while (S.running && performance.now() < end) for (let n = 0; n < 500 && S.running; n++) run1();
+    } else {
+      const bu = byteUs(); budget += dt * 1000; let guard = 0;
+      while (S.running && budget > 0 && guard++ < 200000) budget -= run1() * bu;
+      if (!S.running) budget = 0;
+    }
+  }
+  if (t - ipsT >= 1000) { ips = Math.round(ipsN * 1000 / (t - ipsT)); ipsN = 0; ipsT = t; }
+
+  // Lämpchen: Einschalten rasch, Ausschalten mit Nachglühen
+  const tau = +$('#glow').value, kDown = 1 - Math.exp(-dt / tau), kUp = 1 - Math.exp(-dt / 12);
+  const dv = displayValue();
+  for (let i = 0; i < 8; i++) {
+    let target = totW > 0 ? onW[i] / totW : ((dv >> i) & 1);
+    if (S.running && S.inputHeld) target = Math.min(1, 0.85 * ((mem[INP] >> i) & 1) + 0.3 * target);
+    bright[i] += (target - bright[i]) * (target > bright[i] ? kUp : kDown);
+    dataLamps[i].style.setProperty('--b', bright[i].toFixed(3));
+  }
+  for (const m in modeBright) {
+    const target = m === 'run' ? (S.running ? 1 : 0) : (!S.running && S.mode === m ? 1 : 0);
+    modeBright[m] += (target - modeBright[m]) * (target > modeBright[m] ? kUp : kDown);
+    modeLamps[m].style.setProperty('--b', modeBright[m].toFixed(3));
+  }
+  if (dirty || (S.running && t - benchT > 120)) { renderBench(); dirty = false; benchT = t; srDirty = true; }
+  renderSR(t);
+  requestAnimationFrame(frame);
+}
+
+/* =====================================================================
+   Beispielprogramme (Start jeweils bei 004, P = 003 zeigt darauf)
+   ===================================================================== */
+const DEMOS = [
+  { name: 'Binärzähler', info: 'Zählt auf den Lämpchen binär hoch. START drücken.', src:
+`; Binärzähler mit Warteschleife
+	ORG 004
+START	ADD A C=1	; A um eins erhöhen
+	STORE A OUTPUT	; auf die Lämpchen
+	LOAD B C=040	; Warteschleife
+WARTE	SUB B C=1
+	JPD B≠0 WARTE
+	JPD UNC START
+` },
+  { name: 'Lauflicht (rotierend)', info: 'Ein Lämpchen läuft im Kreis. START drücken.', src:
+`; Ein Lämpchen läuft im Kreis
+	ORG 004
+START	LOAD A C=1
+ZEIG	STORE A OUTPUT
+	LOAD B C=040
+WARTE	SUB B C=1
+	JPD B≠0 WARTE
+	ROTL A1
+	JPD UNC ZEIG
+` },
+  { name: 'Lauflicht hin und her', info: 'Ein Lämpchen wandert nach links und wieder zurück. Zeigt SKP (Bit prüfen und überspringen) und ein Unterprogramm mit JMD.', src:
+`; Ein Lämpchen läuft nach links und wieder zurück
+	ORG 004
+START	LOAD A C=1
+	STORE A OUTPUT
+	JMD UNC WARTE
+LINKS	SFTL A1		; eine Stelle nach links
+	STORE A OUTPUT
+	JMD UNC WARTE
+	SKP 1 b7 A	; ganz links angekommen? dann Sprung überspringen
+	JPD UNC LINKS
+RECHTS	ROTR A1		; eine Stelle nach rechts
+	STORE A OUTPUT
+	JMD UNC WARTE
+	SKP 1 b0 A	; ganz rechts angekommen?
+	JPD UNC RECHTS
+	JPD UNC LINKS
+
+; Unterprogramm: kurze Pause (verändert B)
+WARTE	DB 0		; hier legt JMD die Rücksprungadresse ab
+	LOAD B C=030
+W1	SUB B C=1
+	JPD B≠0 W1
+	JPD UNC (WARTE)	; indirekt zurückspringen
+` },
+  { name: 'Handbuch PR-23: Zähler ohne Bremse', info: 'Das Beispiel aus dem Programming Reference Manual. START drücken.', src:
+`; Beispiel aus dem Programming Reference Manual, PR-23
+	ORG 004
+LOOP	ADD B C=1
+	STORE B OUTPUT
+	JPD UNC LOOP
+` },
+  { name: 'Taster → Lämpchen', info: 'START drücken, dann Datentaster drücken: die Lämpchen zeigen das Eingaberegister 377. CLEAR löscht es wieder.', src:
+`; Die Lämpchen zeigen das Eingaberegister (Datentaster)
+	ORG 004
+LOOP	LOAD A INPUT
+	STORE A OUTPUT
+	JPD UNC LOOP
+` },
+  { name: 'Addition zweier Zahlen', info: 'START. Erste Zahl mit den Datentastern eintasten, START. Zweite Zahl eintasten, START. Die Lämpchen zeigen die Summe; ein Übertrag steht in 201 (Bit 1). Nochmal START für die nächste Aufgabe.', src:
+`; Addition zweier eingetasteter Zahlen
+	ORG 004
+START	LOAD A C=0
+	STORE A INPUT	; Eingaberegister löschen
+	STORE A OUTPUT
+	HALT		; 1. Zahl eintasten, dann START
+	LOAD A INPUT
+	STORE A ZAHL1
+	STORE A OUTPUT	; zur Kontrolle anzeigen
+	LOAD A C=0
+	STORE A INPUT
+	HALT		; 2. Zahl eintasten, dann START
+	LOAD A INPUT
+	ADD A ZAHL1
+	STORE A OUTPUT	; Summe anzeigen
+	HALT		; START: nächste Aufgabe
+	JPD UNC START
+ZAHL1	DB 0
+` },
+  { name: 'Multiplikation (Unterprogramm)', info: 'Wie die Addition: zwei Faktoren eintasten, jeweils START. Das Unterprogramm MULT multipliziert durch Schieben und Addieren; gezeigt werden die unteren 8 Bit des Produkts.', src:
+`; Multiplikation durch Schieben und Addieren
+	ORG 004
+START	LOAD A C=0
+	STORE A INPUT
+	STORE A OUTPUT
+	HALT		; 1. Faktor eintasten, START
+	LOAD A INPUT
+	STORE A FAKT1
+	STORE A OUTPUT
+	LOAD A C=0
+	STORE A INPUT
+	HALT		; 2. Faktor eintasten, START
+	LOAD B INPUT
+	LOAD A FAKT1
+	JMD UNC MULT	; A·B → A
+	STORE A OUTPUT
+	HALT
+	JPD UNC START
+FAKT1	DB 0
+
+; Unterprogramm MULT: A·B → A (untere 8 Bit), verändert B und X
+MULT	DB 0		; Rücksprungadresse
+	STORE A MKAND
+	LOAD A C=0
+	STORE A PROD
+	LOAD X C=010	; acht Bit des Multiplikators
+M1	SKP 1 b0 B	; Bit 0 gesetzt? dann den Sprung überspringen
+	JPD UNC M2
+	LOAD A PROD	; Multiplikand addieren
+	ADD A MKAND
+	STORE A PROD
+M2	LOAD A MKAND	; Multiplikand verdoppeln
+	SFTL A1
+	STORE A MKAND
+	ROTR B1		; nächstes Multiplikatorbit nach Bit 0
+	SUB X C=1
+	JPD X≠0 M1
+	LOAD A PROD
+	JPD UNC (MULT)
+MKAND	DB 0
+PROD	DB 0
+` },
+  { name: 'Würfel', info: 'START, dann einen beliebigen Datentaster drücken: die Lämpchen zeigen 1 bis 6 Punkte. Zeigt die indizierte Adressierung (Tabelle mit X).', src:
+`; Würfel: X läuft schnell von 1 bis 6, ein Taster hält ihn an
+	ORG 004
+START	LOAD X C=0
+	LOAD A C=0
+	STORE A INPUT
+LAUF	ADD X C=1
+	LOAD A X	; X nach A holen (X steht in 002)
+	SUB A C=7
+	JPD A≠0 L2
+	LOAD X C=1	; nach 6 wieder bei 1 anfangen
+L2	LOAD A INPUT	; Taster gedrückt?
+	JPD A=0 LAUF
+	LOAD A TAB,X	; Augen aus der Tabelle holen (indiziert)
+	STORE A OUTPUT
+	LOAD A C=0
+	STORE A INPUT
+	JPD UNC LAUF
+TAB	DB 0, 001, 003, 007, 017, 037, 077
+` },
+  { name: 'Spiel: Zahlenraten', info: 'START, dann einen beliebigen Datentaster drücken – der Zeitpunkt bestimmt die geheime Zahl (0 bis 077). Raten: Zahl eintasten, START. Lämpchen 360 = höher raten, 017 = tiefer raten. Getroffen: die Lämpchen zeigen die Zahl der Versuche, START = neues Spiel.', src:
+`; Zahlenraten von 0 bis 077 (63)
+	ORG 004
+START	LOAD A C=0
+	STORE A INPUT
+	LOAD A C=252	; Muster: bitte einen Taster drücken
+	STORE A OUTPUT
+W	ADD B C=1	; B zählt, bis ein Taster gedrückt wird
+	LOAD A INPUT
+	JPD A=0 W
+	LOAD A B
+	AND A C=077
+	STORE A ZIEL	; geheime Zahl
+	LOAD X C=0	; Versuche zählen
+RATE	LOAD A C=0
+	STORE A INPUT
+	HALT		; Zahl eintasten, dann START
+	ADD X C=1
+	LOAD A INPUT
+	AND A C=077
+	SUB A ZIEL
+	JPD A=0 TREFFER
+	JPD A<0 HOEHER
+	LOAD A C=017	; zu groß: tiefer raten
+	STORE A OUTPUT
+	JPD UNC RATE
+HOEHER	LOAD A C=360	; zu klein: höher raten
+	STORE A OUTPUT
+	JPD UNC RATE
+TREFFER	STORE X OUTPUT	; Zahl der Versuche zeigen
+	HALT
+	JPD UNC START
+ZIEL	DB 0
+` },
+  { name: 'Spiel: Reaktionstest', info: 'START (Lämpchen 001 = bereit), dann einen Datentaster drücken. Nach einer zufälligen Pause gehen alle Lämpchen an – so schnell wie möglich einen Datentaster drücken! Die Lämpchen zeigen dann die Reaktionszeit in Zählschritten (kleiner ist besser, bei Originaltempo etwa 8 ms je Schritt). 125 = Fehlstart, 000 = zu langsam. START = neue Runde. Im schnellen Modus nicht sinnvoll.', src:
+`; Reaktionstest
+	ORG 004
+START	LOAD A C=0
+	STORE A INPUT
+	LOAD A C=001	; bereit
+	STORE A OUTPUT
+W0	ADD B C=1	; zählt, bis zum Start gedrückt wird
+	LOAD A INPUT
+	JPD A=0 W0
+	LOAD A C=0
+	STORE A INPUT
+	STORE A OUTPUT
+	LOAD A B	; zufällige Pause: 3 bis 12 Schritte
+	AND A C=007
+	ADD A C=003
+	STORE A ZAEHL
+PAUSE	LOAD X C=060
+P1	LOAD A INPUT	; zu früh gedrückt?
+	JPD A≠0 FEHL
+	SUB X C=1
+	JPD X≠0 P1
+	LOAD A ZAEHL
+	SUB A C=1
+	STORE A ZAEHL
+	JPD A≠0 PAUSE
+	LOAD A C=377	; los!
+	STORE A OUTPUT
+	LOAD X C=0
+R1	ADD X C=1	; Reaktionszeit zählen
+	JPD X=0 ZEIG	; übergelaufen: zu langsam (000)
+	LOAD A INPUT
+	JPD A=0 R1
+ZEIG	STORE X OUTPUT
+	HALT
+	JPD UNC START
+FEHL	LOAD A C=125	; Fehlstart
+	STORE A OUTPUT
+	HALT
+	JPD UNC START
+ZAEHL	DB 0
+` },
+  { name: 'Spiel: Bit jagen', info: 'Nach „Kill the Bit“ (Altair, 1975). START: drei Lichter laufen im Kreis. Den Datentaster unter einem leuchtenden Lämpchen drücken löscht es – wer daneben drückt, erzeugt ein neues Licht. Alle gelöscht: alle Lämpchen an, START = neues Spiel. Zeigt, wie man ohne XOR-Befehl ein exklusives Oder bildet.', src:
+`; Bit jagen
+	ORG 004
+START	LOAD A C=045	; drei Lichter
+	STORE A MUSTER
+	LOAD A C=0
+	STORE A INPUT
+LAUF	LOAD A MUSTER
+	ROTL A1
+	STORE A MUSTER
+	STORE A OUTPUT
+	LOAD B C=050	; Pause
+W1	SUB B C=1
+	JPD B≠0 W1
+	LOAD A INPUT	; Taster gedrückt?
+	JPD A=0 LAUF
+; MUSTER := MUSTER XOR TASTE = (MUSTER ODER TASTE) UND NICHT (MUSTER UND TASTE)
+	STORE A TASTE
+	AND A MUSTER
+	STORE A HILF
+	LNEG A HILF	; -(M UND T)
+	SUB A C=1	; -x-1 = NICHT x
+	STORE A HILF
+	LOAD A TASTE
+	OR A MUSTER
+	AND A HILF
+	STORE A MUSTER
+	LOAD A C=0
+	STORE A INPUT
+	LOAD A MUSTER
+	JPD A≠0 LAUF
+	LOAD A C=377	; gewonnen
+	STORE A OUTPUT
+	HALT
+	JPD UNC START
+MUSTER	DB 0
+TASTE	DB 0
+HILF	DB 0
+` },
+
+/* ---- Programme aus „KENBAK-1 Laboratory Exercises“ (Blankenbaker, 1971) ---- */
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 2: Zähler', info: 'Übung 2, das erste Programm des Übungsbuchs: A wird ohne Pause hochgezählt. Bei Originaltempo flackern die rechten Lämpchen nur, die linken zählen sichtbar. START drücken.', src:
+`; Laboratory Exercises, Übung 2 – Zähler (Originaladressen)
+	ORG 004
+START	ADD A C=1
+	STORE A OUTPUT
+	JPD UNC START
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 5: Binär-Quiz', info: 'Übung 5. START: ein Lämpchen N (0–7) leuchtet. N als Binärzahl mit den Tastern 0–2 eintasten (z. B. Lämpchen 5 → Taster 2 und 0), START. Richtig: ein neues Lämpchen erscheint, falsch: dasselbe noch einmal. Das Programm verändert sich selbst – es baut den Befehl SET1 bN in Adresse 024 zusammen.', src:
+`; Laboratory Exercises, Übung 5 – Binär-Quiz (Originaladressen)
+	ORG 004
+START	ADD B C=055	; B als einfache Zufallsquelle weiterzählen
+NOCHMAL	LOAD A C=070
+	AND A B		; Bits 5…3 von B = Lämpchennummer N·8
+	STORE A C=0	; im eigenen Operandenbyte (013) merken
+NR	EQU *-1
+	ADD A C=102	; 0N0 + 102 = 1N2 = Befehl SET1 bN
+	STORE A SETZ
+	STORE X OUTPUT	; Lämpchen löschen (X ist 0)
+	STORE X INPUT	; Eingabe löschen
+SETZ	DB 000, OUTPUT	; wird zu SET1 bN OUTPUT
+	HALT		; N binär eintasten, START
+	LOAD A INPUT
+	ROTL A3		; N·8
+	SUB A NR
+	JPD A=0 START	; richtig: neue Aufgabe
+	JPD UNC NOCHMAL	; falsch: dieselbe Aufgabe
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 6: Summierer', info: 'Übung 6. START, dann eine Zahl eintasten und START – sie wird zur Summe auf den Lämpchen addiert. Nur Taster 7 und START löscht die Summe. Der Start liegt bei 021 (siehe Adresse 003).', src:
+`; Laboratory Exercises, Übung 6 – laufende Summe (Originaladressen)
+	ORG 004
+HALTE	HALT		; Zahl eintasten, START
+	SKP0 b7 INPUT	; Taster 7? sonst den Sprung überspringen
+	JPD UNC START
+	ADD A INPUT
+ZEIG	STORE A OUTPUT
+	STORE B INPUT	; Eingabe löschen (B ist 0)
+	JPD UNC HALTE
+START	LOAD A C=0	; Summe löschen
+	JPD UNC ZEIG
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 11: Zahlenschloss', info: 'Übung 11. Kombination 5-7: START. Taster 5 drücken, START. Taster 7 drücken, START – alle Lämpchen gehen an (geöffnet). Eine falsche Ziffer schickt zum Anfang zurück. Die Kombination steht in 375 (1. Ziffer) und 374 (2. Ziffer), jeweils als ein gesetztes Bit.', src:
+`; Laboratory Exercises, Übung 11 – Zahlenschloss (Originaladressen)
+	ORG 100
+START	LOAD A NULL
+	STORE A INPUT
+	HALT		; 1. Ziffer drücken, START
+	STORE A OUTPUT	; Lämpchen löschen
+Z1	LOAD A INPUT
+	SUB A ZIFF1
+	JPD A≠0 START	; falsch
+	LOAD A NULL
+	STORE A INPUT
+	HALT		; 2. Ziffer drücken, START
+	LOAD A INPUT
+	SUB A ZIFF2
+	JPD A≠0 Z1	; falsch
+	LOAD A AUF	; offen!
+	STORE A OUTPUT
+	JPD UNC START
+
+	ORG 373
+AUF	DB 377
+ZIFF2	DB 200		; Taster 7
+ZIFF1	DB 040		; Taster 5
+NULL	DB 0
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 13: Würfelstatistik', info: 'Übung 13. Wurf eines echten Würfels (1–6) binär eintasten, START. Das Programm zählt jede Augenzahl in den Adressen 301–306 mit und zeigt den neuen Zählerstand. Es verändert die eigenen Adressbytes (ADR1, ADR2), um die richtige Strichliste zu treffen.', src:
+`; Laboratory Exercises, Übung 13 – Strichliste für Würfelwürfe
+	ORG 004
+START	LOAD A NULL
+	STORE A INPUT
+	HALT		; Augenzahl binär eintasten, START
+	LOAD A K300
+	ADD A INPUT	; 300 + Augenzahl
+	STORE A ADR1	; in die beiden Befehle unten eintragen
+	STORE A ADR2
+	LOAD A 300
+ADR1	EQU *-1
+	ADD A EINS
+	STORE A 300
+ADR2	EQU *-1
+	STORE A OUTPUT
+	JPD UNC START
+NULL	DB 0
+K300	DB 300
+EINS	DB 1
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 14: Summe von 50 Zahlen', info: 'Übung 14. Addiert die 50 Zahlen in 204–265 (Testdaten aus dem Buch: je fünfmal die Ziffern 0 bis 9). START – Ergebnis 341 (= 225). Ohne Indexregister: das Programm zählt die Adresse im eigenen Befehl hoch.', src:
+`; Laboratory Exercises, Übung 14 – Summe von 50 Zahlen (selbstverändernd)
+	ORG 004
+START	LOAD A K204
+	STORE A ADR
+	LOAD A NULL
+LOOP	ADD A 204
+ADR	EQU *-1		; Adressbyte des ADD-Befehls
+	STORE A SUMME
+	LOAD A ADR	; Adresse um eins weiter
+	ADD A EINS
+	STORE A ADR
+	SUB A K266	; hinter der letzten Zahl?
+	JPD A=0 ENDE
+	LOAD A SUMME
+	JPD UNC LOOP
+ENDE	LOAD A SUMME
+	STORE A OUTPUT
+	HALT
+	JPD UNC START
+K204	DB 204
+NULL	DB 0
+SUMME	DB 0
+EINS	DB 1
+K266	DB 266
+
+	ORG 204		; die 50 Zahlen
+	DB 0,0,0,0,0, 1,1,1,1,1, 2,2,2,2,2, 3,3,3,3,3, 4,4,4,4,4
+	DB 5,5,5,5,5, 6,6,6,6,6, 7,7,7,7,7, #8,#8,#8,#8,#8, #9,#9,#9,#9,#9
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 15: Negative Zahlen', info: 'Übung 15. START, Zahl eintasten, START: die Lämpchen zeigen 0 − Zahl im Zweierkomplement (z. B. 001 → 377, 010 → 370).', src:
+`; Laboratory Exercises, Übung 15 – negative Zahlen (Originaladressen)
+	ORG 004
+START	LOAD A NULL
+	STORE A INPUT
+	HALT		; Zahl eintasten, START
+	SUB A INPUT	; 0 - Zahl
+	STORE A OUTPUT
+	JPD UNC START
+NULL	DB 0
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 16: Sprungprüfer', info: 'Übung 16. Prüft einen bedingten Sprung: Zahl eintasten, START – Lämpchen 7 = Sprung ausgeführt, Lämpchen 0 = nicht. Getestet wird der Befehl in 017; dort 043 (≠0), 044 (=0), 045 (<0), 046 (≥0) oder 047 (>0) eintragen.', src:
+`; Laboratory Exercises, Übung 16 – Sprungbedingungen ausprobieren (Originaladressen)
+	ORG 004
+JA	LOAD A K200
+ZEIG	STORE A OUTPUT
+START	LOAD A NULL
+	STORE A INPUT
+	HALT		; Zahl eintasten, START
+	LOAD A INPUT
+TEST	JPD A≠0 JA	; Byte 017 austauschen: 043 044 045 046 047
+	LOAD A K001
+	JPD UNC ZEIG
+NULL	DB 0
+K001	DB 001
+K200	DB 200
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 18: BCD → binär', info: 'Übung 18. Zweistellige Dezimalzahl als BCD eintasten: Zehner auf Taster 7–4, Einer auf 3–0 (42 = 0100 0010), START. Die Lämpchen zeigen den Binärwert (42 → 052 oktal). Den Rahmen für Ein- und Ausgabe haben wir ergänzt.', src:
+`; Laboratory Exercises, Übung 18 – BCD in Binär wandeln (BCD in A, Ergebnis in B)
+	ORG 004
+START	LOAD A C=0	; Ergänzung: Eingabe
+	STORE A INPUT
+	HALT		; BCD eintasten, START
+	LOAD A INPUT
+; --- Programm aus dem Buch ---
+	LOAD B C=0
+	JPD A<0 FIXUP	; Zehner ≥ 8?
+LOOP	SUB A C=020	; einen Zehner abziehen …
+	JPD A<0 FINISH
+	ADD B C=012	; … und 10 addieren
+	JPD UNC LOOP
+FIXUP	SUB A C=200	; acht Zehner abziehen …
+	ADD B C=120	; … und 80 addieren
+	JPD UNC LOOP
+FINISH	ADD A C=020	; einmal zu oft abgezogen: übrig bleiben die Einer
+	ADD B A
+; --- Ergänzung: Ausgabe ---
+	STORE B OUTPUT
+	HALT
+	JPD UNC START
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 20: Kleinste Zahl', info: 'Übung 20. Sucht die kleinste Zahl in der Tabelle (Zahlen 0–177) und zeigt sie an – hier 007. Die Tabelle wird über das B-Register indirekt adressiert: (B) heißt „die Adresse steht in 001“.', src:
+`; Laboratory Exercises, Übung 20 – kleinste Zahl einer Tabelle
+	ORG 004
+START	LOAD B C=TABLE
+HERE	LOAD A (B)	; neue Kleinste
+	STORE A C=0	; im eigenen Operandenbyte merken
+SMALL	EQU *-1
+THERE	ADD B C=1
+	SUB B C=LAST+1	; Tabellenende?
+	JPD B=0 ENDE
+	ADD B C=LAST+1
+	SUB A (B)	; bisherige Kleinste − nächste Zahl
+	JPD A>0 HERE	; nächste ist kleiner
+	LOAD A SMALL
+	JPD UNC THERE
+ENDE	LOAD A SMALL
+	STORE A OUTPUT
+	HALT
+	JPD UNC START
+
+TABLE	DB 047, 112, 023, 150, 007, 064, 031, 177, 015, 102
+LAST	EQU *-1
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 21: Summe mit Indexregister', info: 'Übung 21. Dieselbe Aufgabe wie Übung 14, jetzt mit indizierter Adressierung TABLE,X: X zählt von 061 bis 0 herunter. START – Ergebnis wieder 341.', src:
+`; Laboratory Exercises, Übung 21 – Summe von 50 Zahlen mit dem X-Register
+	ORG 004
+START	LOAD X C=061	; 50 Zahlen: Index 61…0
+	LOAD A C=0
+LOOP	ADD A TABLE,X
+	SUB X C=1
+	JPD X≥0 LOOP
+	STORE A OUTPUT
+	HALT
+	JPD UNC START
+
+	ORG 204
+TABLE	DB 0,0,0,0,0, 1,1,1,1,1, 2,2,2,2,2, 3,3,3,3,3, 4,4,4,4,4
+	DB 5,5,5,5,5, 6,6,6,6,6, 7,7,7,7,7, #8,#8,#8,#8,#8, #9,#9,#9,#9,#9
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 27: Doppelt genaue Addition', info: 'Übung 27. Unterprogramm für 16-Bit-Addition: B:A plus die zwei Bytes ab der Adresse in X. Beispiel aus dem Buch: 235 364 + 104 151. START: die Lämpchen zeigen die obere Hälfte 342, nochmal START: die untere Hälfte 135. Der Übertrag kommt aus 201 Bit 1. Den absichtlichen Fehler aus dem Buch (SUB statt ADD) haben wir korrigiert.', src:
+`; Laboratory Exercises, Übung 27 – doppelt genaue Addition
+	ORG 004
+START	LOAD B C=235	; erste Zahl: B = obere, A = untere Hälfte
+	LOAD A C=364
+	LOAD X C=ZAHL	; zweite Zahl im Speicher (untere Hälfte zuerst)
+	JMD UNC ADDDP
+	STORE B OUTPUT	; obere Hälfte
+	HALT
+	STORE A OUTPUT	; untere Hälfte
+	HALT
+	JPD UNC START
+ZAHL	DB 151, 104
+
+; Unterprogramm ADD DP (Lösung aus dem Buch, korrigiert)
+ADDDP	DB 0
+	ADD A (X)	; (X): die Adresse steht im X-Register
+	ADD X C=1
+	ADD B (X)
+	SKP0 b1 OCA	; Übertrag aus der unteren Hälfte?
+	ADD B C=1	; im Buch steht hier fälschlich SUB B C=1
+	JPD UNC (ADDDP)
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 28: Sortieren', info: 'Übung 28. Bubblesort: tauscht benachbarte Zahlen, bis ein Durchgang ohne Tausch bleibt (Merker FLAG, Bit 7). START sortiert die Tabelle ab TABLE (im Speicherfenster sichtbar). Danach zeigt jedes START die nächste sortierte Zahl – diese Anzeige haben wir ergänzt.', src:
+`; Laboratory Exercises, Übung 28 – Sortieren
+	ORG 004
+START	LOAD X C=0	; beim ersten Paar anfangen
+RESET	SET0 b7 FLAG	; noch nichts getauscht
+NEXT	LOAD A TABLE,X	; erste Zahl
+	ADD X C=1
+	SUB A TABLE,X	; minus zweite
+	JPD A<0 OK	; Reihenfolge stimmt
+	JPD A=0 OK
+	LOAD A TABLE,X	; tauschen
+	SUB X C=1
+	LOAD B TABLE,X
+	STORE A TABLE,X
+	ADD X C=1
+	STORE B TABLE,X
+	SET1 b7 FLAG	; getauscht!
+OK	SUB X C=LAST-TABLE	; Durchgang zu Ende?
+	JPD X=0 ENDPASS	; (dann ist X schon wieder 0)
+	ADD X C=LAST-TABLE
+	JPD UNC NEXT
+ENDPASS	SKP0 b7 FLAG	; ohne Tausch: fertig
+	JPD UNC RESET
+ENDJOB	LOAD X C=0	; Ergänzung: Tabelle zeigen
+ZEIG	LOAD A TABLE,X
+	STORE A OUTPUT
+	HALT		; START: nächste Zahl
+	ADD X C=1
+	SUB X C=LAST-TABLE+1
+	JPD X=0 ENDJOB
+	ADD X C=LAST-TABLE+1
+	JPD UNC ZEIG
+FLAG	DB 0
+
+TABLE	DB 1, 5, 6, 3, 2, 0, 7, 1, #100, #42, #17, #64
+LAST	EQU *-1
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 29: Datum prüfen', info: 'Übung 29. Prüft ein Datum (1601–1999) einschließlich Schaltjahr. Alle Eingaben zweistellig als BCD (Zehner auf Taster 7–4, Einer auf 3–0), jeweils START. Lämpchen 5 = Monat eingeben, 4 = Tag, 3 = Jahr. Danach Lämpchen 7 = gültig oder 0 = ungültig, zusammen mit Lämpchen 5 für den nächsten Monat. Beispiel: 02 · 29 · 72 gültig, 02 · 29 · 71 ungültig.', src:
+`; Laboratory Exercises, Übung 29 – ist das Datum gültig?
+	ORG 004
+START	LOAD A C=040	; Code für Monat
+MONTH	JMD UNC EINGABE	; BCD holen und wandeln
+	JPD A=0 BAD	; Monat 0 gibt es nicht
+	STORE A X	; Monat nach X
+	SUB X C=015	; 13
+	JPD X≥0 BAD	; größer als 12
+	ADD X C=015
+DAY	LOAD A C=020	; Code für Tag
+	JMD UNC EINGABE
+	JPD A=0 BAD	; Tag 0 gibt es nicht
+	STORE A B	; Tag nach B
+YEAR	LOAD A C=010	; Code für Jahr
+	JMD UNC EINGABE
+	JPD A=0 NOTLPYR	; 1900: kein Schaltjahr
+	SUB A C=143	; 99
+	JPD A>0 BAD
+	ADD A C=143
+	AND A C=003	; durch 4 teilbar?
+	JPD A≠0 NOTLPYR
+LPYR	SET1 b0 FEB	; Februar hat 29 Tage
+NOTLPYR	SUB B JAN-1,X	; Tag − Tage des Monats
+	JPD B>0 BAD	; zu viele Tage
+	LOAD A C=240	; „gültig“ + „Monat“
+	JPD UNC OUT
+BAD	LOAD A C=041	; „ungültig“ + „Monat“
+OUT	SET0 b0 FEB	; Februar wieder 28 Tage
+	JPD UNC MONTH
+
+; Unterprogramm EINGABE (im Buch: INPUT): zeigt A, holt zwei BCD-Ziffern, Ergebnis binär in A
+EINGABE	DB 0
+	STORE A OUTPUT
+	STORE B C=0	; B im eigenen Operandenbyte retten
+BSAVE	EQU *-1
+	LOAD A C=0
+	STORE A INPUT	; Eingabe löschen
+	HALT		; Eingabe abwarten
+	LOAD B INPUT
+LOOP	SUB B C=020	; 1 bei den Zehnern weg
+	ADD A C=012	; 10 bei den Einern dazu
+	SKP1 b1 OCB	; zu oft abgezogen (Borgen)?
+	JPD UNC LOOP
+	ADD A C=006	; Korrektur: −012 und +020
+	ADD A B		; Einer dazu
+	JPD A<0 BAD	; Zahl zu groß
+	LOAD B BSAVE
+	JPD UNC (EINGABE)	; zurück
+
+JAN	DB 037, 034, 037, 036, 037, 036, 037, 037, 036, 037, 036, 037
+FEB	EQU JAN+1
+` },
+  { group: 'Laboratory Exercises (1971)', name: 'Lab 30: Zufallszahlen', info: 'Übung 30. Das Programm zählt B ständig hoch. Taster 7 dreimal drücken (mit Pausen dazwischen): zweimal wird B um drei Stellen gedreht, beim dritten Mal erscheint die Zufallszahl auf den Lämpchen. Läuft ohne Halt weiter.', src:
+`; Laboratory Exercises, Übung 30 – Zufallszahlen per Bediener (Originaladressen)
+	ORG 004
+COUNT	ADD B C=1	; Leerlauf: B zählt
+	SKP1 b7 INPUT	; Taster 7 gedrückt?
+	JPD UNC COUNT
+	SUB X C=1	; dritter Druck?
+	JPD X=0 HAVENUM
+	ROTL B3
+CLEAR	SET0 b7 INPUT	; warten, bis Taster 7 losgelassen ist
+	SKP0 b7 INPUT
+	JPD UNC CLEAR
+	JPD UNC COUNT
+HAVENUM	STORE B OUTPUT	; Zufallszahl zeigen
+	JPD UNC START
+START	LOAD X C=3
+	JPD UNC CLEAR
+` }
+];
+const demoSel = $('#demo');
+{ let grp = demoSel;
+  DEMOS.forEach((d, i) => {
+    const g = d.group || "Beispiele der Werkbank";
+    if (grp === demoSel || grp.label !== g) { grp = document.createElement("optgroup"); grp.label = g; demoSel.appendChild(grp); }
+    grp.appendChild(new Option(d.name, i));
+  });
+}
+const showDemoInfo = () => { $('#demoInfo').textContent = DEMOS[+demoSel.value].info || ''; };
+demoSel.onchange = showDemoInfo; showDemoInfo();
+$('#bDemo').onclick = () => {
+  const d = DEMOS[+demoSel.value];
+  $('#asmSrc').value = d.src;
+  const keep = $('#asmClr').checked; $('#asmClr').checked = true;
+  const res = doAssemble(true);
+  $('#asmClr').checked = keep;
+  if (!res.errors.length) { S.steps = 0; dirty = true; }
+};
+
+/* =====================================================================
+   Bedienelemente der Werkbank
+   ===================================================================== */
+$('#bRun').onclick = () => { if (!S.running) { S.running = true; S.mode = 'out'; budget = 0; S.stopReason = ''; dirty = true; } };
+$('#bStop').onclick = () => press('stop');
+$('#bStep').onclick = () => press('step');
+$('#bOver').onclick = () => stepOver();
+$('#bClr').onclick = () => {
+  if (!confirm('Gesamten Speicher (einschließlich Register) löschen?')) return;
+  S.running = false; mem.fill(0); S.addr = 0; S.mode = 'input'; S.halt = false; S.steps = 0; clearTrace(); dirty = true;
+};
+$('#base').onchange = e => { BASE = +e.target.value; dirty = true; };
+document.querySelectorAll('input[name=tempo]').forEach(r => r.onchange = () => { budget = 0; });
+
+/* Zustand speichern/laden – nur über Dateien */
+$('#bSave').onclick = () => {
+  const rows = [];
+  for (let r = 0; r < 32; r++) rows.push(fmt8(r * 8) + ': ' + Array.from(mem.slice(r * 8, r * 8 + 8), fmt8).join(' '));
+  const data = { format: 'kenbak1-werkbank', version: 1, adressregister: fmt8(S.addr), speicher_oktal: rows,
+                 breakpoints: [...bps].sort((a, b) => a - b).map(fmt8), quelltext: $('#asmSrc').value };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'kenbak1-zustand.json';
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+function fmt8(v) { return v.toString(8).padStart(3, '0'); }
+$('#bLoad').onclick = () => $('#file').click();
+$('#file').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const buf = new Uint8Array(await f.arrayBuffer());
+  try {
+    const d = JSON.parse(new TextDecoder().decode(buf));
+    if (d.format !== 'kenbak1-werkbank') throw new Error('unbekanntes Format');
+    const vals = d.speicher_oktal.flatMap(line => line.split(':')[1].trim().split(/\s+/).map(s => parseInt(s, 8)));
+    if (vals.length !== 256 || vals.some(v => !(v >= 0 && v <= 255))) throw new Error('Speicherinhalt unvollständig');
+    S.running = false; mem.set(vals); S.addr = parseInt(d.adressregister, 8) & 255;
+    bps.clear();
+    if (typeof d.quelltext === 'string') $('#asmSrc').value = d.quelltext;
+    if (Array.isArray(d.breakpoints)) d.breakpoints.forEach(s => { const v = parseInt(s, 8); if (v >= 0 && v <= 255) bps.add(v); });
+  } catch (err) {
+    if (buf.length === 256) { S.running = false; mem.set(buf); }          // rohes 256-Byte-Abbild
+    else { alert('Datei konnte nicht gelesen werden: ' + err.message); return; }
+  }
+  S.mode = 'address'; S.halt = false; S.stopReason = ''; clearTrace(); dirty = true;
+};
+
+/* =====================================================================
+   Assembler – Schreibweise nach PR-14 (Operation, Einzelheit, Operand)
+   ===================================================================== */
+const SYM0 = { A: 0, B: 1, X: 2, P: 3, OUTPUT: 0o200, OCA: 0o201, OCB: 0o202, OCX: 0o203, INPUT: 0o377 };
+const MN_ARITH = { ADD: 0, SUB: 1, LOAD: 2, STORE: 3 };
+const MN_LOGIC = { OR: 0, AND: 2, LNEG: 3, ORA: 0, ANDA: 2, LNEGA: 3 };
+const MN_JUMP = { JPD: 4, JPI: 5, JMD: 6, JMI: 7 };
+const MN_SHIFT = { SFTR: 0, ROTR: 1, SFTL: 2, ROTL: 3 };
+const DIRECTIVES = ['ORG', 'EQU', 'DB', 'BYTE', 'DATA'];
+const COND = [                                   // längere Formen zuerst
+  [/^(≠0|!=0|<>0|NZ)$/i, 3], [/^(=0|Z)$/i, 4], [/^(<0|NEG|N)$/i, 5],
+  [/^(≥0|>=0|POS|P)$/i, 6], [/^(>0|PNZ)$/i, 7]
+];
+function isMnemonic(w) {
+  w = w.toUpperCase();
+  return w in MN_ARITH || w in MN_LOGIC || w in MN_JUMP || w in MN_SHIFT ||
+         /^(SKP|SET)[01]?$/.test(w) || w === 'HALT' || w === 'NOOP' || DIRECTIVES.includes(w);
+}
+
+function asmExpr(src, syms, cur, final) {
+  const s = src.replace(/\s+/g, '');
+  if (!s) throw 'Operand fehlt';
+  const parts = s.match(/[+-]?[^+-]+/g);
+  if (!parts || parts.join('') !== s) throw `Ausdruck „${src}“ nicht lesbar`;
+  let v = 0;
+  for (let p of parts) {
+    let sign = 1;
+    if (p[0] === '+') p = p.slice(1); else if (p[0] === '-') { sign = -1; p = p.slice(1); }
+    let n;
+    if (/^0x[0-9a-f]+$/i.test(p)) n = parseInt(p.slice(2), 16);
+    else if (/^#\d+$/.test(p)) n = parseInt(p.slice(1), 10);
+    else if (/^[0-7]+$/.test(p)) n = parseInt(p, 8);
+    else if (/^\d+$/.test(p)) throw `„${p}“ ist keine Oktalzahl (dezimal bitte mit #, z. B. #${p})`;
+    else if (p === '*') n = cur;
+    else if (/^[A-Za-zÄÖÜäöü_][\wÄÖÜäöüß]*$/.test(p)) {
+      const k = p.toUpperCase();
+      if (k in syms) n = syms[k];
+      else if (final) throw `Unbekanntes Symbol „${p}“`;
+      else n = 0;
+    }
+    else throw `„${p}“ nicht lesbar`;
+    v += sign * n;
+  }
+  return ((v % 256) + 256) % 256;
+}
+
+/* Übersetzt eine Zeile ohne Marke. Liefert Bytes (Länge zählt auch im 1. Durchlauf). */
+function asmInstr(op, args, syms, cur, final) {
+  const OP = op.toUpperCase(), E = s => asmExpr(s, syms, cur, final);
+  args = args.trim();
+  const operand = s => {
+    s = s.trim(); let m;
+    if ((m = s.match(/^C\s*=\s*(.+)$/i))) return [3, E(m[1])];
+    if ((m = s.match(/^\((.+)\)\s*,\s*X$/i))) return [7, E(m[1])];
+    if ((m = s.match(/^\((.+)\)$/))) return [5, E(m[1])];
+    if ((m = s.match(/^(.+?)\s*,\s*X$/i))) return [6, E(m[1])];
+    if (!s) throw 'Operand fehlt';
+    return [4, E(s)];
+  };
+  if (OP === 'HALT') { if (args) throw 'HALT hat keinen Operanden'; return [0o000]; }
+  if (OP === 'NOOP') { if (args) throw 'NOOP hat keinen Operanden'; return [0o200]; }
+  if (OP in MN_ARITH) {
+    const m = args.match(/^([ABX])\s*[,\s]\s*(.+)$/i);
+    if (!m) throw `${OP} braucht Register (A, B oder X) und Operand`;
+    const reg = 'ABX'.indexOf(m[1].toUpperCase());
+    const [mode, val] = operand(m[2]);
+    return [(reg << 6) | (MN_ARITH[OP] << 3) | mode, val];
+  }
+  if (OP in MN_LOGIC) {
+    let a = args; const m = a.match(/^A\s*[,\s]\s*(.+)$/i);
+    if (m && !OP.endsWith('A')) a = m[1];
+    const [mode, val] = operand(a);
+    return [0o300 | (MN_LOGIC[OP] << 3) | mode, val];
+  }
+  if (OP in MN_JUMP) {
+    let reg = 3, cond = 4, rest = args, m;   // unbedingt: 344 wie im Handbuch (PR-23)
+    if ((m = args.match(/^UNC\s*[,\s]\s*(.+)$/i))) rest = m[1];
+    else if ((m = args.match(/^([ABX])\s*(≠0|!=0|<>0|=0|<0|≥0|>=0|>0|PNZ|NZ|NEG|POS|Z|N|P)\s*[,\s]\s*(.+)$/i))) {
+      reg = 'ABX'.indexOf(m[1].toUpperCase());
+      cond = COND.find(([re]) => re.test(m[2]))[1];
+      rest = m[3];
+    }
+    else if (/\s/.test(args.trim().replace(/\(.*\)/, ''))) throw `Sprungbedingung „${args.split(/\s+/)[0]}“ unbekannt`;
+    let code = MN_JUMP[OP];
+    const ind = rest.trim().match(/^\((.+)\)$/);
+    if (ind) { rest = ind[1]; if (code === 4 || code === 6) code++; }
+    return [(reg << 6) | (code << 3) | cond, E(rest)];
+  }
+  let m;
+  if ((m = OP.match(/^(SKP|SET)([01])?$/))) {
+    let a = args, val = m[2];
+    if (val === undefined) { const mv = a.match(/^([01])\s+(.+)$/); if (!mv) throw `${OP} braucht 0 oder 1`; val = mv[1]; a = mv[2]; }
+    const mb = a.match(/^b?([0-7])\s*[,\s]\s*(.+)$/i);
+    if (!mb) throw `${m[1]} braucht Bitnummer (b0…b7) und Adresse`;
+    const first = m[1] === 'SKP' ? 0o200 : 0;
+    return [first | (+val << 6) | (+mb[1] << 3) | 2, E(mb[2])];
+  }
+  if (OP in MN_SHIFT) {
+    const ms = args.match(/^([AB])\s*([1-4])?$/i);
+    if (!ms) throw `${OP} braucht Register A oder B und 1…4 Stellen`;
+    const n = ms[2] ? +ms[2] : 1;
+    return [(MN_SHIFT[OP] << 6) | ((ms[1].toUpperCase() === 'B' ? 1 : 0) << 5) | ((n & 3) << 3) | 1];
+  }
+  throw `Unbekannter Befehl „${op}“`;
+}
+
+/* Zwei Durchläufe. Ergebnis: { bytes: Map(adresse → wert), lines, errors, start, syms } */
+function assemble(src) {
+  const raw = src.replace(/\r/g, '').split('\n');
+  const parsed = raw.map((line, i) => {
+    const code = line.replace(/;.*$/, '');
+    let label = null, rest = code;
+    const m = code.match(/^([A-Za-zÄÖÜäöü_][\wÄÖÜäöüß]*):?(?=\s|$)/);
+    if (m && (code[m[0].length - 1] === ':' || !isMnemonic(m[1]))) {
+      label = m[1].toUpperCase(); rest = code.slice(m[0].length);
+    }
+    rest = rest.trim();
+    const mo = rest.match(/^(\S+)\s*(.*)$/);
+    return { i, line, label, op: mo ? mo[1] : '', args: mo ? mo[2] : '' };
+  });
+  const run = final => {
+    const syms = Object.assign({}, SYM0), out = { bytes: new Map(), lines: [], errors: [], start: -1, syms };
+    if (final) Object.assign(syms, run.labels);
+    let cur = 0o004;
+    for (const p of parsed) {
+      const L = { i: p.i, line: p.line, addr: cur, bytes: [], err: null };
+      try {
+        const OP = p.op.toUpperCase();
+        if (OP === 'EQU') {
+          if (!p.label) throw 'EQU braucht einen Namen am Zeilenanfang';
+          if (p.label in SYM0) throw `„${p.label}“ ist schon vordefiniert – bitte anderen Namen wählen`;
+          syms[p.label] = asmExpr(p.args, syms, cur, final); L.addr = -1;
+        } else {
+          if (p.label) {
+            if (p.label in SYM0) throw `„${p.label}“ ist schon vordefiniert (${fmt8(SYM0[p.label])}) – bitte anderen Namen wählen`;
+            if (!final && p.label in syms) throw `Marke „${p.label}“ doppelt`;
+            syms[p.label] = cur;
+          }
+          if (OP === 'ORG') { cur = asmExpr(p.args, syms, cur, true); L.addr = cur; }
+          else if (OP === 'DB' || OP === 'BYTE' || OP === 'DATA') {
+            L.bytes = p.args.split(',').map(s => asmExpr(s, syms, cur, final));
+          } else if (p.op) {
+            L.bytes = asmInstr(p.op, p.args, syms, cur, final);
+          }
+        }
+      } catch (e) { L.err = String(e); if (final) out.errors.push(`Zeile ${p.i + 1}: ${e}`); }
+      for (let k = 0; k < L.bytes.length; k++) {
+        const a = (cur + k) & 255;
+        if (final && out.bytes.has(a)) L.err = L.err || `Adresse ${fmt8(a)} wird doppelt belegt`;
+        out.bytes.set(a, L.bytes[k]);
+        if (out.start < 0 && a !== P) out.start = a;
+      }
+      if (L.err && final && !out.errors.some(x => x.startsWith(`Zeile ${p.i + 1}:`))) out.errors.push(`Zeile ${p.i + 1}: ${L.err}`);
+      cur = (cur + L.bytes.length) & 255;
+      out.lines.push(L);
+    }
+    return out;
+  };
+  const first = run(false);
+  run.labels = {};
+  for (const k in first.syms) if (!(k in SYM0) || first.syms[k] !== SYM0[k]) run.labels[k] = first.syms[k];
+  const res = run(true);
+  if ('START' in res.syms) res.start = res.syms.START;
+  return res;
+}
+
+let lastAsm = null;
+function showAsm(res) {
+  const out = $('#asmOut'); out.textContent = '';
+  const add = (t, cls) => { const s = document.createElement('span'); if (cls) s.className = cls; s.textContent = t + '\n'; out.appendChild(s); };
+  if (res.errors.length) res.errors.forEach(e => add('✗ ' + e, 'err'));
+  else add(`✓ ${res.bytes.size} Byte, Start bei ${fmt8(res.start < 0 ? 4 : res.start)}`, 'ok');
+  add('');
+  for (const L of res.lines) {
+    const ad = L.addr >= 0 && (L.bytes.length || /^\s*\S*\s*ORG/i.test(L.line)) ? fmt8(L.addr) : '   ';
+    const by = L.bytes.map(fmt8).join(' ').padEnd(8);
+    add(ad + '  ' + by + '  ' + L.line, L.err ? 'err' : '');
+    if (L.err) add('          ↑ ' + L.err, 'err');
+  }
+}
+function doAssemble(load) {
+  const res = assemble($('#asmSrc').value);
+  showAsm(res);
+  if (res.errors.length || !load) return res;
+  S.running = false;
+  if ($('#asmClr').checked) mem.fill(0);
+  for (const [a, v] of res.bytes) mem[a] = v;
+  const start = res.start < 0 ? 4 : res.start;
+  if ($('#asmSetP').checked && !res.bytes.has(P)) mem[P] = start;
+  lastAsm = res;
+  S.addr = start; S.mode = 'address'; S.halt = false; S.stopReason = '';
+  disStart = mem[P]; clearTrace(); dirty = true;
+  return res;
+}
+$('#bAsm').onclick = () => doAssemble(true);
+$('#bAsmChk').onclick = () => doAssemble(false);
+$('#asmSrc').addEventListener('keydown', e => {
+  if (e.key === 'Tab') { e.preventDefault(); const t = e.target, s = t.selectionStart;
+    t.value = t.value.slice(0, s) + '\t' + t.value.slice(t.selectionEnd); t.selectionStart = t.selectionEnd = s + 1; }
+  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); doAssemble(true); }
+});
+
+/* Speicher → Quelltext (Disassembler-Ausgabe ist wieder assemblierbar) */
+function memToSrc(from, to) {
+  const keep = BASE; BASE = 8;
+  const lines = ['; aus dem Speicher geholt, ' + fmt8(from) + '–' + fmt8(to)];
+  if (from <= P && to >= P) lines.push('\tORG 003', '\tDB ' + fmt8(mem[P]) + '\t\t; Anfangswert von P');
+  let a = Math.max(from, 4); lines.push('\tORG ' + fmt8(a));
+  while (a <= to) {
+    const d = dis(a);
+    if (a + d.len - 1 > to || (d.t === 'NOOP' && d.len === 2)) { lines.push('\tDB ' + fmt8(mem[a]) + '\t\t; ' + fmt8(a)); a++; continue; }
+    lines.push('\t' + d.t.replace(/^(\S+) /, '$1\t') + '\t\t; ' + fmt8(a));
+    a += d.len;
+  }
+  BASE = keep;
+  return lines.join('\n') + '\n';
+}
+$('#bMem2Src').onclick = () => {
+  const f = parseInt($('#m2sFrom').value, 8), t = parseInt($('#m2sTo').value, 8);
+  if (!(f >= 0 && t <= 255 && f <= t)) { alert('Bitte oktale Adressen 000–377 angeben.'); return; }
+  $('#asmSrc').value = memToSrc(f, t);
+};
+function download(name, text, type) {
+  const blob = new Blob([text], { type });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+$('#bSrcSave').onclick = () => download('kenbak1-programm.asm', $('#asmSrc').value, 'text/plain');
+$('#bSrcLoad').onclick = () => $('#srcFile').click();
+$('#srcFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  $('#asmSrc').value = await f.text();
+};
+
+/* =====================================================================
+   Eintipp-Hilfe: Tasterfolge am Original (nach PR-20/PR-23)
+   ===================================================================== */
+let eiSteps = [], eiPos = 0, eiTimer = null;
+const bitsOf = v => [7, 6, 5, 4, 3, 2, 1, 0].filter(b => (v >> b) & 1);
+const kk = (t, f) => `<span class="kk${f ? ' f' : ''}">${t}</span>`;
+function enterKeys(v) { return ['clear', ...bitsOf(v).map(b => 'b' + b)]; }
+function enterHtml(v) {
+  const bs = bitsOf(v);
+  return kk('CLEAR', 1) + ' ' + (bs.length ? bs.map(b => kk(b)).join('') : '<i>kein Datentaster</i>') + ` <span class="mono">= ${fmt8(v)}</span>`;
+}
+function buildEintipp() {
+  let bytes;
+  if (document.querySelector('input[name=eiQ]:checked').value === 'asm') {
+    if (!lastAsm) { alert('Bitte zuerst ein Programm assemblieren und laden.'); return; }
+    bytes = [...lastAsm.bytes.entries()];
+    if (!lastAsm.bytes.has(P) && $('#asmSetP').checked) bytes.push([P, mem[P]]);
+  } else {
+    const f = parseInt($('#eiFrom').value, 8), t = parseInt($('#eiTo').value, 8);
+    if (!(f >= 0 && t <= 255 && f <= t)) { alert('Bitte oktale Adressen 000–377 angeben.'); return; }
+    bytes = []; for (let a = f; a <= t; a++) bytes.push([a, mem[a]]);
+  }
+  bytes.sort((x, y) => x[0] - y[0]);
+  const steps = [];
+  steps.push({ html: 'Netzschalter ein. Danach START und STOP je einmal drücken (initialisiert die Steuerung, PR-18).', keys: [] });
+  let addr = -1, endAddr = -1;
+  for (const [a, v] of bytes) {
+    if (a !== addr) {
+      steps.push({ html: `Adresse ${fmt8(a)} einstellen: ${enterHtml(a)} ${kk('SET', 1)}`, keys: [...enterKeys(a), 'set'] });
+      addr = a;
+    }
+    const d = disOp(v, 0);
+    steps.push({ html: `<span class="mono">${fmt8(a)}</span> ← ${enterHtml(v)} ${kk('STORE', 1)}`, keys: [...enterKeys(v), 'store'], note: '' });
+    addr = (a + 1) & 255; endAddr = addr;
+  }
+  if (bytes.length) steps.push({ html: `Kontrolle: ${kk('DISPLAY', 1)} – die Lämpchen zeigen die nächste Adresse <span class="mono">${fmt8(endAddr)}</span>`, keys: ['disp'] });
+  if ($('#eiCheck').checked && bytes.length) {
+    let ca = -1;
+    for (const [a, v] of bytes) {
+      if (a !== ca) steps.push({ html: `Zum Nachlesen Adresse ${fmt8(a)} einstellen: ${enterHtml(a)} ${kk('SET', 1)}`, keys: [...enterKeys(a), 'set'] });
+      steps.push({ html: `${kk('READ', 1)} – Lämpchen müssen <span class="mono">${fmt8(v)}</span> zeigen (${bin(v)})`, keys: ['read'] });
+      ca = (a + 1) & 255;
+    }
+  }
+  steps.push({ html: `${kk('START', 1)} – das Programm läuft ab der Adresse in 003`, keys: ['start'] });
+  eiSteps = steps; eiPos = 0; renderEintipp();
+  const presses = steps.reduce((n, s) => n + s.keys.length, 0);
+  $('#eiSum').textContent = `${bytes.length} Byte · ${steps.length} Schritte · ${presses} Tastendrücke (ohne Netzschalter und Initialisierung).`;
+}
+function renderEintipp() {
+  $('#eiList').innerHTML = eiSteps.map((s, i) =>
+    `<tr class="${i < eiPos ? 'done' : i === eiPos ? 'now' : ''}"><td class="nr">${i + 1}.</td><td>${s.html}</td></tr>`).join('');
+  const now = $('#eiList tr.now'); if (now && now.scrollIntoView) now.scrollIntoView({ block: 'nearest' });
+}
+function eiDoStep(then) {
+  if (eiPos >= eiSteps.length) { stopEiPlay(); return; }
+  const keys = eiSteps[eiPos].keys.slice();
+  if (S.running && keys.length && keys[keys.length - 1] !== 'start') press('stop');
+  const gap = +$('#eiSpeed').value;
+  const next = () => {
+    if (!keys.length) { eiPos++; renderEintipp(); if (then) then(); return; }
+    const k = keys.shift(); flashKey(k); press(k);
+    setTimeout(next, gap);
+  };
+  next();
+}
+function stopEiPlay() { if (eiTimer) { clearTimeout(eiTimer); eiTimer = null; } $('#bEiPlay').textContent = 'Alles vorführen'; }
+$('#bEi').onclick = buildEintipp;
+$('#bEiStep').onclick = () => { stopEiPlay(); eiDoStep(); };
+$('#bEiReset').onclick = () => { stopEiPlay(); eiPos = 0; renderEintipp(); };
+$('#bEiPlay').onclick = () => {
+  if (eiTimer) { stopEiPlay(); return; }
+  $('#bEiPlay').textContent = 'Anhalten';
+  const loop = () => { eiTimer = setTimeout(() => eiDoStep(() => { if (eiTimer && eiPos < eiSteps.length) loop(); else stopEiPlay(); }), 150); };
+  loop();
+};
+
+/* =====================================================================
+   Brücke zur Logisim-Schaltung (kenbak1.circ / kenbak1_logisim_web.html):
+   Die beiden RAMs „Umlauf 0 (000–177)“ und „Umlauf 1 (200–377)“ ersetzen
+   dort die Schieberegister. Ihr Anfangsinhalt steht im Attribut „contents“.
+   ===================================================================== */
+const RAM_RE = /<comp lib="4" loc="\([^)]*\)" name="RAM">[\s\S]*?<\/comp>/g;
+const ramLine = blk => { const m = blk.match(/<a name="label" val="Umlauf (\d)/); return m ? +m[1] : -1; };
+function circContents(line) {
+  let s = 'addr/data: 7 8\n';
+  for (let i = 0; i < 128; i += 8) s += Array.from(mem.slice(line * 128 + i, line * 128 + i + 8), v => v.toString(16)).join(' ') + '\n';
+  return s;
+}
+function circPut(text) {
+  let n = 0;
+  const out = text.replace(RAM_RE, blk => {
+    const line = ramLine(blk); if (line < 0) return blk;
+    n++;
+    const b = blk.replace(/\s*<a name="contents">[\s\S]*?<\/a>/, '');
+    return b.replace(/\s*<\/comp>$/, `\n      <a name="contents">${circContents(line)}</a>\n    </comp>`);
+  });
+  return { out, n };
+}
+function circGet(text) {
+  const img = new Uint8Array(256); let n = 0;
+  for (const blk of text.match(RAM_RE) || []) {
+    const line = ramLine(blk); if (line < 0) continue;
+    n++;
+    const m = blk.match(/<a name="contents">([\s\S]*?)<\/a>/); if (!m) continue;
+    let a = 0;
+    for (const tok of m[1].replace(/^\s*addr\/data:\s*\d+\s+\d+/, '').trim().split(/\s+/)) {
+      if (!tok) continue;
+      const st = tok.indexOf('*');
+      const cnt = st > 0 ? parseInt(tok.slice(0, st), 10) : 1, v = parseInt(st > 0 ? tok.slice(st + 1) : tok, 16);
+      for (let i = 0; i < cnt && a < 128; i++) img[line * 128 + a++] = v & 255;
+    }
+  }
+  return { img, n };
+}
+let circMode = 'put';
+$('#bCircPut').onclick = () => { circMode = 'put'; $('#circFile').click(); };
+$('#bCircGet').onclick = () => { circMode = 'get'; $('#circFile').click(); };
+$('#circFile').onchange = async e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  const text = await f.text();
+  if (circMode === 'put') {
+    const { out, n } = circPut(text);
+    if (n !== 2) { alert('In dieser Datei wurden die beiden RAMs „Umlauf 0“ und „Umlauf 1“ der Kenbak-Schaltung nicht gefunden.'); return; }
+    download(f.name, out, f.name.endsWith('.circ') ? 'application/xml' : 'text/html');
+  } else {
+    const { img, n } = circGet(text);
+    if (n !== 2) { alert('In dieser Datei wurden die beiden RAMs „Umlauf 0“ und „Umlauf 1“ der Kenbak-Schaltung nicht gefunden.'); return; }
+    S.running = false; mem.set(img); S.addr = mem[P]; S.mode = 'address'; S.halt = false; S.stopReason = '';
+    disStart = mem[P]; clearTrace(); dirty = true;
+  }
+};
+
+/* =====================================================================
+   Umlaufspeicher-Ansicht: zwei Ringe zu je 128 Plätzen × 8 Bit
+   ===================================================================== */
+const srCv = $('#srCv'), srCtx = srCv.getContext('2d');
+srCv.width = srCv.height = 840;
+const SR_C = 210, SR_H = 6, SR_R = [96, 152], SR_D = 2 * Math.PI / 128;
+let srDirty = true, srAnim = null, srHover = null;
+const srRot = () => document.querySelector('input[name=srView]:checked').value === 'rot';
+function srAngle(s, L) { return srRot() ? -Math.PI / 2 - ((s - L) & 127) * SR_D : -Math.PI / 2 + s * SR_D; }
+function srWedge(a, r1, r2, g) {
+  srCtx.beginPath(); srCtx.arc(SR_C, SR_C, r2, a - g, a + g); srCtx.arc(SR_C, SR_C, r1, a + g, a - g, true); srCtx.closePath();
+}
+function srEntries() {
+  const e = [];
+  for (let i = 0; i < srLast.n; i += 3) e.push({ a: SRL[i], t: SRL[i + 1], w: SRL[i + 2] });
+  return e;
+}
+function srDraw(L, curT) {
+  if (!srCtx) return;
+  const c = srCtx; c.setTransform(2, 0, 0, 2, 0, 0); c.clearRect(0, 0, 420, 420);
+  const pc = mem[P], g = SR_D * 0.42;
+  const special = a => a <= 3 || (a >= 0o200 && a <= 0o203) || a === 0o377;
+  for (let line = 0; line < 2; line++) {
+    for (let s = 0; s < 128; s++) {
+      const adr = line * 128 + s, v = mem[adr], ang = srAngle(s, L);
+      for (let b = 0; b < 8; b++) {
+        const r1 = SR_R[line] + b * SR_H;
+        c.fillStyle = (v >> b) & 1 ? '#f0b54a' : (special(adr) ? '#2e4456' : '#323a44');
+        srWedge(ang, r1, r1 + SR_H - 1, g); c.fill();
+      }
+    }
+  }
+  // gesuchte Plätze des letzten Befehls
+  if (srLast.valid) {
+    let k = 0, prev = -2; const seen = new Map();
+    for (const e of srEntries()) {
+      if (e.a < 0 || e.a === prev) continue; prev = e.a; k++;
+      if (!seen.has(e.a)) seen.set(e.a, []); seen.get(e.a).push(k);
+    }
+    c.font = '600 10px system-ui'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    for (const [a, ks] of seen) {
+      const line = a >> 7, ang = srAngle(a & 127, L);
+      c.strokeStyle = '#7fc4ff'; c.lineWidth = 1.5;
+      srWedge(ang, SR_R[line] - 1, SR_R[line] + 8 * SR_H, SR_D * 0.5); c.stroke();
+      const rr = 84 - 11 * line;
+      c.fillStyle = '#7fc4ff';
+      c.fillText(ks.join(','), SR_C + rr * Math.cos(ang), SR_C + rr * Math.sin(ang));
+    }
+  }
+  // nächster Befehl
+  c.strokeStyle = '#ffd36b'; c.lineWidth = 2;
+  srWedge(srAngle(pc & 127, L), SR_R[pc >> 7] - 1, SR_R[pc >> 7] + 8 * SR_H, SR_D * 0.55); c.stroke();
+  // Lesekopf
+  const ha = srRot() ? -Math.PI / 2 : srAngle(L, L);
+  c.fillStyle = curT !== null ? '#ffffff' : '#e6e2d8';
+  c.save(); c.translate(SR_C, SR_C); c.rotate(ha + Math.PI / 2);
+  c.beginPath(); c.moveTo(0, -201); c.lineTo(-6, -210); c.lineTo(6, -210); c.closePath(); c.fill();
+  c.globalAlpha = 0.25; c.fillRect(-SR_D * 100, -201, SR_D * 200, 112); c.restore(); c.globalAlpha = 1;
+  // Mitte
+  c.fillStyle = '#98a1aa'; c.font = '11px system-ui'; c.textAlign = 'center';
+  c.fillText('Platz am Lesekopf', SR_C, SR_C - 22);
+  c.fillStyle = '#f0b54a'; c.font = '600 22px ui-monospace,Consolas,monospace';
+  c.fillText(fmt(L & 127), SR_C, SR_C + 2);
+  c.fillStyle = '#98a1aa'; c.font = '10px system-ui';
+  c.fillText('innen 000–177 · außen 200–377', SR_C, SR_C + 24);
+}
+function srLogHtml(curT) {
+  if (!srLast.valid) return 'Noch kein Befehl ausgeführt – Einzelschritt drücken.';
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const d = srLast.t1 - srLast.t0, bu = byteUs();
+  let wait = 0; const lines = [];
+  for (const e of srEntries()) {
+    const now = curT !== null && curT >= e.t && curT < e.t + e.w;
+    let t;
+    if (e.a >= 0) { wait += e.w - 1; t = `<span class="w">Platz ${fmt(e.a)} abwarten (Umlauf ${e.a >> 7})  ${String(e.w).padStart(3)} BZ</span>`; }
+    else t = `  Byte am Lesekopf verarbeiten       1 BZ`;
+    lines.push(now ? `<span class="now">${t}</span>` : t);
+  }
+  const head = `${fmt(srLast.p)}: ${esc(disOp(srLast.op, srLast.b2).t)}\n` +
+    `Dauer ${d} Bytezeiten = ${(d * bu / 1000).toFixed(2).replace('.', ',')} ms, davon ${wait} BZ reines Warten\n\n`;
+  return head + lines.join('\n');
+}
+function renderSR(t) {
+  let L = T & 127, curT = null;
+  if (srAnim) {
+    const q = Math.min(1, (t - srAnim.start) / srAnim.dur);
+    curT = Math.floor(srAnim.t0 + (srAnim.t1 - srAnim.t0) * q);
+    L = curT & 127; srDirty = true;
+    if (q >= 1) { srAnim = null; curT = null; L = T & 127; }
+  }
+  if (!srDirty) return;
+  srDirty = false;
+  srDraw(L, curT);
+  const bu = byteUs();
+  $('#srNow').innerHTML = `<span class="big">L = ${fmt(L)}</span> · ${curT !== null ? 'Zeitlupe' : `Bytezeit ${T.toLocaleString('de-DE')} · ${Math.floor(T / 128).toLocaleString('de-DE')} Umläufe · ${(T * bu / 1e6).toFixed(3).replace('.', ',')} s Laufzeit`}`;
+  $('#srLog').innerHTML = srLogHtml(curT);
+  srTipUpdate();
+}
+function srTipUpdate() {
+  const tip = $('#srTip');
+  if (!srHover) { tip.textContent = 'Maus über einen Platz: Adresse, Inhalt und Wartezeit bis zum Lesekopf'; return; }
+  const { line, s } = srHover, a = line * 128 + s, L = T & 127, w = (s - L) & 127;
+  tip.textContent = `Adresse ${fmt(a)} (Umlauf ${line}, Platz ${fmt(s)}) = ${fmt(mem[a])} · ${w ? `kommt in ${w} Bytezeiten an den Lesekopf` : 'liegt gerade am Lesekopf'}`;
+}
+srCv.addEventListener('mousemove', e => {
+  const rc = srCv.getBoundingClientRect(), k = 420 / rc.width;
+  const x = (e.clientX - rc.left) * k - SR_C, y = (e.clientY - rc.top) * k - SR_C, r = Math.hypot(x, y);
+  let line = -1;
+  for (let i = 0; i < 2; i++) if (r >= SR_R[i] - 1 && r <= SR_R[i] + 8 * SR_H + 1) line = i;
+  if (line < 0) { srHover = null; srTipUpdate(); return; }
+  const ang = Math.atan2(y, x), L = T & 127, tw = 2 * Math.PI;
+  const s = srRot() ? (L + Math.round((((-Math.PI / 2 - ang) % tw) + tw) % tw / SR_D)) & 127
+                    : Math.round((((ang + Math.PI / 2) % tw) + tw) % tw / SR_D) & 127;
+  srHover = { line, s }; srTipUpdate();
+});
+srCv.addEventListener('mouseleave', () => { srHover = null; srTipUpdate(); });
+srCv.addEventListener('click', () => { if (srHover) { S.addr = srHover.line * 128 + srHover.s; dirty = true; } });
+document.querySelectorAll('input[name=srView]').forEach(r => r.addEventListener('change', () => { srDirty = true; }));
+$('#bSrSlow').onclick = () => {
+  if (!srLast.valid) return;
+  S.running = false;
+  srAnim = { start: performance.now(), dur: +$('#srSlowLen').value * 1000, t0: srLast.t0, t1: srLast.t1 };
+};
+
+$('#asmSrc').value = DEMOS[0].src;
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
