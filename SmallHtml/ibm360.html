@@ -91,6 +91,8 @@ table.t th{background:#eee}
 .hint{background:#fff7d6;border:1px solid #e8d48a;padding:8px 10px;border-radius:4px;font-size:13px}
 footer{padding:16px 10px 30px;font-size:13px;color:var(--muted);text-align:center}
 h3{margin:6px 0 8px;font-size:16px}
+.k1401mem .wm{text-decoration:underline;text-decoration-thickness:2px;color:#b3261e;font-weight:700}
+.k1401mem .ad{color:#777}
 </style>
 </head>
 <body>
@@ -150,6 +152,7 @@ h3{margin:6px 0 8px;font-size:16px}
   <button data-t="tMem">Speicher</button>
   <button data-t="tChn">Kanäle</button>
   <button data-t="tTrc">Trace</button>
+  <button data-t="tEmu">1401-Emulation</button>
   <button data-t="tHlp">Hilfe</button>
 </nav>
 <main>
@@ -261,6 +264,47 @@ h3{margin:6px 0 8px;font-size:16px}
     <div class="listing" id="trList" style="max-height:520px"></div>
   </div>
 
+  <div class="tab" id="tEmu">
+    <h3>1401-Kompatibilitätsmodus (Emulation wie auf Model 30/40)</h3>
+    <div class="hint">Wie bei der echten Kompatibilitätsfunktion liegt der 1401-Speicher <b>im S/360-Hauptspeicher</b>: ein 1401-Zeichen je Byte, Bits <code>B A 8 4 2 1</code> in den unteren sechs Bits, die Wortmarke in Bit X'40'. Die 1401-Befehle laufen statt der S/360-Befehle; Lesen, Drucken und Stanzen gehen auf den Kartenleser 2540 (00C), den Drucker 1403 (00E) und den Stanzer 2540 (00D) dieser Werkbank. Für genau diese Mischung aus Mikrocode und Steuerprogramm prägte IBM 1964 den Begriff <b>Emulation</b>.</div>
+    <div class="row">
+      1401-Speicher ab S/360-Adresse X'<input type="text" id="emuBase" size="7" value="010000">'
+      Größe <select id="emuSize"><option value="4000">4.000 Stellen</option><option value="8000">8.000 Stellen</option><option value="16000" selected>16.000 Stellen</option></select>
+      Tempo <select id="emuRate"><option value="86957">wie eine 1401 (11,5 µs)</option><option value="0" selected>Maximum</option></select>
+      <button class="b" id="emuOn"><b>Kompatibilitätsmodus einschalten</b></button>
+      <span class="small" id="emuState">aus – die S/360 arbeitet normal.</span>
+    </div>
+    <div class="row mono" id="emuRegs"></div>
+    <div class="row">
+      <button class="key blue" id="emuLoad">LADEN<br>(2540, 00C)</button>
+      <button class="key yel" id="emuStart">START</button>
+      <button class="key" id="emuStop">STOP</button>
+      <button class="key" id="emuStep">EINZEL-<br>BEFEHL</button>
+      <button class="key red" id="emuReset">START<br>RESET</button>
+      <span class="small">Programmschalter: <span id="emuSense"></span></span>
+    </div>
+    <div class="msg" id="emuMsg" style="color:#7a4a00"></div>
+    <div class="cols">
+      <div>
+        <h3>Autocoder</h3>
+        <div class="row"><select id="emuEx"></select><button class="b" id="emuExLoad">Beispiel laden</button></div>
+        <textarea id="emuSrc" rows="14" class="mono" spellcheck="false"></textarea>
+        <div class="small">Datenkarten (werden in den Leser 2540 gelegt, Textzeilen werden ins EBCDIC der 360 übertragen):</div>
+        <textarea id="emuData" rows="3" class="mono" spellcheck="false"></textarea>
+        <div class="row"><button class="b" id="emuAsmRun"><b>Assemblieren + Starten</b></button><span class="small" id="emuAsmInfo"></span></div>
+        <div class="listing" id="emuList" style="max-height:220px"></div>
+      </div>
+      <div>
+        <h3>Nächste 1401-Befehle</h3>
+        <div class="dis" id="emuDis" style="max-height:260px"></div>
+        <h3>1401-Speicher (Ausschnitt)</h3>
+        <div class="row">Adresse <input type="text" id="emuMemA" size="6" value="0000"><button class="b" id="emuMemGo">Anzeigen</button><span class="small" id="emuMemHint"></span></div>
+        <div class="memv k1401mem" id="emuMem" style="max-height:300px"></div>
+      </div>
+    </div>
+    <p class="small">Die Ausgabe erscheint in den Reitern <b>Drucker 1403</b> und <b>Karten 2540</b>. Im Reiter <b>Speicher</b> der S/360 sieht man dieselben Daten als Bytes: ab der eingestellten Adresse steht z. B. X'48' für ein „8“ mit Wortmarke. Der Kern ist derselbe wie in der eigenständigen <a href="ibm1401.html">1401-Werkbank</a>.</p>
+  </div>
+
   <div class="tab" id="tHlp">
     <h3>Kurzanleitung</h3>
     <p>Die Werkbank bildet die <b>Architektur</b> des IBM System/360 nach (GA22-6821), kein bestimmtes Modell. Geräte: Konsolschreibmaschine 1052 (009), Kartenleser 2540 (00C), Kartenstanzer 2540 (00D), Zeilendrucker 1403 (00E), alle am Multiplexkanal 0.</p>
@@ -276,6 +320,7 @@ h3{margin:6px 0 8px;font-size:16px}
     <ol class="small">
       <li><b>Stufe 1 (fertig):</b> CPU mit Standard- und Dezimalbefehlssatz, Unterbrechungen, Schutzschlüssel, Intervall-Zeitgeber; Multiplexkanal mit CCW-Ketten (Befehls- und Datenverkettung, TIC, SLI, Skip); 1052, 2540, 1403; IPL von Karte; Bedienfeld; Debugger, Speicheransicht, Trace, Kanalmonitor; Assembler.</li>
       <li><b>Stufe 2 (diese Seite):</b> hexadezimales Gleitkomma kurz, lang und erweitert (inkl. MXR, MXD, MXDR, AXR, SXR, LRDR, LRER) mit Schutzziffer und allen Ausnahmen; Befehlstest mit 185 Prüfungen; Gleitkomma-Details (Schutzziffer nur kurz, Unterlauf ergibt echte Null, HALVE ohne Normalisierung) nach GA22-6821-0; Watchpoints; Zustand als gzip-Datei sichern und laden; asynchrone Kanäle mit Gerätezeiten und PCI-Zwischenunterbrechung; Intervall-Zeitgeber und E/A in emulierter Zeit (Bezug: gewähltes Modelltempo).</li>
+      <li><b>Zusatz (diese Seite):</b> 1401-Kompatibilitätsmodus im Reiter „1401-Emulation“ – 1401-Speicher im S/360-Hauptspeicher, E/A über 2540 und 1403, Autocoder, LADEN-Taste; derselbe Kern wie in der eigenständigen 1401-Werkbank.</li>
       <li>Stufe 3: Bedienfeld ausgebaut (Model-65-Stil), Selektorkanäle, PCI, Gerätetiming, Abruf-Schutz.</li>
       <li>Stufe 4: Platten 2311/2314 im CKD-Format, Hercules-CKD/CCKD, Sicherung nur geänderter Spuren, IPL von Platte.</li>
       <li>Stufe 5: Magnetband 2400 (AWS), IPL von Band.</li>
@@ -2794,6 +2839,1164 @@ function deckReport(cards){
 if(typeof module!=='undefined') module.exports={analyzeDeck,deckReport,Machine,Con1052,Rdr2540,Pun2540,Prt1403,Asm,buildDeck,EXAMPLES,disasm,disasmB,s2e,e2s,textCard,HX};
 </script>
 
+<script id="k1401core">
+"use strict";
+/* =====================================================================
+   IBM 1401 – Kern: BCD-Zeichencode, CPU, Disassembler, Autocoder-Assembler
+   Grundlage: IBM 1401 Reference Manual (A24-1403), Autocoder (C24-3319)
+   Ein Speicherzeichen = ein Byte: Bit 0x40 Wortmarke, Bits 0x3F = B A 8 4 2 1
+   ===================================================================== */
+const K_WM=0x40;
+const K_B2N=[0,1,2,3,4,5,6,7,8,9,0,3,4,5,6,7];   // BCD-Ziffer → Wert (wie SimH bcd_to_bin)
+/* BCD-Zeichensatz (A-Kette); Index = Code B A 8 4 2 1 */
+const K_CH=[' ','1','2','3','4','5','6','7','8','9','0','#','@',':','>','√',
+            '¢','/','S','T','U','V','W','X','Y','Z','‡',',','%','=','\'','"',
+            '-','J','K','L','M','N','O','P','Q','R','!','$','*',']',';','Δ',
+            '&','A','B','C','D','E','F','G','H','I','?','.','¤','[','<','⁂'];
+/* H-Kette (FORTRAN): abweichende Druckbilder */
+const K_HCH=K_CH.slice(); K_HCH[0x0B]='='; K_HCH[0x0C]='\''; K_HCH[0x1C]='('; K_HCH[0x3C]=')'; K_HCH[0x30]='+';
+const K_OF=new Map(); K_CH.forEach((c,i)=>K_OF.set(c,i));
+[['+',0x30],['(',0x1C],[')',0x3C],['|',0x1A],['_',0x3F],['^',0x0F]].forEach(([c,v])=>{ if(!K_OF.has(c)) K_OF.set(c,v); });
+function kA2B(s){ const o=new Uint8Array(s.length); for(let i=0;i<s.length;i++){ const c=s[i].toUpperCase(), v=K_OF.get(c); o[i]=v===undefined?0x00:v; } return o; }
+function kB2A(b,h){ const T=h?K_HCH:K_CH; let s=''; for(let i=0;i<b.length;i++) s+=T[b[i]&63]; return s; }
+/* Eingabe für FORTRAN (H-Kette): = ' ( ) + werden auf die FORTRAN-Codes abgebildet */
+function kA2BH(s){ const o=kA2B(s); for(let i=0;i<s.length;i++){ const j=K_HCH.indexOf(s[i]); if(j>=0&&'=\'()+'.includes(s[i])) o[i]=j; } return o; }
+function kCardH(line){ const c=new Uint8Array(80); c.set(kA2BH(line.slice(0,80))); return c; }
+function kCard(line){ const c=new Uint8Array(80); c.set(kA2B(line.slice(0,80))); return c; }
+/* Prüfbit C (ungerade Parität über C B A 8 4 2 1) – nur für die Anzeige */
+function kC(c){ let x=c&63, p=0; while(x){ p^=x&1; x>>=1; } return p?0:1; }
+/* Sortierfolge der 1401 (aufsteigend), Reference Manual Fig. 267:
+   ␢ . ¤ [ < ⁂ & $ * ] ; Δ - / , % = ' " ¢ # @ : > √ ? A–I ! J–R ‡ S–Z 0–9 */
+const K_COLSEQ=[0x00,0x3B,0x3C,0x3D,0x3E,0x3F,0x30,0x2B,0x2C,0x2D,0x2E,0x2F,0x20,0x11,0x1B,0x1C,0x1D,0x1E,0x1F,0x10,
+ 0x0B,0x0C,0x0D,0x0E,0x0F,
+ 0x3A,0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,
+ 0x2A,0x21,0x22,0x23,0x24,0x25,0x26,0x27,0x28,0x29,
+ 0x1A,0x12,0x13,0x14,0x15,0x16,0x17,0x18,0x19,
+ 0x0A,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09];
+const K_COL=new Uint8Array(64); K_COLSEQ.forEach((c,i)=>K_COL[c]=i);
+/* Hollerith-Lochungen für die Kartendarstellung */
+function kHoll(c){ c&=63; const z=c>>4, d=c&15, r=[];
+  if(c===0) return r;
+  if(z===3) r.push(12); else if(z===2) r.push(11); else if(z===1) r.push(0);
+  if(d>=1&&d<=9) r.push(d);
+  else if(d===10){ if(z===0) r.push(0); else if(z===1) r.push(8,2); else r.push(0); }
+  else if(d>10) r.push(8,d-8);
+  return r; }
+
+const K_DV=c=>{ const n=c&15; return n===10?0:n%10; };
+/* Ziffernwert im Addierwerk: ungültige Codes 11–15 gelten als 3–7 (8-Bit fällt weg) */
+const K_AV=[0,1,2,3,4,5,6,7,8,9,0,3,4,5,6,7];
+const K_DC=d=>d===0?0x0A:d;
+const K_HEX=v=>String(v);
+function kAddrChars(v){ v=((v%16000)+16000)%16000; const th=Math.floor(v/1000), h=Math.floor(v/100)%10, t=Math.floor(v/10)%10, u=v%10;
+  return [K_DC(h)|((th&3)<<4), K_DC(t), K_DC(u)|(((th>>2)&3)<<4)]; }
+function kAddrVal(h,t,u){ return K_DV(h)*100+K_DV(t)*10+K_DV(u)+(((h>>4)&3)+4*((u>>4)&3))*1000; }
+const K_P4=n=>String(n).padStart(4,'0');
+
+/* Operationsnamen (Autocoder) für den Disassembler */
+const K_OPN={0x31:'A',0x12:'S',0x3A:'ZA',0x2A:'ZS',0x0C:'M',0x1C:'D',0x24:'MCW',0x23:'LCA',0x34:'MN',0x18:'MZ',0x19:'MCS',0x35:'MCE',
+  0x33:'C',0x32:'B',0x15:'BWZ',0x16:'BBE',0x38:'SBR',0x28:'SAR',0x1B:'SW',0x3C:'CW',0x11:'CS',0x3B:'H',0x25:'NOP',
+  0x01:'R',0x02:'W',0x03:'WR',0x04:'P',0x05:'RP',0x06:'WP',0x07:'WRP',0x08:'SRF',0x09:'SPF',0x36:'CC',0x22:'SS',0x0B:'MA',
+  0x27:'MCM',0x17:'MIZ'};
+const K_BIN={0x00:'B',0x11:'BU',0x12:'BE',0x13:'BL',0x14:'BH',0x19:'BAV',0x31:'BLC',0x09:'BC9',0x0C:'BCV',0x27:'BPB',0x29:'BPCB',0x22:'BEF',0x23:'BER'};
+
+/* I-Phase: Zeichen bis zur nächsten Wortmarke; SW und CS mit 7 Stellen sowie B mit 5 Stellen und blankem d
+   brauchen keine folgende Wortmarke (Van Snyder, 1401 Programming Hints) */
+function kFetch(M,S,a){
+  const ch=[M[a]&63], op=ch[0]; let i=a+1;
+  while(i<S&&!(M[i]&K_WM)){ if(ch.length<8) ch.push(M[i]&63); else ch[7]=M[i]&63; i++;   // ab 8 Stellen: letztes Zeichen ist d
+    if(ch.length===7&&(op===0x1B||op===0x11)) break;
+    if(ch.length===5&&op===0x32&&ch[4]===0x00) break;
+    if(i-a>200) break; }
+  return {ch,n:i-a};
+}
+class K1401Stop extends Error{ constructor(m){ super(m); this.k1401=true; } }
+
+class K1401{
+  constructor(mem,size){
+    this.attach(mem,size);
+    this.io=null;              // {read()→Uint8Array(80)|null, hopperEmpty()→bool, print(Uint8Array132), punch(Uint8Array80), carriage(kind,n)}
+    this.sense=[false,false,false,false,false,false,false];   // A..G
+    this.bp=new Set(); this.bpSkip=false;
+    this.TN=2048; this.tI=new Int32Array(this.TN); this.tL=new Uint8Array(this.TN); this.tC=[]; this.tPos=0; this.tCnt=0; this.trOn=true;
+    for(let i=0;i<this.TN;i++) this.tC.push(null);
+    this.wp=[]; this.wpHit=null;
+    this.cycles=0; this.icount=0; this.running=false; this.stopMsg='';
+    this.model='1401';         // '1401' (feste E/A-Bereiche, 1402/1403) oder '1440' (Move-Mode-E/A, 1442/1443)
+    this.reset();
+  }
+  attach(mem,size){ this.M=mem; this.size=size; }
+  reset(){ /* START RESET */
+    this.I=1; this.A=0; this.B=0; this.aReg=0; this.bReg=0; this.op=0; this.d=0; this.len=0;
+    this.eq=false; this.ne=false; this.hi=false; this.lo=false; this.ov=false; this.last=false;
+    this.eor=false; this.tapeErr=false; this.dk={N:false,V:false,W:false,X:false,Y:false};
+    this.after=null; this.running=false; this.stopMsg=''; this.ioWait=null; this.hb=null;
+  }
+  /* Taste START RESET an der Konsole: löscht Prüf- und Vergleichsanzeiger, die I-Adresse bleibt (Handbuch S. 113) */
+  startReset(){ this.hb=null; this.eq=false; this.ne=false; this.hi=false; this.lo=false; this.ov=false; this.running=false; this.stopMsg=''; this.ioWait=null; }
+  clearMem(){ this.M.fill(0,0,this.size); }
+  stop(m){ this.running=false; this.stopMsg=m||''; }
+  chk(a){ if(a<0||a>=this.size) throw new K1401Stop('Adressprüfung: Adresse '+a+' liegt außerhalb des Speichers ('+this.size+' Stellen)'); return a; }
+  wpCheck(a){ for(const w of this.wp) if(a>=w.a&&a<w.a+w.n&&!this.wpHit) this.wpHit={w,a}; }
+  st(a,v){ this.chk(a); if(this.wp.length) this.wpCheck(a); this.M[a]=v; }
+  /* Adresse aus drei Speicherzeichen inkl. Indexregister */
+  ea(h,t,u){ let v=kAddrVal(h,t,u); const x=(t>>4)&3;
+    if(x){ const p=x===1?87:(x===2?92:97); const M=this.M; v=(v+kAddrVal(M[p]&63,M[p+1]&63,M[p+2]&63))%16000; }
+    return v; }
+  idxVal(n){ const p=n===1?87:(n===2?92:97), M=this.M; return kAddrVal(M[p]&63,M[p+1]&63,M[p+2]&63); }
+
+  /* ---- Trace ---- */
+  trace(ia,len,txt){ const p=this.tPos; this.tI[p]=ia; this.tL[p]=len; this.tC[p]=txt; this.tPos=(p+1)%this.TN; if(this.tCnt<this.TN) this.tCnt++; }
+
+  run(n){
+    if(this.running&&this.hb!=null){ this.I=this.hb; this.hb=null; }   // START nach „H aaa“: jetzt verzweigen
+    for(let i=0;i<n;i++){
+      if(!this.running) return 'halt';
+      if(this.bp.size&&this.bp.has(this.I)&&!this.bpSkip){ this.stop('Haltepunkt bei '+K_P4(this.I)); return 'bp'; }
+      this.bpSkip=false;
+      this.step();
+    }
+    return 'ok';
+  }
+  step(){
+    const ia=this.I;
+    try{ this.exec1(); }
+    catch(e){ if(e instanceof K1401Stop){ this.I=ia; this.stop(e.message); } else throw e; }
+    if(this.wpHit){ const h=this.wpHit; this.wpHit=null; this.stop('Watchpoint '+K_P4(h.w.a)+': Befehl bei '+K_P4(ia)+' schrieb Stelle '+K_P4(h.a)); }
+  }
+  /* ---------- I-Phase und Ausführung ---------- */
+  exec1(){
+    const M=this.M, S=this.size; const ia=this.I;
+    this.chk(ia);
+    const f=kFetch(M,S,ia), ch=f.ch, i=ia+f.n;
+    const n=f.n, op=ch[0];
+    this.cycles+=Math.min(n,8)+1; this.icount++;
+    const pA=this.A, pB=this.B;
+    let A=pA, B=pB, d=this.d, L=ch.length;
+    if((L===3||L===6)&&op!==0x25){ this.I=ia; throw new K1401Stop('Prüfhalt: Befehl bei '+K_P4(ia)+' hat '+L+' Stellen (Adressdecodierfehler)'); }
+    if(L===2) d=ch[1];
+    /* 4/5-stellig: A-Adresse geht bei allen Befehlen außer L, M, Q, H auch ins B-Adressregister */
+    if(L>=4){ A=this.ea(ch[1],ch[2],ch[3]); if(L<7&&op!==0x23&&op!==0x24&&op!==0x28&&op!==0x38) B=A; }
+    if(L>=7) B=this.ea(ch[4],ch[5],ch[6]);
+    /* d-Register = zuletzt geholtes Zeichen (wie SimH): bei 4 Stellen die Einerstelle der A-Adresse, bei 7 die der B-Adresse */
+    if(L>=2) d=ch[L-1];
+    if(op===0x32&&L===5&&ch[4]===0x00) L=4;   // B aaa + Leerzeichen = unbedingter Sprung
+    this.op=op; this.d=d; this.len=L;
+    if(this.trOn) this.trace(ia,n,ch);
+    this.I=i;                        // nächster Befehl
+    if(op===0x14&&L>=5&&ch[1]===0x1C&&(ch[2]===0x14||ch[2]===0x32)&&this.model==='1401') return this.tapeCtl(ia,ch[3],ch[4]);
+    if(L>=4&&(op===0x24||op===0x23)&&ch[1]===0x1C){
+      if(this.model==='1440'&&L>=8&&(ch[2]===0x37||ch[2]===0x18)) return this.mm1440(ia,op,ch[2],ch[3],B,d);
+      if(this.model==='1440'&&L>=8&&ch[2]===0x36) return this.disk1311(ia,op,ch[3],B,d);
+      if(this.model==='1401'&&L>=8&&(ch[2]===0x14||ch[2]===0x32)) return this.tapeRW(ia,op,ch[2]===0x32,ch[3],B,d);
+      throw new K1401Stop('Move-Mode-E/A (%'+K_CH[ch[2]]+K_CH[ch[3]]+') für '+(ch[2]===0x16?'Platte 1311':ch[2]===0x24?'Magnetband':ch[2]===0x23?'Konsole 1447':'dieses Gerät')+' ist in dieser Ausbaustufe noch nicht eingebaut'); }
+    if(this.model==='1440'&&op>=0x01&&op<=0x09)
+      throw new K1401Stop('Operation \''+K_CH[op]+'\' gibt es auf der 1440 nicht: sie hat keine festen Lese-, Stanz- und Druckbereiche. Ein-/Ausgabe über M %G1 (Leser/Stanzer 1442) und M %Y1 (Drucker 1443)');
+    if(op!==0x38&&op!==0x28){ this.A=A; this.B=B; }
+    switch(op){
+      case 0x31: return this.addSub(false);                     // A
+      case 0x12: return this.addSub(true);                      // S
+      case 0x3A: return this.zeroAdd(false);                    // ZA
+      case 0x2A: return this.zeroAdd(true);                     // ZS
+      case 0x0C: return this.mul();                             // M (Sonderausstattung)
+      case 0x1C: return this.dvd();                             // D (Sonderausstattung)
+      case 0x24: return this.mcw();                             // MCW
+      case 0x23: return this.lca();                             // LCA
+      case 0x34: { const a=this.chk(this.A), b=this.chk(this.B); this.st(b,(M[b]&0x70)|(M[a]&0x0F)); this.A--; this.B--; this.cycles+=2; return; }   // MN
+      case 0x18: { const a=this.chk(this.A), b=this.chk(this.B); this.st(b,(M[b]&0x4F)|(M[a]&0x30)); this.A--; this.B--; this.cycles+=2; return; }   // MZ
+      case 0x19: return this.mcs();                             // MCS
+      case 0x35: return this.mce();                             // MCE
+      case 0x33: return this.cmp();                             // C
+      case 0x32: return this.branch(L,A,B,d);                   // B, BCE, BIN …
+      case 0x15: { if(L!==1&&L<8) throw new K1401Stop('BWZ braucht 8 Stellen (oder 1 Stelle verkettet)'); const c=M[this.chk(B)];
+        const t=((d&1)&&(c&K_WM))||((d&2)&&((c&0x30)===(d&0x30))); this.B=B-1; if(t){ this.B=this.I; this.I=A; } return; }
+      case 0x16: { if(L!==1&&L<8) throw new K1401Stop('BBE braucht 8 Stellen (oder 1 Stelle verkettet)'); const c=M[this.chk(B)]&63; this.B=B-1; if(c&d&63){ this.B=this.I; this.I=A; } return; }
+      case 0x38: { const ad=L>=4?A:pA, bv=L>=7?B:pB; const c=kAddrChars(bv); for(let k=0;k<3;k++) this.st(ad-2+k,(M[ad-2+k]&K_WM)|c[k]); this.A=ad-3; this.B=bv; return; }   // SBR (7 Stellen: speichert die B-Adresse des Befehls, z. B. SBR X1,1000)
+      case 0x28: { const ad=L>=4?A:pA; const c=kAddrChars(pA); for(let k=0;k<3;k++) this.st(ad-2+k,(M[ad-2+k]&K_WM)|c[k]); this.A=ad-3; this.B=pA; return; }   // SAR (wie SimH: das B-Adressregister übernimmt den alten A-Registerinhalt)
+      case 0x1B: { this.st(this.A,M[this.chk(this.A)]|K_WM); if(L>=7||L<4) this.st(this.B,M[this.chk(this.B)]|K_WM); this.A--; this.B--; return; }   // SW
+      case 0x3C: { this.st(this.A,M[this.chk(this.A)]&63); if(L>=7||L<4) this.st(this.B,M[this.chk(this.B)]&63); this.A--; this.B--; return; }     // CW
+      case 0x11: { const from=this.chk(this.B), to=from-(from%100); for(let a=from;a>=to;a--) this.st(a,0); this.cycles+=from-to+1;
+        this.B=to-1<0?to-1+this.size:to-1; if(L>=7) this.I=A; return; }                   // CS (wie SimH: A-Register bleibt, Sprung ändert B nicht)
+      case 0x3B: { if(L>=4&&L<7){ this.hb=A; this.stop('Halt bei '+K_P4(ia)+' – START setzt bei '+K_P4(A)+' fort, START RESET + START bei '+K_P4(this.I)); return; }   // H mit Sprung: Sprung erst beim Drücken von START
+        this.stop('Halt bei '+K_P4(ia)+(L>=7?' (Kennung in A/B: '+K_P4(A)+' '+K_P4(B)+')':'')); return; }   // H mit 7 Stellen: Kennzahl-Halt, START macht weiter
+      case 0x0B: { const a=this.chk(this.A), b=this.chk(this.B); this.chk(a-2); this.chk(b-2);   // MA: Adresse modifizieren (modulo 16000)
+        const v=(kAddrVal(M[b-2]&63,M[b-1]&63,M[b]&63)+kAddrVal(M[a-2]&63,M[a-1]&63,M[a]&63))%16000, c=kAddrChars(v), x=M[b-1]&0x30;
+        this.st(b-2,(M[b-2]&K_WM)|c[0]); this.st(b-1,(M[b-1]&K_WM)|c[1]|x); this.st(b,(M[b]&K_WM)|c[2]); this.A=a-3; this.B=b-3; this.cycles+=6; return; }
+      case 0x27: return this.mcm();                             // MCM / MRCM (Sonderausstattung Move Record)
+      case 0x17: throw new K1401Stop('MIZ (Move and Insert Zeros, für komprimierte 7070-Bänder) braucht die Bandeinheit – in dieser Ausbaustufe nicht eingebaut');
+      case 0x25: return;                                        // NOP
+      case 0x01: case 0x02: case 0x03: case 0x04: case 0x05: case 0x06: case 0x07: return this.io1(op,L,A,ia,(L===2||L===5)?d:null);
+      case 0x08: case 0x09: return;                             // SRF, SPF
+      case 0x36: this.carriage(d); if(L>=4){ this.B=this.I; this.I=A; } return;   // CC, CCB (mit I-Adresse)
+      case 0x22: if(this.io&&this.io.stacker) this.io.stacker(d); if(L>=4){ this.B=this.I; this.I=A; } return;   // SS, SSB (Fachwahl)
+      default: throw new K1401Stop('Ungültiger Operationscode \''+K_CH[op]+'\' bei '+K_P4(ia));
+    }
+  }
+  /* ---------- Felder lesen ---------- */
+  num(a,len){ /* liefert {v:BigInt-Betrag, neg} des Feldes, das bei a (Einer) endet */
+    const M=this.M; let v=0n, p=1n; for(let k=0;k<len;k++){ v+=BigInt(K_DV(M[a-k]))*p; p*=10n; }
+    return v; }
+  fieldLen(a){ const M=this.M; let n=0; for(;;){ this.chk(a-n); n++; if(M[a-n+1]&K_WM) return n; if(n>16000) throw new K1401Stop('Keine Wortmarke gefunden'); } }
+  /* schreibt Betrag v in len Stellen ab Einer b. Einerstelle: Vorzeichen (B = minus, AB = plus) oder unverändert (keep);
+     Zonen der Mittelstellen werden gelöscht, die Zone der höchsten Stelle bleibt (sie zählt Überläufe, z. B. Tausender von Adressen) */
+  wrNum(b,len,v,neg,keep,clrHi){
+    const M=this.M;
+    for(let k=0;k<len;k++){ const d=Number(v%10n); v/=10n; const a=b-k; let c=(M[a]&K_WM)|K_DC(d);
+      if(k===0) c|=keep?(M[a]&0x30):(neg?0x20:0x30);
+      else if(k===len-1&&!clrHi) c|=M[a]&0x30;
+      this.st(a,c); }
+  }
+  /* A/S wie die Hardware (Handbuch S. 28–31, Ablauf wie im SimH-Modell, am echten Autocoder geprüft):
+     Vorzeichen B-Bit allein = minus. Gleiche Vorzeichen → echte Addition, sonst Komplementaddition (Zehnerkomplement von A).
+     Einerstelle: echte Addition behält die B-Zone, Komplementaddition setzt das Standardvorzeichen.
+     Mittlere Stellen verlieren ihre Zonen. Hohe Stelle bei echter Addition: Zone = Zone(A) + Zone(B) + Übertrag (als A-Bit),
+     so zählt sie Überläufe und rechnet Tausender von Adressen mit. Ohne Übertrag aus der hohen Stelle wird rückkomplementiert,
+     das Vorzeichen wechselt. Ein einstelliges B-Feld hat keinen Überlauf. */
+  addSub(sub){
+    const M=this.M, a0=this.chk(this.A), b0=this.chk(this.B);
+    const z=c=>c&0x30, D=c=>K_AV[c&15], S=d=>d===0?0x0A:d;
+    let ap=a0, bp=b0, a=M[ap], b=M[bp];
+    const q=((z(a)===0x20)!==sub)!==(z(b)===0x20);
+    let t=q?D(b)+10-D(a):D(b)+D(a), carry=t>=10; t%=10;
+    let bu=(b&(K_WM|0x30))|S(t); if(q&&!(b&0x20)) bu=(bu&K_WM)|0x30|S(t);
+    this.st(bp,bu); ap--; bp--; let n=1, aDone=!!(a&K_WM);
+    if(!(b&K_WM)){
+      for(;;){ let ac=0; if(!aDone){ ac=M[this.chk(ap)]; ap--; if(ac&K_WM) aDone=true; }
+        b=M[this.chk(bp)];
+        let u=D(b)+(q?9-D(ac):D(ac))+(carry?1:0); carry=u>=10; u%=10;
+        if((b&K_WM)&&!q){ const zs=((z(ac)>>4)+(z(b)>>4)+(carry?1:0))&3; this.st(bp,K_WM|(zs<<4)|S(u)); if(carry) this.ov=true; }
+        else this.st(bp,(b&K_WM)|S(u));
+        bp--; n++; if(b&K_WM) break; if(n>16000) throw new K1401Stop('Keine Wortmarke im B-Feld'); }
+    }
+    if(q&&!carry){                                   // Rückkomplementierung
+      this.st(b0,M[b0]^0x10);
+      let c=1; for(let p=b0;p>bp;p--){ const ch=M[p]; let u=9-D(ch)+c; c=u>=10?1:0; u%=10; this.st(p,(ch&(K_WM|0x30))|S(u)); }
+    }
+    this.A=ap; this.B=bp; this.cycles+=2*n;
+  }
+  zeroAdd(sub){
+    const M=this.M, a0=this.chk(this.A), b0=this.chk(this.B);
+    const la=this.fieldLen(a0), lb=this.fieldLen(b0), n=Math.min(la,lb);
+    const neg=((M[a0]&0x30)===0x20)!==sub;
+    const v=this.num(a0,n);
+    for(let k=0;k<lb;k++){ const a=b0-k; const x=k<n?M[a0-k]&63:0x0A;
+      let c=(M[a]&K_WM)|(x===0x00?0x00:((x&15)===0?0x0A:(x&15)));   // Handbuch S. 31: Leerstellen des A-Feldes bleiben Leerstellen (Einerstelle: Leer + AB = &)
+      if(k===0) c|=neg?0x20:0x30; this.st(a,c); }
+    this.A=a0-n; this.B=b0-lb; this.cycles+=n+lb; void v;
+  }
+  /* M und D: genaue Nachbildung von SimH i1401 (Ziffernweise wie auf dem Papier) */
+  mul(){   /* B-Feld = Multiplikator (links, mit Wortmarke) + Produktfeld (Multiplikand + 1 Stellen); B zeigt auf die Einerstelle */
+    const M=this.M, dg=c=>K_B2N[c&15], put=(p,v)=>this.st(p,(M[p]&K_WM)|(v%10===0?0x0A:v%10));
+    let AS=this.chk(this.A), BS=this.chk(this.B); const asave=AS, lowprd=BS; let bsave=BS, a, b, n=0;
+    do{ a=M[this.chk(AS)]; this.chk(BS); this.st(BS,0x0A); AS--; BS--; n++; } while(!(a&K_WM));
+    this.chk(BS); this.st(BS,0x0A); BS--;
+    const sign=((M[asave]&0x30)===0x20)!==((M[this.chk(BS)]&0x30)===0x20);
+    do{ let ps=bsave; AS=asave; let carry=0; b=M[this.chk(BS)];
+      do{ a=M[AS]; const t=dg(a)*dg(b)+carry+dg(M[this.chk(ps)]); carry=Math.floor(t/10); put(ps,t); AS--; ps--; n++; } while(!(a&K_WM));
+      this.st(BS,(M[BS]&K_WM)|0x0A);
+      const t=dg(M[this.chk(ps)])+carry; put(ps,t);
+      bsave--; BS--; } while(!(b&K_WM));
+    this.st(lowprd,M[lowprd]|0x30); if(sign) this.st(lowprd,M[lowprd]&~0x10);
+    this.A=AS; this.B=BS; this.cycles+=3*n;
+  }
+  dvd(){   /* B zeigt auf die Stelle „höchste Dividendenstelle + Divisorlänge“; links davon Nullen (Divisorlänge + 1) als Quotientenfeld */
+    const M=this.M, dg=c=>K_B2N[c&15], put=(p,v)=>this.st(p,(M[p]&K_WM)|(v%10===0?0x0A:v%10));
+    let AS=this.chk(this.A), BS=this.chk(this.B); const asave=AS; let a, b, t=false, n=0;
+    do{ a=M[this.chk(AS)]; if(dg(a)!==0) t=true; AS--; } while(!(a&K_WM));
+    const sub=(ap,bp)=>{ let c=0, x; do{ x=M[ap]; const r=dg(M[this.chk(bp)])-dg(x)-c; c=r<0?1:0; put(bp,r+10); ap--; bp--; n++; } while(!(x&K_WM));
+      const y=M[this.chk(bp)]; if(dg(y)!==0){ put(bp,dg(y)-c); return 0; } return c; };
+    const add=(ap,bp)=>{ let c=0, x; do{ x=M[ap]; const r=dg(M[bp])+dg(x)+c; c=r>=10?1:0; put(bp,r); ap--; bp--; n++; } while(!(x&K_WM)); return c; };
+    const sgn=(dvrc,dvdc,qp,rp)=>{ const s=dvrc&0x30; this.st(rp,M[rp]|0x30); if(s===0x20) this.st(rp,M[rp]&~0x10);
+      this.st(qp,M[qp]|0x30); if(((dvdc&0x30)===0x20)!==(s===0x20)) this.st(qp,M[qp]&~0x10); };
+    if(!t){ this.ov=true; const qs=BS; let bs=BS; do{ b=M[this.chk(bs)]; bs++; } while(!(b&0x30));
+      sgn(M[asave],b,qs-1,bs-1); this.A=AS; this.B=(BS-2)-(asave-(AS+1)); return; }
+    let bsave=BS, qs=BS-(asave-AS)-1;
+    do{ let quo=0; this.chk(qs); b=M[this.chk(bsave)];
+      do{ t=sub(asave,bsave); quo++; } while(t===0);
+      add(asave,bsave); quo--; if(quo>9) this.ov=true;
+      put(qs,quo); bsave++; qs++; if(n>200000) throw new K1401Stop('Division: kein Vorzeichen im Dividenden gefunden'); } while(!(b&0x30));
+    sgn(M[asave],b,qs-1,bsave-1);
+    this.A=AS; this.B=qs-2; this.cycles+=3*n;
+  }
+  mcw(){ const M=this.M; let a=this.A, b=this.B, n=0;
+    for(;;){ const c=M[this.chk(a)], t=M[this.chk(b)]; this.st(b,(t&K_WM)|(c&63)); a--; b--; n++; if((c&K_WM)||(t&K_WM)) break; if(n>16000) break; }
+    this.A=a; this.B=b; this.cycles+=2*n; }
+  lca(){ const M=this.M; let a=this.A, b=this.B, n=0;
+    for(;;){ const c=M[this.chk(a)]; this.chk(b); this.st(b,c); a--; b--; n++; if(c&K_WM) break; if(n>16000) break; }
+    this.A=a; this.B=b; this.cycles+=2*n; }
+  /* MCS (Handbuch S. 38): A-Feld nach B, Vorzeichen der Einerstelle weg, B-Wortmarken gelöscht.
+     Danach Rückwärtslauf von links: führende Nullen und Kommas → Leerstellen; Bindestrich und Leerstelle ändern nichts;
+     eine signifikante Ziffer beendet die Nullunterdrückung, jedes andere Zeichen (auch der Dezimalpunkt) startet sie neu. */
+  mcs(){ const M=this.M; let a=this.A, b=this.B, n=0; const b0=b;
+    for(;;){ const c=M[this.chk(a)]; this.chk(b); let v=c&63; if(n===0&&(v&15)>0&&(v&15)<=10) v&=0x0F; this.st(b,v); a--; b--; n++; if(c&K_WM) break; if(n>16000) break; }
+    let sup=true;
+    for(let p=b+1;p<=b0;p++){ const c=M[p]&63;
+      if(c===0x0A||c===0x1B){ if(sup) this.st(p,0); }
+      else if(c===0x00||c===0x20) {}
+      else if(c>=0x01&&c<=0x09) sup=false;
+      else sup=true; }
+    this.A=a; this.B=b0+1; this.cycles+=3*n;
+  }
+  /* MCE (Handbuch S. 40–42, Regeln 1–7): A-Feld = Daten, B-Feld = Aufbereitungsmaske mit Wortmarke links.
+     Vorwärtslauf von rechts: Leerstelle/Null ← Datenzeichen; & → Leerstelle; CR und - im Statusteil bei plus → Leerstellen;
+     nach der A-Wortmarke werden restliche Kommas zu Leerstellen. Die rechte Null der Maske ist die Nullunterdrückungsgrenze:
+     dort wird eine Wortmarke gesetzt, danach läuft die Maschine von links bis zu ihr zurück und ersetzt führende Nullen,
+     Kommas und Punkte durch Leerstellen. */
+  mce(){   // genaue Nachbildung von SimH i1401 (mit Sonderausstattung „Erweiterte Druckaufbereitung“: * und $)
+    const M=this.M; let AS=this.chk(this.A), BS=this.chk(this.B), n=0;
+    let a=M[AS], t=a&15; AS--;
+    const qsign=(a&0x30)===0x20; let qawm=false, qzero=false, qbody=false, qdollar=false, qaster=false, qdecimal=false, b;
+    do{
+      this.chk(BS); b=M[BS]; this.st(BS,b&63); let take=false;
+      switch(b&63){
+        case 0x2C: if(qbody&&!qdollar){ qaster=true; take=true; } break;     // *
+        case 0x2B: if(qbody&&!qaster){ qdollar=true; take=true; } break;     // $
+        case 0x0A:                                                           // 0
+          if(qawm){ if(!qzero) this.st(BS,M[BS]|K_WM); qzero=true; break; }
+          if(!qzero) t|=K_WM; qzero=true; take=true; break;
+        case 0x00: if(!qawm) take=true; break;                               // Leerstelle
+        case 0x33: case 0x29: case 0x20: if(!qsign&&!qbody) this.st(BS,0); break;   // C R -
+        case 0x1B: if(!qbody) this.st(BS,0); break;                          // ,
+        case 0x30: this.st(BS,0); break;                                     // &
+      }
+      if(take){ this.st(BS,t); if(a&K_WM){ qbody=false; qawm=true; } else { qbody=true; a=M[this.chk(AS)]; AS--; t=a&63; } }
+      BS--; n++; if(n>16000) throw new K1401Stop('MCE: keine Wortmarke im B-Feld');
+    } while(!(b&K_WM));
+    this.A=AS; this.B=BS; this.cycles+=2*n;
+    if(!qzero) return;
+    do{ BS++; this.chk(BS); b=M[BS];                                         // Durchlauf 2: von links, Nullen unterdrücken
+      switch(b&63){
+        case 1: case 2: case 3: case 4: case 5: case 6: case 7: case 8: case 9: qzero=false; break;
+        case 0x0A: case 0x1B: if(qzero&&!qdecimal) this.st(BS,(b&K_WM)|(qaster?0x2C:0)); break;
+        case 0x00: if(qaster) this.st(BS,(b&K_WM)|0x2C); break;
+        case 0x3B: if(qzero) qdecimal=true; break;
+        case 0x1C: case 0x1D: case 0x1E: case 0x1F: case 0x20: break;
+        default: qzero=true; }
+      n++; } while(!(b&K_WM));
+    this.st(BS,M[BS]&63);
+    if(!qdollar&&!(qdecimal&&qzero)){ this.B=BS+1; this.cycles+=n; return; }
+    if(qdecimal&&qzero) qdollar=false;
+    for(;;){ b=M[this.chk(BS)];                                              // Durchlauf 3: $ einsetzen bzw. Dezimalpunkt
+      if(b===0x00&&qdollar){ this.st(BS,0x2B); break; }
+      if(b===0x3B){ this.st(BS,qaster?0x2C:0); break; }
+      if(b===0x0A&&!qdollar) this.st(BS,qaster?0x2C:0);
+      BS--; n++; }
+    this.B=BS; this.cycles+=n;
+  }
+  /* MCM / MRCM (Sonderausstattung, Handbuch S. 85): von der hohen Stelle nach rechts bis Satzmarke ‡ oder Gruppenmarke mit Wortmarke */
+  mcm(){ const M=this.M; let a=this.A, b=this.B, n=0;
+    for(;;){ const c=M[this.chk(a)]; this.chk(b); this.st(b,(M[b]&K_WM)|(c&63)); a++; b++; n++;
+      if((c&63)===0x1A||c===(K_WM|0x3F)) break; if(n>16000) throw new K1401Stop('MCM: keine Satz- oder Gruppenmarke gefunden'); }
+    this.A=a; this.B=b; this.cycles+=2*n; }
+  cmp(){ const M=this.M; let a=this.A, b=this.B, res=0, n=0;
+    for(;;){ const ca=M[this.chk(a)], cb=M[this.chk(b)]; const ra=K_COL[ca&63], rb=K_COL[cb&63];
+      if(ra!==rb) res=rb>ra?1:-1; a--; b--; n++;
+      if(cb&K_WM) break;
+      if(ca&K_WM){ res=1; break; }   // A-Feld kürzer: ungleich, B hoch – Vergleich endet an der A-Wortmarke
+      if(n>16000) break; }
+    this.eq=res===0; this.ne=res!==0; this.hi=res>0; this.lo=res<0; this.A=a; this.B=b; this.cycles+=2*n; }
+  ind(d){
+    switch(d){
+      case 0x00: return true;
+      case 0x11: return this.ne;
+      case 0x12: return this.eq;
+      case 0x13: return this.lo;
+      case 0x14: return this.hi;
+      case 0x19: { const v=this.ov; this.ov=false; return v; }
+      case 0x31: return this.last;
+      case 0x22: { const v=this.eor; this.eor=false; return v; }                 // K Bandende/Bandmarke (Abfrage löscht)
+      case 0x23: { const v=this.tapeErr; this.tapeErr=false; return v; }         // L Bandfehler
+      case 0x25: return this.dk.N; case 0x15: return this.dk.V; case 0x16: return this.dk.W;   // 1311: N V W
+      case 0x17: return this.dk.X; case 0x18: return this.dk.Y;                                 // 1311: X Y
+      case 0x32: case 0x33: case 0x34: case 0x35: case 0x36: case 0x37: return this.sense[d-0x31];
+      case 0x09: return this.io&&this.io.channel?this.io.channel(9):false;
+      case 0x0C: return this.io&&this.io.channel?this.io.channel(12):false;
+      default: return false;
+    }
+  }
+  /* Mit der Indexausstattung lädt jeder ausgeführte Sprung die Folgeadresse (NSI) ins B-Adressregister (Handbuch S. 85) */
+  branch(L,A,B,d){
+    if(L===4){ this.B=this.I; this.I=A; return; }
+    if(L===5){ const nx=this.I; if(this.ind(d)){ this.B=nx; this.I=A; } return; }
+    /* einstellig: verkettetes BCE mit A-, B- und d-Register des Vorgängers (so läuft der Original-Autocoder) */
+    if(L>=7||L===1){ const c=this.M[this.chk(B)]&63; this.B=B-1; if(c===(d&63)){ this.B=this.I; this.I=A; } return; }
+    throw new K1401Stop('Sprungbefehl mit '+L+' Stellen ist ungültig');
+  }
+  io1(op,L,A,ia,d){
+    const io=this.io; if(!io) throw new K1401Stop('Keine E/A-Geräte angeschlossen');
+    const M=this.M;
+    if(d===0x33||d===0x29) throw new K1401Stop((d===0x33?'Spaltenbinär (Column Binary)':'Lesen im Stanzweg (Punch Feed Read)')+' ist eine Sonderausstattung des 1402 und hier nicht eingebaut');
+    if(op&1){ if(io.hopperEmpty()){ this.I=ia; this.stop('Kartenleser 1402: Magazin leer – Karten einlegen und START drücken'); this.ioWait='rdr'; return; } }
+    if(op&2){ if(this.size<333) throw new K1401Stop('Druckbereich 201–332 nicht vorhanden');
+      if(op===2&&d===0x3C){ const w=new Uint8Array(132); for(let k=0;k<132;k++) w[k]=M[201+k]&K_WM?0x01:0x00; io.print(w); }   // WM: Wortmarken als 1 drucken
+      else io.print(M.subarray(201,333)); this.cycles+=870; const a=this.after; this.after=null;
+      if(a) io.carriage(a.kind,a.n); else io.carriage('space',1); }
+    if(op&1){ const c=io.read(); for(let k=0;k<80;k++) this.st(1+k,(M[1+k]&K_WM)|(c[k]&63)); this.last=io.hopperEmpty(); this.cycles+=870; }
+    if(op&4){ io.punch(M.slice(101,181).map(x=>x&63)); this.cycles+=870; }
+    if(L>=4){ this.B=this.I; this.I=A; }
+  }
+  /* IBM 1440 (Handbuch A24-3116, Abschnitt D): Move-Mode-E/A ohne Wortmarken. Das B-Feld beginnt an der B-Adresse
+     und endet vor einer Gruppenmarke mit Wortmarke. 1442: d = R lesen, P stanzen und anhalten, G stanzen und weiterführen.
+     1443: d = W drucken, S drucken ohne Zeilenvorschub; die Zeile muss an einer Stelle xx01 beginnen (Drucker ohne Puffer). */
+  gmLen(b,max,what){ const M=this.M; for(let j=0;j<=max;j++){ const a=b+j; if(a>=this.size) break; if(M[a]===(K_WM|0x3F)) return j; }
+    throw new K1401Stop(what+': keine Gruppenmarke mit Wortmarke höchstens '+max+' Stellen hinter '+K_P4(b)+' – das Gerät bleibt hängen'); }
+  mm1440(ia,op,u,n,B,d){
+    const io=this.io, M=this.M; if(!io) throw new K1401Stop('Keine E/A-Geräte angeschlossen');
+    if(n!==0x01) throw new K1401Stop('Gerät %'+K_CH[u]+K_CH[n]+' ist nicht angeschlossen (nur Einheit 1)');
+    this.chk(B); this.A=B;
+    if(u===0x37){                       // %G1 – Kartenleser/-stanzer 1442
+      if(d===0x29){ const lb=this.gmLen(B,80,'1442 Lesen');
+        if(io.hopperEmpty()){ this.I=ia; this.stop('Leser/Stanzer 1442: Magazin leer – Karten einlegen und START drücken'); this.ioWait='rdr'; return; }
+        const c=io.read(); for(let j=0;j<lb;j++) this.st(B+j,(M[B+j]&K_WM)|(c[j]&63));
+        this.last=io.hopperEmpty(); this.B=B+lb+1; this.cycles+=2260+lb; return; }
+      if(d===0x27||d===0x37){ const lb=this.gmLen(B,200,'1442 Stanzen'); const o=new Uint8Array(Math.min(lb,80));
+        for(let j=0;j<o.length;j++) o[j]=M[B+j]&63;
+        io.punch1442(o,d===0x37); this.B=B+lb+1; this.cycles+=600+lb*1130+(d===0x37?18900:0); return; }
+      throw new K1401Stop('1442: unbekanntes d-Zeichen \''+K_CH[d]+'\' (R, P oder G)'); }
+    /* %Y1 – Drucker 1443 */
+    if(d!==0x16&&d!==0x12) throw new K1401Stop('1443: unbekanntes d-Zeichen \''+K_CH[d]+'\' (W oder S)');
+    if(B%100!==1||B>=this.size-100) throw new K1401Stop('Adressprüfung: der Drucker 1443 ohne Puffer verlangt eine Anfangsadresse xx01 (nicht im letzten Hunderterblock), nicht '+K_P4(B));
+    const lb=this.gmLen(B,120,'1443 Drucken'); const o=new Uint8Array(lb); for(let j=0;j<lb;j++) o[j]=M[B+j]&63;
+    io.print(o); const a=this.after; this.after=null;
+    if(a) io.carriage(a.kind,a.n); else if(d===0x16) io.carriage('space',1);
+    this.B=B+lb+1; this.cycles+=21000+lb;
+  }
+  /* ---------- Magnetband 729 (1401, Handbuch S. 56–62) ----------
+     M %Un BBB R/W lesen/schreiben ohne Wortmarken, L … mit Wortmarken (Worttrennzeichen A841 auf dem Band).
+     Lesen endet an der Satzlücke (dann wird eine Gruppenmarke gespeichert) oder an einer Gruppenmarke mit Wortmarke.
+     U %Un d: R zurückspulen, U zurückspulen und entladen, B einen Satz zurück, M Bandmarke schreiben, E Lücke. */
+  tapeOf(ia,n){ const io=this.io, u=K_DV(n), t=io&&io.tape?io.tape(u):null;
+    if(!t||!t.loaded){ this.I=ia; this.stop('Bandeinheit '+u+' nicht bereit – im Reiter „Band 729“ ein Band einlegen und START drücken'); return null; }
+    this.tapeErr=false; return t; }
+  tapeRead(t,b,load,bin,key){ const M=this.M; let p=b;
+    const rec=t.recs[t.pos++]; t.moved=true;
+    if(rec===null){ this.eor=true; this.st(p,(M[p]&K_WM)|0x0F); p++; this.st(p,(M[p]&K_WM)|0x3F); return {p,n:1}; }   // Bandmarke
+    let sep=false, gm=false;
+    for(let i=0;i<rec.length;i++){ const c=rec[i]&63; this.chk(p);
+      if(!key&&M[p]===(K_WM|0x3F)){ gm=true; break; }   // die BAND-LADEN-Taste liest bis zur Satzlücke (Handbuch S. 114)
+      if(load&&!bin&&c===0x1D){ sep=true; continue; }
+      this.st(p,load?(c|(sep?K_WM:0)):((M[p]&K_WM)|c)); sep=false; p++; }
+    if(!gm){ this.chk(p); if(M[p]!==(K_WM|0x3F)) this.st(p,load?0x3F:((M[p]&K_WM)|0x3F)); }   // Lademodus: Gruppenmarke ohne Wortmarke (wie SimH)
+    return {p,n:rec.length}; }
+  tapeRW(ia,op,bin,n,B,d){
+    const t=this.tapeOf(ia,n); if(!t) return; const M=this.M, load=op===0x23; this.A=B; this.chk(B);
+    if(d===0x29){
+      if(t.pos>=t.recs.length){ this.I=ia; this.stop('Band '+K_DV(n)+': hinter dem letzten Satz ist kein Band mehr beschrieben – die Einheit läuft leer'); return; }
+      const r=this.tapeRead(t,B,load,bin); this.B=r.p+1; this.cycles+=870+r.n*6; return; }
+    if(d===0x16){
+      if(!t.ring){ this.I=ia; this.stop('Band '+K_DV(n)+': kein Schreibring eingelegt – Schreiben gesperrt'); return; }
+      if(M[B]===(K_WM|0x3F)) throw new K1401Stop('Band schreiben: Gruppenmarke mit Wortmarke schon an der B-Adresse – Bandsteuerung hängt');
+      const o=[]; let p=B; while(M[this.chk(p)]!==(K_WM|0x3F)){ const c=M[p]; if(load&&!bin&&(c&K_WM)) o.push(0x1D); o.push(c&63); p++; if(p-B>16000) break; }
+      t.recs.length=t.pos; t.recs.push(Uint8Array.from(o)); t.pos++; t.dirty=true; t.moved=true; this.B=p+1; this.cycles+=870+o.length*6; return; }
+    throw new K1401Stop('Band: unbekanntes d-Zeichen \''+K_CH[d]+'\' (R oder W)'); }
+  tapeCtl(ia,n,d){ const t=this.tapeOf(ia,n); if(!t) return; t.moved=true;
+    switch(d){
+      case 0x29: t.pos=0; break;                                         // RWD
+      case 0x14: t.pos=0; t.loaded=false; break;                         // RWU: Einheit danach nicht bereit
+      case 0x32: if(t.pos>0) t.pos--; break;                             // BSP
+      case 0x24: t.recs.length=t.pos; t.recs.push(null); t.pos++; t.dirty=true; break;   // WTM
+      case 0x35: break;                                                  // SKP: Lücke, keine Daten
+      default: throw new K1401Stop('Bandsteuerung: unbekanntes d-Zeichen \''+K_CH[d]+'\' (R, U, B, M oder E)'); }
+    this.cycles+=2; }
+  /* BAND LADEN (Konsole): Einheit 1, Satz in Lademodus ab 001, dann Sprung nach 001 */
+  tapeLoadKey(){ const io=this.io, t=io&&io.tape?io.tape(1):null;
+    if(!t||!t.loaded){ this.stop('BAND LADEN: auf Einheit 1 ist kein Band eingelegt'); return false; }
+    if(t.pos>=t.recs.length){ this.stop('BAND LADEN: Band 1 hat an dieser Stelle keinen Satz – erst zurückspulen'); return false; }
+    this.tapeRead(t,1,true,false,true); this.M[1]|=K_WM; this.hb=null; this.I=1; this.A=0; this.B=0; this.running=true; this.stopMsg=''; return true; }
+
+  /* ---------- Plattenspeicher 1311 an der 1440 (A24-3116, Abschnitt F) ----------
+     Plattensteuerfeld ab B: Ersatzcode (* oder Laufwerk), 6-stellige Sektoradresse, 3-stellige Sektorzahl; dahinter die Daten,
+     abgeschlossen durch Gruppenmarke mit Wortmarke. %F0 Suchen, %F1 Sektoren lesen/schreiben, %F3 Schreibprüfung.
+     M-Befehl: 100 Zeichen je Sektor ohne Wortmarken, L-Befehl: 90 Zeichen je Sektor mit Wortmarken.
+     Ein Plattenstapel hat 100 Zylinder × 10 Spuren × 20 Sektoren = Sektoradressen 000000–019999. */
+  disk1311(ia,op,n,B,d){
+    const io=this.io, M=this.M, pk=io&&io.disk?io.disk():null, D=this.dk;
+    D.N=D.V=D.W=D.X=D.Y=false; this.chk(B); this.chk(B+9);
+    const fn=K_DV(n), alt=M[B]&15, dv=a=>{ let v=0; for(let i=0;i<a.n;i++) v=v*10+K_DV(M[a.p+i]); return v; };
+    const put=(p,len,v)=>{ for(let i=len-1;i>=0;i--){ this.st(p+i,K_DC(v%10)); v=Math.floor(v/10); } };
+    if(fn!==0&&fn!==1&&fn!==3) throw new K1401Stop('1311: Betriebsart %F'+fn+(fn===5?' (Sektorzahl im Satz)':fn===6?' (ganze Spur mit Adressen)':'')+' ist hier noch nicht eingebaut');
+    if(d!==0x29&&d!==0x16) throw new K1401Stop('1311: d-Zeichen muss R oder W sein');
+    const drv=(M[B]&63)===0x2C?0:(alt>=1&&alt<=10?K_DV(M[B]):-1);
+    let addr=dv({p:B+1,n:6}); this.A=B+6;
+    if(!pk||drv!==0||addr>19999){ D.N=D.Y=true; this.B=B+7; this.cycles+=20; return; }            // Zugriff nicht möglich
+    if(fn===0){ pk.cyl=Math.floor(addr/200); pk.moved=true; this.B=B+7; this.cycles+=21700; return; }  // Suchen (≈ 250 ms)
+    const wm=op===0x23, Ls=wm?90:100, wr=d===0x16&&fn===1, chkW=fn===3; let cnt=dv({p:B+7,n:3}), p=B+10, ns=0;
+    for(;;){
+      if(Math.floor(addr/200)!==pk.cyl||addr>19999){ D.X=D.Y=true; break; }                   // Adressvergleich ungleich
+      cnt=(cnt+999)%1000;                                                                         // erst nach gelungenem Vergleich
+      let sec=pk.sec.get(addr); if(!sec&&wr){ sec=new Uint8Array(100); pk.sec.set(addr,sec); }
+      let early=false;
+      for(let j=0;j<Ls;j++){ this.chk(p);
+        if(M[p]===(K_WM|0x3F)){ early=true; if(wr) for(let k=j;k<Ls;k++) sec[k]=0; break; }
+        const c=sec?sec[j]:0;
+        if(wr) sec[j]=wm?(M[p]&(K_WM|63)):(M[p]&63);
+        else if(chkW){ if(wm?((c&(K_WM|63))!==(M[p]&(K_WM|63))):((c&63)!==(M[p]&63))) D.V=D.Y=true; }
+        else this.st(p,wm?(c&(K_WM|63)):((M[p]&K_WM)|(c&63)));
+        p++; }
+      ns++; if(wr){ pk.dirty=true; } pk.moved=true;
+      if(early){ D.W=D.Y=true; break; }
+      if(cnt===0){ if(M[this.chk(p)]!==(K_WM|0x3F)){ D.W=D.Y=true; } break; }
+      addr++;
+    }
+    put(B+1,6,addr); put(B+7,3,cnt); this.B=p+1; this.cycles+=180+ns*180+1900;
+  }
+  carriage(d){ const io=this.io; if(!io) return; const z=d>>4, n=d&15;
+    const ch=n>=1&&n<=9?n:(n===10?10:(n===11?11:(n===12?12:0)));
+    if(z===0){ if(ch) io.carriage('skip',ch); return; }                 // 1–9,0,#,@: sofort springen
+    if(z===3){ if(ch) this.after={kind:'skip',n:ch}; return; }         // A–I,?,.,¤: springen nach Druck
+    if(z===2){ if(n>=1&&n<=3) io.carriage('space',n); return; }        // J,K,L: sofort 1–3 Zeilen
+    if(z===1){ const m={0x11:1,0x12:2,0x13:3}[d]; if(m) this.after={kind:'space',n:m}; return; }   // / S T: nach Druck 1–3
+  }
+  /* LADEN-Taste: Karte nach 001–080, Wortmarke in 001, 002–080 ohne Wortmarke, Sprung nach 001 */
+  loadKey(){ const io=this.io; if(!io||io.hopperEmpty()){ this.stop('LADEN: Kartenleser leer'); return false; }
+    const c=io.read(); for(let k=0;k<80;k++) this.M[1+k]=c[k]&63; this.M[1]|=K_WM; this.last=io.hopperEmpty();
+    if(this.model==='1440'&&this.size>81) this.M[81]=K_WM|0x3F;     // 1440: Stellen 001–081, Gruppenmarke mit Wortmarke in 081
+    this.I=1; this.A=0; this.B=0; this.hb=null; this.running=true; this.stopMsg=''; return true; }
+  save(){ return {model:this.model,ne:this.ne,hb:this.hb,I:this.I,A:this.A,B:this.B,op:this.op,d:this.d,len:this.len,eq:this.eq,hi:this.hi,lo:this.lo,ov:this.ov,last:this.last,
+    after:this.after,sense:this.sense,eor:this.eor,dk:this.dk,cycles:this.cycles,icount:this.icount,bp:[...this.bp],wp:this.wp}; }
+  load(o){ Object.assign(this,{hb:o.hb===undefined?null:o.hb,ne:o.ne!==undefined?o.ne:!o.eq,I:o.I,A:o.A,B:o.B,op:o.op,d:o.d,len:o.len,eq:o.eq,hi:o.hi,lo:o.lo,ov:o.ov,last:o.last,after:o.after,
+    sense:o.sense||this.sense,cycles:o.cycles||0,icount:o.icount||0,model:o.model||'1401',eor:!!o.eor,dk:o.dk||{N:false,V:false,W:false,X:false,Y:false}}); this.bp=new Set(o.bp||[]); this.wp=o.wp||[]; this.running=false; this.stopMsg=''; }
+}
+
+/* ---------- Disassembler ---------- */
+function kAddrTxt(h,t,u){ const v=kAddrVal(h,t,u), x=(t>>4)&3; return K_P4(v)+(x?'+X'+x:''); }
+function kDisasm(k,a){
+  if(a<0||a>=k.size) return {len:1,txt:'?',raw:''};
+  const f=kFetch(k.M,k.size,a); return kDis(f.ch,f.n);
+}
+function kDis(ch,n){
+  const raw=ch.map(c=>K_CH[c]).join('');
+  const op=ch[0], L=ch.length; let nm=K_OPN[op]||'??';
+  const A=L>=4?kAddrTxt(ch[1],ch[2],ch[3]):null, B=L>=7?kAddrTxt(ch[4],ch[5],ch[6]):null;
+  let d=L===2?ch[1]:(L===5?ch[4]:(L>=8?ch[7]:null));
+  const dq=d===null?'':"'"+K_CH[d]+"'";
+  let ops=[];
+  if((op===0x24||op===0x23)&&L>=4&&ch[1]===0x1C){
+    const dev='%'+K_CH[ch[2]]+K_CH[ch[3]], dd=L>=8?ch[7]:null;
+    const names={'%G1:R':'R','%G1:P':'PS','%G1:G':'P','%Y1:W':'W','%Y1:S':'WS'};
+    const key=dev+':'+(dd!==null?K_CH[dd]:''); const B=L>=7?kAddrTxt(ch[4],ch[5],ch[6]):'';
+    if(op===0x24&&names[key]) return {len:n,txt:names[key].padEnd(5)+' '+B+'   ('+dev+')',raw};
+    if(ch[2]===0x14||ch[2]===0x32){ const nm=(dd===0x29?'RT':'WT')+(ch[2]===0x32?'B':op===0x23?'W':''); return {len:n,txt:nm.padEnd(5)+' '+K_DV(ch[3])+','+B+'   ('+dev+')',raw}; }
+    if(ch[2]===0x36){ const f=K_DV(ch[3]); const nm=f===0?'SD':f===3?'WDC':(dd===0x29?'RD':'WD'); return {len:n,txt:(nm+(op===0x23&&f?'W':'')).padEnd(5)+' '+B+'   ('+dev+')',raw}; }
+    return {len:n,txt:(op===0x24?'MCW':'LCA').padEnd(5)+' '+[dev,B,dd!==null?"'"+K_CH[dd]+"'":''].filter(x=>x).join(','),raw}; }
+  if(op===0x14&&L>=5&&ch[1]===0x1C){ const nm={0x29:'RWD',0x14:'RWU',0x32:'BSP',0x24:'WTM',0x35:'SKP'}[ch[4]]||'CU';
+    return {len:n,txt:nm.padEnd(5)+' '+K_DV(ch[3])+'   (%'+K_CH[ch[2]]+K_CH[ch[3]]+')',raw}; }
+  if(op===0x32){
+    if(L===4) ops=[A];
+    else if(L===5){ if(K_BIN[d]&&d!==0x00){ nm=K_BIN[d]; ops=[A]; } else if(d===0x00) ops=[A]; else { nm='BIN'; ops=[A,dq]; } }
+    else if(L>=8){ nm='BCE'; ops=[A,B,dq]; }
+    else ops=[A,B];
+  } else if(op===0x15&&L>=8&&(d===0x22||d===0x01)){ nm=d===0x22?'BM':'BW'; ops=[A,B]; }
+  else {
+    if(op===0x36&&L>=5) nm='CCB'; if(op===0x22&&L>=5) nm='SSB'; if(op===0x02&&d===0x3C){ nm='WM'; d=null; }
+    if(A) ops.push(A); if(B) ops.push(B); if(d!==null) ops.push(op===0x02||op===0x01||op===0x04?"'"+K_CH[d]+"'":dq);
+  }
+  return {len:n,txt:nm.padEnd(5)+' '+ops.join(','),raw};
+}
+
+/* =====================================================================
+   Autocoder-Assembler (Teilmenge)
+   Zeile: [Marke] Operation Operanden [Bemerkung]   · * in Spalte 1 = Kommentar
+   Operanden: Adressausdruck (SYMBOL, Zahl, *, +/− n, &X1/&X2/&X3), Literale @TEXT@ oder +123
+   Datensymbole (DCW, DC, DS, DSA) bezeichnen die Einerstelle (rechtes Ende)
+   ===================================================================== */
+/* SPS-Namen und Autocoder-Namen (Reference Manual Fig. 19/20) */
+const K_MN={
+  A:[0x31,'AB'],S:[0x12,'AB'],ZA:[0x3A,'AB'],ZS:[0x2A,'AB'],M:[0x0C,'AB'],D:[0x1C,'AB'],MCW:[0x24,'AB'],LCA:[0x23,'AB'],MN:[0x34,'AB'],MZ:[0x18,'AB'],
+  MCS:[0x19,'AB'],MCE:[0x35,'AB'],C:[0x33,'AB'],SW:[0x1B,'AB'],CW:[0x3C,'AB'],SBR:[0x38,'AB'],SAR:[0x28,'AB'],
+  B:[0x32,'I'],J:[0x32,'I'],BCE:[0x32,'IBd'],BWZ:[0x15,'IBd'],BBE:[0x16,'IBd'],BIN:[0x32,'Id'],
+  BE:[0x32,'I',0x12],BU:[0x32,'I',0x11],BH:[0x32,'I',0x14],BL:[0x32,'I',0x13],BAV:[0x32,'I',0x19],BLC:[0x32,'I',0x31],
+  BSS:[0x32,'Id'],CS:[0x11,'CS'],H:[0x3B,'I'],NOP:[0x25,'N'],
+  R:[0x01,'I'],W:[0x02,'I'],WR:[0x03,'I'],P:[0x04,'I'],RP:[0x05,'I'],WP:[0x06,'I'],WRP:[0x07,'I'],SRF:[0x08,'N'],SPF:[0x09,'N'],
+  CC:[0x36,'d'],SS:[0x22,'d'],MA:[0x0B,'AB'],
+  MLC:[0x24,'AB'],MLCWA:[0x23,'AB'],MLNS:[0x34,'AB'],MLZS:[0x18,'AB'],MCM:[0x27,'AB'],MRCM:[0x27,'AB'],MIZ:[0x17,'AB'],
+  BM:[0x15,'IB',0x22],BW:[0x15,'IB',0x01],BC9:[0x32,'I',0x09],BCV:[0x32,'I',0x0C],BEF:[0x32,'I',0x22],BER:[0x32,'I',0x23],
+  BPB:[0x32,'I',0x27],BPCB:[0x32,'I',0x29],CCB:[0x36,'Id'],SSB:[0x22,'Id'],WM:[0x02,'I',0x3C],
+  CU:[0x14,'Ad'],RCB:[0x01,'I',0x33],PCB:[0x04,'I',0x33],RF:[0x04,'I',0x29],WRF:[0x05,'I',0x29]};
+/* 1440-Autocoder: E/A-Befehle werden zu Move-Mode-Befehlen M %Gn/%Yn BBB d */
+const K_MM1440={R:['G1','R'],P:['G1','G'],PS:['G1','P'],W:['Y1','W'],WS:['Y1','S']};
+/* Plattenbefehle der 1440: [Op, %Fn, d] */
+const K_DISK={SD:[0x24,0,'R'],RD:[0x24,1,'R'],RDW:[0x23,1,'R'],WD:[0x24,1,'W'],WDW:[0x23,1,'W'],WDC:[0x24,3,'W'],WDCW:[0x23,3,'W']};
+/* Bandbefehle der 1401: [Op, Modus U/B, d] bzw. Steuerbefehle U %Un d */
+const K_TAPE={RT:[0x24,'U','R'],RTW:[0x23,'U','R'],RTB:[0x24,'B','R'],WT:[0x24,'U','W'],WTW:[0x23,'U','W'],WTB:[0x24,'B','W']};
+const K_TCTL={RWD:'R',RWU:'U',BSP:'B',WTM:'M',SKP:'E'};
+class K1401AsmErr extends Error{}
+class K1401Asm{
+  constructor(src,opt){ this.src=src.replace(/\r/g,'').split('\n'); this.model=(opt&&opt.model)||'1401'; }
+  run(){
+    this.errors=[];
+    this.lines=this.src.map((t,i)=>this.parse(t,i+1));
+    for(this.pass=1;this.pass<=2;this.pass++){
+      this.loc=333; this.lits=new Map(); this.placed=new Set(); if(this.pass===1){ this.sym=new Map(); this.litPos=new Map(); } this.img=new Map(); this.start=null; this.lo=1e9; this.hi=-1;
+      for(const s of this.lines){ if(!s||s.err||s.cmt||!s.op) continue; s.out=null; s.loc=null;
+        try{ this.stmt2(s); }catch(e){ if(e instanceof K1401AsmErr){ if(this.pass===2) s.err=e.message; else s.err1=e.message; } else throw e; } }
+      this.placeLits();
+    }
+    for(const s of this.lines) if(s&&s.err) this.errors.push('Zeile '+s.no+': '+s.err);
+    return this;
+  }
+  /* Operandenfeld wie bei Autocoder: es beginnt spätestens 6 Spalten nach dem Anfang der Operation.
+     Steht danach erst weiter rechts Text, ist es eine Bemerkung (Befehl ohne Operanden). */
+  parse(t,no){
+    const raw=t; if(!t.trim()||t[0]==='*') return {no,raw,cmt:true};
+    let label=null, p=0;
+    if(!/^\s/.test(t)){ const m=t.match(/^(\S+)/); label=m[1].toUpperCase(); p=m[1].length; }
+    while(p<t.length&&/\s/.test(t[p])) p++;
+    const os=p; while(p<t.length&&!/\s/.test(t[p])) p++;
+    const op=t.slice(os,p).toUpperCase(); if(!op) return {no,raw,label,op:'',opd:''};
+    while(p<t.length&&/\s/.test(t[p])) p++;
+    let opd='';
+    if(p<t.length&&p<=os+6){ let inAt=false; for(;p<t.length;p++){ const c=t[p]; if(c==='@') inAt=!inAt; else if(!inAt&&/\s/.test(c)) break; opd+=c; } }
+    return {no,raw,label,op,opd};
+  }
+  err(m){ throw new K1401AsmErr(m); }
+  emit(a,c,wm){ if(this.dry) return; if(a<0||a>=16000) this.err('Adresse '+a+' außerhalb'); this.img.set(a,(c&63)|(wm?K_WM:0)); if(a<this.lo) this.lo=a; if(a>this.hi) this.hi=a; }
+  def(n,v){ if(!n) return; if(!/^[A-Z][A-Z0-9#@$]*$/.test(n)) this.err('Ungültige Marke '+n);
+    if(this.pass===1){ if(this.sym.has(n)) this.err('Marke '+n+' doppelt'); this.sym.set(n,v); } }
+  /* Konstante → Zeichenfolge */
+  konst(t){
+    if(/^@.*@$/.test(t)) return {chars:kA2B(t.slice(1,-1))};
+    if(/^#\d+$/.test(t)) return {chars:new Uint8Array(+t.slice(1))};
+    const m=t.match(/^([+-]?)(\d+)$/); if(m){ const ds=m[2].split('').map(x=>K_DC(+x)); const c=Uint8Array.from(ds);
+      if(m[1]==='+') c[c.length-1]|=0x30; if(m[1]==='-') c[c.length-1]|=0x20; return {chars:c}; }
+    this.err('Unbekannte Konstante '+t);
+  }
+  /* Literale: bei LTORG und am Ende in der Reihenfolge ihres ersten Auftretens ablegen (in beiden Läufen gleich) */
+  placeLits(){ for(const t of this.lits.keys()){ if(this.placed.has(t)) continue; this.placed.add(t);
+      const c=this.konst(t).chars, a=this.loc; c.forEach((x,i)=>this.emit(a+i,x,i===0)); this.loc+=c.length; if(this.pass===1) this.litPos.set(t,a+c.length-1); } }
+  /* Adressausdruck: liefert {v, x} */
+  expr(t){
+    t=t.trim(); let x=0;
+    const dm=t.match(/^%([A-Z])([0-9])$/i); if(dm) return {v:0,x:0,dev:[0x1C,K_OF.get(dm[1].toUpperCase()),K_OF.get(dm[2])]};   // Geräteadresse %G1, %Y1 …
+    const xm=t.match(/^(.*)[&+](X[123])$/i); if(xm&&!/^@/.test(t)){ x=+xm[2][1]; t=xm[1]; }
+    if(/^@.*@$/.test(t)) return {v:this.litV(t),x};
+    if(/^[+-]\d+$/.test(t)) return {v:this.litV(t),x};
+    let v=0, sign=1, pos=0; const toks=t.match(/\*|[A-Z][A-Z0-9#@$]*|\d+|[+-]/gi); if(!toks) this.err('Leerer Ausdruck');
+    let expectTerm=true;
+    for(const k of toks){
+      if(k==='+'||k==='-'){ if(expectTerm&&pos>0) this.err('Ausdruck '+t); sign=k==='+'?1:-1; expectTerm=true; pos++; continue; }
+      let tv; if(k==='*') tv=this.star; else if(/^\d+$/.test(k)) tv=+k; else { const u=k.toUpperCase(); if(this.sym.has(u)) tv=this.sym.get(u); else if(this.pass===2) this.err('Unbekannte Marke '+u); else tv=0; }
+      v+=sign*tv; sign=1; expectTerm=false; pos++;
+    }
+    return {v,x};
+  }
+  litV(t){ if(!this.lits.has(t)) this.lits.set(t,null); if(this.pass===1) return 0;
+    const v=this.litPos.get(t); if(v===undefined) this.err('Literal '+t); return v; }
+  dChar(t){ if(t===undefined) this.err('d-Zeichen fehlt'); t=t.replace(/^'(.*)'$/,'$1'); if(t===''||t==='␢'||/^BLANK$/i.test(t)) return 0;
+    if(t.length!==1) this.err('d-Zeichen muss ein Zeichen sein: '+t); const v=K_OF.get(t.toUpperCase()); if(v===undefined) this.err('Unbekanntes Zeichen '+t); return v; }
+  splitOps(s){ const o=[]; let cur='', inAt=false; for(const c of s){ if(c==='@') inAt=!inAt; if(c===','&&!inAt){ o.push(cur); cur=''; } else cur+=c; } if(s.length) o.push(cur); return o; }
+  addr3(e){ if(e.dev) return e.dev; const c=kAddrChars(e.v); if(e.x) c[1]|=e.x<<4; return c; }
+  /* * steht wie im Original-Autocoder für die Adresse der rechten (Einer-)Stelle des gerade übersetzten Befehls;
+     bei Anweisungen ohne eigenen Code (EQU, ORG …) für die zuletzt belegte Stelle */
+  stmt2(s){
+    if(/^(ORG|EQU|END|LTORG|DCW|DC|DS|DSA|DA)$/.test(s.op)){ this.star=this.loc-1; return this.stmt(s); }
+    const loc=this.loc, img=this.img, lo=this.lo, hi=this.hi, lits=new Map(this.lits), sym=this.sym.has(s.label)?this.sym.get(s.label):undefined;
+    this.star=loc-1; this.dry=true; let n=null;
+    try{ this.stmt(s); if(s.out&&s.out.a===loc) n=s.out.n; } finally { this.dry=false; }
+    this.loc=loc; this.img=img; this.lo=lo; this.hi=hi; this.lits=lits; if(s.label){ if(sym===undefined) this.sym.delete(s.label); else this.sym.set(s.label,sym); }
+    s.out=undefined; this.star=n?loc+n-1:loc-1; this.stmt(s); }
+  stmt(s){
+    const op=s.op, o=this.splitOps(s.opd);
+    if(op==='ORG'){ this.loc=this.expr(o[0]).v; if(s.label) this.def(s.label,this.loc); return; }
+    if(op==='EQU'){ this.def(s.label,this.expr(o[0]).v); s.loc=this.expr(o[0]).v; return; }
+    if(op==='END'){ if(o[0]) this.start=this.expr(o[0]).v; return; }
+    if(op==='LTORG'){ s.loc=this.loc; this.placeLits(); return; }
+    if(op==='DA') this.err('DA (Define Area) wird von dieser Autocoder-Teilmenge nicht unterstützt – DS/DCW verwenden');
+    if(op==='DCW'||op==='DC'){ const c=this.konst(s.opd.trim()).chars; const a=this.loc; s.loc=a;
+      c.forEach((x,i)=>this.emit(a+i,x,op==='DCW'&&i===0)); this.loc+=c.length; this.def(s.label,a+c.length-1); s.out={a,n:c.length}; return; }
+    if(op==='DS'){ const n=this.expr(o[0]).v; s.loc=this.loc; this.loc+=n; this.def(s.label,this.loc-1); return; }
+    if(op==='DSA'){ const e=this.expr(o[0]); const c=this.addr3(e); const a=this.loc; s.loc=a; c.forEach((x,i)=>this.emit(a+i,x,i===0)); this.loc+=3; this.def(s.label,a+2); s.out={a,n:3}; return; }
+    if(this.model==='1440'&&K_MM1440[op]){ const [u,dd]=K_MM1440[op]; const a=this.loc; s.loc=a; this.def(s.label,a);
+      if(o[0]===undefined||!o[0].trim()) this.err(op+' braucht auf der 1440 die Anfangsadresse des Bereichs (z. B. '+op+' ZEILE)');
+      const ch=[0x24,0x1C,K_OF.get(u[0]),K_OF.get(u[1]),...this.addr3(this.expr(o[0])),K_OF.get(dd)];
+      ch.forEach((x,i)=>this.emit(a+i,x,i===0)); this.loc+=ch.length; s.out={a,n:ch.length}; return; }
+    if(this.model==='1440'&&K_DISK[op]){ const [oc,f,dd]=K_DISK[op]; const a=this.loc; s.loc=a; this.def(s.label,a);
+      if(!o[0]||!o[0].trim()) this.err(op+' braucht die Anfangsadresse (hohe Stelle) des Plattensteuerfeldes');
+      const ch=[oc,0x1C,0x36,K_DC(f),...this.addr3(this.expr(o[0])),K_OF.get(dd)];
+      ch.forEach((x,i)=>this.emit(a+i,x,i===0)); this.loc+=ch.length; s.out={a,n:ch.length}; return; }
+    if(this.model==='1401'&&(K_TAPE[op]||K_TCTL[op])){ const a=this.loc; s.loc=a; this.def(s.label,a);
+      const u=o[0]===undefined?'':o[0].trim(); if(!/^[1-6]$/.test(u)) this.err(op+': Bandeinheit 1–6 als erster Operand (z. B. '+op+' 1'+(K_TAPE[op]?',BEREICH':'')+')');
+      let ch;
+      if(K_TAPE[op]){ const [oc,md,dd]=K_TAPE[op]; if(!o[1]||!o[1].trim()) this.err(op+' braucht als zweiten Operanden die Anfangsadresse des Bereichs');
+        ch=[oc,0x1C,K_OF.get(md),K_DC(+u),...this.addr3(this.expr(o[1])),K_OF.get(dd)]; }
+      else ch=[0x14,0x1C,0x14,K_DC(+u),K_OF.get(K_TCTL[op])];
+      ch.forEach((x,i)=>this.emit(a+i,x,i===0)); this.loc+=ch.length; s.out={a,n:ch.length}; return; }
+    const mn=K_MN[op]; if(!mn) this.err('Unbekannte Operation '+op);
+    const [opc,f,fixd]=mn; const a=this.loc; s.loc=a; this.def(s.label,a);
+    const ch=[opc];
+    const has=i=>o[i]!==undefined&&o[i].trim()!=='';
+    if(f==='AB'){ if(has(0)) ch.push(...this.addr3(this.expr(o[0]))); if(has(1)) ch.push(...this.addr3(this.expr(o[1]))); if(has(2)) ch.push(this.dChar(o[2].trim())); }
+    else if(f==='I'){ if(has(0)) ch.push(...this.addr3(this.expr(o[0]))); if(fixd!==undefined) ch.push(fixd); }
+    else if(f==='Ad'){ ch.push(...this.addr3(this.expr(o[0]))); ch.push(this.dChar(o[1]===undefined?undefined:o[1].trim())); }
+    else if(f==='IB'){ ch.push(...this.addr3(this.expr(o[0]))); ch.push(...this.addr3(this.expr(o[1]))); ch.push(fixd); }
+    else if(f==='Id'){ ch.push(...this.addr3(this.expr(o[0]))); ch.push(this.dChar(o[1]===undefined?undefined:o[1].trim())); }
+    else if(f==='IBd'){ ch.push(...this.addr3(this.expr(o[0]))); ch.push(...this.addr3(this.expr(o[1]))); ch.push(this.dChar(o[2]===undefined?undefined:o[2].trim())); }
+    else if(f==='d'){ ch.push(this.dChar(o[0]===undefined?undefined:o[0].trim())); }
+    else if(f==='CS'){ if(has(1)){ ch.push(...this.addr3(this.expr(o[1]))); ch.push(...this.addr3(this.expr(o[0]))); } else if(has(0)) ch.push(...this.addr3(this.expr(o[0]))); }
+    else if(f==='N'){}
+    ch.forEach((x,i)=>this.emit(a+i,x,i===0)); this.loc+=ch.length; s.out={a,n:ch.length};
+  }
+  listing(){ const L=[]; const img=this.img;
+    for(const s of this.lines){ if(!s) continue; let code='';
+      if(s.out){ for(let i=0;i<s.out.n;i++){ const v=img.get(s.out.a+i); code+=(v&K_WM?'_':'')+K_CH[v&63]; } }
+      const loc=s.loc!==null&&s.loc!==undefined?K_P4(s.loc):'    ';
+      L.push({t:String(s.no).padStart(4)+' '+(s.cmt?'    ':loc)+'  '+code.padEnd(14).slice(0,Math.max(14,code.length))+'  '+s.raw,err:false});
+      if(s.err) L.push({t:'     *** FEHLER: '+s.err,err:true}); }
+    if(this.litPos&&this.litPos.size){ L.push({t:'',err:false}); L.push({t:'     Literale:',err:false}); for(const [t,v] of this.litPos) L.push({t:'     '+K_P4(v)+'  '+t,err:false}); }
+    return L; }
+}
+/* Speicherbild in die Maschine laden */
+function kLoadImage(k,asm){ for(const [a,v] of asm.img){ if(a<k.size) k.M[a]=v; } }
+
+/* Quelltext der Werkbank in Lochkarten für den echten Autocoder umsetzen (C24-3319: Marke Sp. 6–15, Operation 16–20,
+   Operanden 21–72, Kennung 76–80). Fehlen JOB und CTL, werden sie ergänzt. */
+function kAutocoderCards(src,title,ctl){
+  const a=new K1401Asm(src), cards=[]; let seq=0;
+  const card=(lab,op,opd)=>{ seq++; let c=(' '.repeat(5)+(lab||'').padEnd(10).slice(0,10)+(op||'').padEnd(5).slice(0,5)+(opd||'')).slice(0,72).padEnd(75);
+    return c+('W'+String(seq).padStart(4,'0')); };
+  const L=a.src.map((t,i)=>a.parse(t,i+1));
+  const has=op=>L.some(s=>s&&s.op===op);
+  if(!has('JOB')) cards.push(card('','JOB',(title||'WERKBANK').toUpperCase()));
+  if(!has('CTL')) cards.push(card('','CTL',ctl||'6611'));
+  for(const s of L){ if(!s) continue;
+    if(s.cmt){ const t=s.raw.replace(/^\*/,'').trim(); if(s.raw.trim()) cards.push(card('','','').slice(0,5)+'*'+t.toUpperCase().slice(0,66).padEnd(69)+'W'+String(seq).padStart(4,'0')); continue; }
+    if(!s.op) continue;
+    cards.push(card(s.label,s.op,s.opd));
+  }
+  return cards; }
+
+/* Band (Spule) und Plattenstapel – Datenmodell, das die Oberfläche hält */
+class K1401Tape{ constructor(name,recs){ this.name=name||'leer'; this.recs=recs||[]; this.pos=0; this.loaded=true; this.ring=true; this.dirty=false; } }
+class K1311Pack{ constructor(name){ this.name=name||'neuer Stapel'; this.sec=new Map(); this.cyl=0; this.dirty=false; } }
+/* Bandabbilder: SimH-.tap (32-Bit-Satzlänge vor und hinter jedem Satz, 0 = Bandmarke) und P. Pierces .bcd (Bit 7 = Satzanfang).
+   BCD-Bänder haben gerade Parität, darum steht die Leerstelle dort als A-Bit (0x10) – beim Einlesen wird sie zur Leerstelle. */
+function kTapeFromTap(u8){ const recs=[]; let i=0, raw=[];
+  while(i+4<=u8.length){ const n=(u8[i]|(u8[i+1]<<8)|(u8[i+2]<<16)|(u8[i+3]<<24))>>>0; i+=4;
+    if(n===0){ recs.push(null); continue; } if(n===0xFFFFFFFF||n&0x7F000000) break;
+    const len=n&0xFFFFFF; raw.push(u8.subarray(i,i+len)); recs.push(raw.length-1); i+=len+(len&1); i+=4; }
+  return kTapeFix(recs,raw); }
+function kTapeFromBcd(u8){ const recs=[], raw=[]; let s=-1;
+  for(let i=0;i<=u8.length;i++){ if(i===u8.length||(u8[i]&0x80)){ if(s>=0){ const r=u8.subarray(s,i);
+        if(r.length===1&&(r[0]&63)===0x0F) recs.push(null); else { raw.push(r); recs.push(raw.length-1); } } s=i; } }
+  return kTapeFix(recs,raw); }
+function kTapeFix(recs,raw){ let z=0; for(const r of raw) for(const c of r) if((c&63)===0) z++;
+  const blank=z===0;   // keine 0-Codes: Leerstellen stehen als 0x10 auf dem Band
+  return recs.map(x=>x===null?null:Uint8Array.from(raw[x],c=>{ c&=63; return blank&&c===0x10?0x00:c; })); }
+function kTapeToTap(recs){ const parts=[]; const w32=n=>Uint8Array.of(n&255,(n>>8)&255,(n>>16)&255,(n>>>24)&255);
+  for(const r of recs){ if(r===null){ parts.push(w32(0)); continue; } const d=Uint8Array.from(r,c=>c===0?0x10:c&63);
+    parts.push(w32(d.length),d); if(d.length&1) parts.push(Uint8Array.of(0)); parts.push(w32(d.length)); }
+  parts.push(w32(0xFFFFFFFF)); let n=0; parts.forEach(p=>n+=p.length); const o=new Uint8Array(n); n=0; parts.forEach(p=>{ o.set(p,n); n+=p.length; }); return o; }
+
+
+/* Beispielprogramme (Autocoder-Teilmenge) */
+const K_EXAMPLES=[
+{name:'1 · Hallo Welt',cards:'',src:
+`* HALLO WELT AUF DEM ZEILENDRUCKER 1403
+* DRUCKBEREICH 201-332, CS LOESCHT BIS ZUR HUNDERTERGRENZE
+         ORG  333
+START    CS   332            LOESCHT 332 BIS 300
+         CS                  VERKETTET: LOESCHT 299 BIS 200
+         MCW  @HALLO WELT, HIER SPRICHT DIE IBM 1401@,240
+         W                   DRUCKEN
+         H    *-3              HALT
+         END  START`},
+{name:'2 · Kartenliste (80/80-Liste)',cards:
+`ERSTE KARTE   IBM 1401 DATA PROCESSING SYSTEM
+ZWEITE KARTE  ANGEKUENDIGT AM 5. OKTOBER 1959
+DRITTE KARTE  UEBER 12000 STUECK GEBAUT
+VIERTE KARTE  LESER 1402 MIT 800 KARTEN JE MINUTE
+LETZTE KARTE  DRUCKER 1403 MIT 600 ZEILEN JE MINUTE`,src:
+`* KARTENLISTE: JEDE KARTE WIRD MIT LAUFENDER NUMMER GEDRUCKT
+* DIE KARTEN LIEGEN IM KARTENLESER (LESEBEREICH 001-080)
+         ORG  333
+START    CS   332
+         CS
+         SW   001            WORTMARKE AM ANFANG DES LESEBEREICHS
+         CC   1              NEUE SEITE (SPRUNG AUF KANAL 1)
+         MCW  @KARTENLISTE@,211
+         W
+         CS   332            DRUCKBEREICH WIEDER LOESCHEN
+         CS
+         CC   J              SOFORT EINE LEERZEILE
+LOOP     R                   KARTE LESEN
+         A    @1@,ANZ        ZAEHLER ERHOEHEN
+         MCS  ANZ,205        NUMMER OHNE FUEHRENDE NULLEN
+         MCW  080,290        KARTENINHALT NACH 211-290
+         W
+         BLC  ENDE           LETZTE KARTE GELESEN?
+         B    LOOP
+ENDE     CS   332
+         CS
+         MCW  @ANZAHL KARTEN:@,224
+         MCS  ANZ,229
+         CC   J
+         W
+         H    *-3
+ANZ      DCW  0000
+         END  START`},
+{name:'3 · Summenliste mit Aufbereitung',cards:
+`MUELLER, ANNA       00012550
+SCHMIDT, KARL       00004999
+HUBER, JOSEF        00100000
+WAGNER, EVA         00000075
+BECKER, OTTO        00033333`,src:
+`* SUMMENLISTE: NAME IN SPALTE 1-20, BETRAG IN CENT IN SPALTE 21-28
+* MCE BEREITET DEN BETRAG MIT TAUSENDERPUNKT UND KOMMA AUF
+         ORG  333
+START    CS   332
+         CS
+         SW   001,021        WORTMARKEN AN DEN FELDANFAENGEN
+LOOP     R
+         MCW  020,220        NAME
+         ZA   028,BETRAG     BETRAG AUS SPALTE 21-28
+         A    BETRAG,SUMME   AUFSUMMIEREN
+         LCA  MASKE,240      MASKE MIT WORTMARKE IN DEN DRUCKBEREICH
+         MCE  BETRAG,240     AUFBEREITEN
+         W
+         BLC  ENDE
+         B    LOOP
+ENDE     CS   332
+         CS
+         MCW  @SUMME@,220
+         LCA  MASKE,240
+         MCE  SUMME,240
+         CC   J
+         W
+         H    *-3
+BETRAG   DCW  00000000
+SUMME    DCW  00000000
+MASKE    DCW  @   ,  0.  -@
+         END  START`},
+{name:'4 · Einmaleins nur mit Addition',cards:'',src:
+`* KLEINES EINMALEINS 1X1 BIS 9X9 - NUR MIT ADDITION (GRUNDAUSSTATTUNG)
+* INDEXREGISTER X1 (STELLEN 087-089) SCHIEBT DIE DRUCKSPALTE
+         ORG  333
+START    CS   332
+         CS
+         SW   087            WORTMARKE VOR INDEXREGISTER 1
+NEUZ     A    @1@,ZEILE      I = I + 1
+         MCW  @000@,WERT
+         MCW  @000@,J
+         MCW  @004@,X1       ERSTE DRUCKSPALTE 202-204
+SPALTE   A    ZEILE,WERT     WERT = WERT + I
+         MCS  WERT,200&X1    OHNE FUEHRENDE NULLEN DRUCKEN
+         A    @004@,X1       NAECHSTE SPALTE
+         A    @1@,J
+         C    J,@009@
+         BU   SPALTE
+         W
+         CS   332
+         CS
+         C    ZEILE,@009@
+         BU   NEUZ
+         H    *-3
+ZEILE    DCW  000
+WERT     DCW  000
+J        DCW  000
+X1       EQU  89
+         END  START`},
+{name:'5 · Primzahlen (Dividieren, Sonderausstattung)',cards:'',src:
+`* PRIMZAHLEN BIS 300 MIT DEM DIVIDIERBEFEHL D (SONDERAUSSTATTUNG)
+* QR: 5 NULLEN (DIVISORLAENGE + 1) UND DER 3-STELLIGE DIVIDEND N
+* D ADRESSIERT DIE HOECHSTE DIVIDENDENSTELLE (QR-2). DANACH STEHT
+* DER QUOTIENT LINKS (QR-7 BIS QR-5), DER REST RECHTS (QR-3 BIS QR)
+         ORG  333
+START    CS   332
+         CS
+         SW   087
+         MCW  @000@,X1
+NAECHS  A    @1@,N          N = N + 1
+         C    N,@301@
+         BE   FERTIG
+         MCW  @0002@,T       TEILER T = 2
+TEILE    ZA   N,QR
+         D    T,QR-2         QR = N / T
+         MCW  QR-5,Q         QUOTIENT
+         MZ   @0@,Q          VORZEICHEN ENTFERNEN
+         MCW  QR,REST        REST
+         MZ   @0@,REST
+         C    T,Q            QUOTIENT KLEINER ALS TEILER?
+         BL   PRIM           DANN IST N PRIM
+         C    REST,@0000@
+         BE   NAECHS        TEILBAR: KEINE PRIMZAHL
+         A    @1@,T
+         B    TEILE
+PRIM     A    @004@,X1
+         MCS  N,200&X1
+         C    X1,@040@       ZEHN ZAHLEN JE ZEILE
+         BU   NAECHS
+         W
+         CS   332
+         CS
+         MCW  @000@,X1
+         B    NAECHS
+FERTIG   W
+         H    *-3
+N        DCW  001
+T        DCW  0000
+QR       DCW  00000000
+Q        DCW  0000
+REST     DCW  0000
+X1       EQU  89
+         END  START`},
+{name:'6 · Unterprogramm mit SBR',cards:'',src:
+`* UNTERPROGRAMM-AUFRUF WIE AUF DER ECHTEN 1401:
+* B UP LAEDT DIE RUECKKEHRADRESSE INS B-ADRESSREGISTER,
+* SBR SPEICHERT SIE IN DEN SPRUNGBEFEHL AM ENDE DES UNTERPROGRAMMS
+         ORG  333
+START    CS   332
+         CS
+         MCW  @ERSTER AUFRUF@,220
+         B    DRUCK
+         MCW  @ZWEITER AUFRUF@,220
+         B    DRUCK
+         MCW  @DRITTER AUFRUF@,220
+         B    DRUCK
+         H    *-3
+* UNTERPROGRAMM: ZAEHLT DIE AUFRUFE UND DRUCKT DIE ZEILE
+DRUCK    SBR  ZURUCK+3       RUECKKEHRADRESSE EINTRAGEN
+         A    @1@,ZAHL
+         MCW  @AUFRUF NR.@,232
+         MCS  ZAHL,236
+         W
+         CS   332
+         CS
+ZURUCK   B    0000           WIRD VON SBR UEBERSCHRIEBEN
+ZAHL     DCW  000
+         END  START`},
+{name:'7 · Selbstladende Karte (LADEN-Taste)',cards:
+`,008015,022029,030035M0452122.030 HELLO WORLD`,src:
+`* DIESES BEISPIEL BRAUCHT KEINEN ASSEMBLER:
+* DIE KARTE IM KARTENLESER ENTHAELT DAS GANZE PROGRAMM.
+* "BEISPIEL LADEN" LEGT SIE EIN, DANN DIE TASTE LADEN DRUECKEN.
+*
+* LADEN: KARTE NACH 001-080, WORTMARKE IN 001, SPRUNG NACH 001
+* 001 ,008015   SW  008,015   WORTMARKEN FUER DIE NAECHSTEN BEFEHLE
+* 008 ,022029   SW  022,029
+* 015 ,030035   SW  030,035   035 = ANFANG DES TEXTES
+* 022 M045212   MCW 045,212   TEXT 035-045 IN DEN DRUCKBEREICH
+* 029 2         W             DRUCKEN
+* 030 .030      H   030       HALT
+* 035 HELLO WORLD
+         END`}
+,{name:'8 · Handbuch Abb. 22: Lesen, Stanzen oder Drucken',cards:
+`-KARTE MIT 11-ZONE IN SPALTE 1 WIRD GEDRUCKT
+EINE NORMALE KARTE WIRD GESTANZT
+JAUCH DIESE, DENN J IST 11-1, GEHT AUF DEN DRUCKER
+DIESE KARTE BEGINNT MIT D = 12-4 UND WIRD GESTANZT`,src:
+`* BEISPIELPROGRAMM AUS DEM IBM 1401 REFERENCE MANUAL A24-1403-5, ABB. 22
+* JEDE KARTE WIRD GELESEN. HAT SPALTE 1 EINE 11-ZONE (Z. B. - ODER J-R),
+* WIRD SIE GEDRUCKT, SONST GESTANZT. DAS HANDBUCH ZEIGT DEN MASCHINENCODE:
+*   0500 ,001   0504 1   0505 V524001K   0513 M080180
+*   0520 4504   0524 M080280   0531 2504
+* NACH DER LETZTEN KARTE HAELT DER LESER MIT LEEREM MAGAZIN AN.
+         ORG  500
+BEGIN    SW   1
+START    R
+         BWZ  PRINT,1,K
+PUNCH    MLC  80,180
+         P    START
+PRINT    MLC  80,280
+         W    START
+         END  BEGIN`},
+{name:'9 · Magnetband 729: schreiben und wieder lesen',cards:
+`ERSTER SATZ - VON DER KARTE AUFS BAND
+ZWEITER SATZ - DAS BAND 729 SPEICHERT 200 ODER 556 ZEICHEN JE ZOLL
+DRITTER SATZ - ZWISCHEN DEN SAETZEN LIEGT EINE SATZLUECKE
+VIERTER SATZ - AM ENDE STEHT EINE BANDMARKE`,src:
+`* KARTEN WERDEN ALS SAETZE AUF BAND 1 GESCHRIEBEN (WT 1,001 = M %U1 001 W),
+* DANACH FOLGEN EINE BANDMARKE (WTM) UND DAS ZURUECKSPULEN (RWD).
+* ANSCHLIESSEND WIRD DAS BAND SATZ FUER SATZ GELESEN (RT 1,PUFFER) UND
+* GEDRUCKT, BIS DIE BANDMARKE DEN ANZEIGER BANDENDE SETZT (BEF).
+* EINE GRUPPENMARKE MIT WORTMARKE IN 081 BEENDET DEN SATZ BEIM SCHREIBEN.
+PUFFER   EQU  601            LESEPUFFER 0601-0680, DAHINTER GRUPPENMARKE
+         ORG  81
+         DCW  @_@
+         ORG  333
+START    CS   332
+         CS
+         SW   001,PUFFER
+         RWD  1
+LESEN    R
+         WT   1,001          KARTE ALS SATZ AUFS BAND
+         A    @1@,ANZ
+         BLC  ENDE
+         B    LESEN
+ENDE     WTM  1              BANDMARKE
+         RWD  1              ZURUECKSPULEN
+NAECHS  RT   1,PUFFER       SATZ LESEN
+         BEF  FERTIG         BANDMARKE ERREICHT?
+         MCW  PUFFER+79,280
+         W
+         B    NAECHS
+FERTIG   CS   332
+         CS
+         MCW  @SAETZE AUF BAND 1:@,219
+         MCS  ANZ,223
+         CC   J
+         W
+         H    *-3
+ANZ      DCW  000
+         END  START`}
+];
+/* Beispielprogramme für die IBM 1440 (Move-Mode-E/A mit 1442 und 1443) */
+const K_EXAMPLES_1440=[
+{name:'1 · Hallo Welt auf dem 1443',cards:'',src:
+`* HALLO WELT AUF DER IBM 1440 MIT DEM DRUCKER 1443
+* DIE 1440 HAT KEINE FESTEN E/A-BEREICHE. W ZEILE WIRD ZU
+* M %Y1 101 W: DRUCKE AB STELLE 0101 BIS ZUR GRUPPENMARKE MIT WORTMARKE.
+* DER DRUCKER HAT KEINEN PUFFER, DIE ZEILE MUSS BEI XX01 BEGINNEN.
+ZEILE    EQU  101            DRUCKZEILE 0101-0220 (120 STELLEN)
+         ORG  221
+         DCW  @_@            GRUPPENMARKE MIT WORTMARKE BEENDET DIE ZEILE
+         ORG  400
+START    CS   220            LOESCHT 200-220
+         CS                  VERKETTET: LOESCHT 100-199
+         MCW  @HALLO WELT, HIER SPRICHT DIE IBM 1440@,ZEILE+39
+         W    ZEILE          GLEICHBEDEUTEND: MCW %Y1,ZEILE,W
+         H    *-3
+         END  START`},
+{name:'2 · Karten nummerieren (1442 lesen + stanzen)',cards:
+`IBM 1440 DATA PROCESSING SYSTEM
+ANGEKUENDIGT AM 11. OKTOBER 1962
+FUER KLEINERE BETRIEBE GEDACHT
+LESER/STANZER 1442 MIT EINER KARTENBAHN
+DRUCKER 1443 MIT TYPENSTANGE`,src:
+`* DER 1442 HAT NUR EINE KARTENBAHN: NACH R (= M %G1 001 R) STEHT DIE
+* GELESENE KARTE IN DER STANZSTATION. PS (PUNCH AND STOP = M %G1 101 P)
+* STANZT IN GENAU DIESE KARTE - HIER EINE LAUFENDE NUMMER IN SPALTE 77-80.
+* LEERSTELLEN STANZEN NICHTS, DIE DATEN IN SPALTE 1-76 BLEIBEN ERHALTEN.
+* DIE KARTEN LANDEN IM ABLAGEFACH, DER 1443 DRUCKT DAZU EINE LISTE.
+KARTE    EQU  1              LESEBEREICH 0001-0080
+STANZ    EQU  101            STANZBEREICH 0101-0180
+ZEILE    EQU  201            DRUCKZEILE 0201-0320
+         ORG  81
+         DCW  @_@            GRUPPENMARKEN MIT WORTMARKE HINTER DEN BEREICHEN
+         ORG  181
+         DCW  @_@
+         ORG  321
+         DCW  @_@
+         ORG  400
+START    CS   180            STANZBEREICH 100-180 LEER
+         CS   320            DRUCKZEILE 200-320 LEER
+         CS
+         SW   KARTE          WORTMARKE FUER MCW AUS DEM LESEBEREICH
+LOOP     R    KARTE          KARTE LESEN
+         A    @1@,NR
+         MCW  NR,STANZ+79    NUMMER NACH SPALTE 77-80
+         PS   STANZ          IN DIE GELESENE KARTE STANZEN
+         MCW  KARTE+79,ZEILE+79
+         MCS  NR,ZEILE+86
+         W    ZEILE
+         BLC  ENDE           LETZTE KARTE?
+         B    LOOP
+ENDE     H    *-3              NPRO IM REITER KARTEN WIRFT DIE LETZTE KARTE AUS
+NR       DCW  0000
+         END  START`},
+{name:'3 · Summenliste mit Aufbereitung',cards:
+`MUELLER, ANNA       00012550
+SCHMIDT, KARL       00004999
+HUBER, JOSEF        00100000
+WAGNER, EVA         00000075
+BECKER, OTTO        00033333`,src:
+`* WIE BEISPIEL 3 DER 1401, NUR MIT DEN GERAETEN DER 1440:
+* LESEN MIT R (1442), DRUCKEN MIT W (1443), AUFBEREITEN MIT MCE
+KARTE    EQU  1
+ZEILE    EQU  201
+         ORG  81
+         DCW  @_@
+         ORG  321
+         DCW  @_@
+         ORG  400
+START    CS   320
+         CS
+         SW   1,21           WORTMARKEN AN DEN FELDANFAENGEN
+LOOP     R    KARTE
+         MCW  20,220         NAME
+         ZA   28,BETRAG
+         A    BETRAG,SUMME
+         LCA  MASKE,240
+         MCE  BETRAG,240
+         W    ZEILE
+         BLC  ENDE
+         B    LOOP
+ENDE     CS   320
+         CS
+         MCW  @SUMME@,220
+         LCA  MASKE,240
+         MCE  SUMME,240
+         CC   J              EINE LEERZEILE
+         W    ZEILE
+         H    *-3
+BETRAG   DCW  00000000
+SUMME    DCW  00000000
+MASKE    DCW  @   ,  0.  -@
+         END  START`},
+{name:'4 · Plattenstapel 1311: schreiben, prüfen, lesen',cards:
+`ERSTER SEKTOR   - DIE 1311 SPEICHERT 2 MILLIONEN ZEICHEN JE STAPEL
+ZWEITER SEKTOR  - 100 ZYLINDER, 10 SPUREN, 20 SEKTOREN JE SPUR
+DRITTER SEKTOR  - JEDER SEKTOR FASST 100 ZEICHEN
+VIERTER SEKTOR  - DER STAPEL IST WECHSELBAR`,src:
+`* JEDE KARTE WIRD IN EINEN SEKTOR DES PLATTENSTAPELS 1311 GESCHRIEBEN
+* (WD = M %F1 BBB W) UND SOFORT GEPRUEFT (WDC = M %F3 BBB W).
+* DANACH WERDEN DIE SEKTOREN WIEDER GELESEN (RD) UND GEDRUCKT.
+* PLATTENSTEUERFELD AB 0590: ERSATZCODE *, SEKTORADRESSE 000100, SEKTORZAHL 001.
+* DIREKT DAHINTER LIEGEN DIE 100 DATENZEICHEN UND EINE GRUPPENMARKE MIT WM.
+* WORTMARKEN IM STEUERFELD GEHEN BEI JEDEM PLATTENBEFEHL VERLOREN (HANDBUCH
+* S. F-17), DARUM ZAEHLT DAS PROGRAMM DIE SEKTORADRESSE IN EINEM EIGENEN FELD.
+KARTE    EQU  1
+ZEILE    EQU  201
+STF      EQU  590            STEUERFELD 0590-0599
+DATEN    EQU  600            SEKTORDATEN 0600-0699
+         ORG  81
+         DCW  @_@
+         ORG  321
+         DCW  @_@
+         ORG  700
+         DCW  @_@
+         ORG  800
+START    LCA  @*000100001@,STF+9
+         SW   KARTE,DATEN
+         SD   STF            ZUGRIFFSARM AUF DEN ZYLINDER STELLEN
+SCHRB  R    KARTE
+         MCW  KARTE+79,DATEN+79
+         MCW  @001@,STF+9
+         WD   STF            SEKTOR SCHREIBEN
+         MCW  @001@,STF+9
+         WDC  STF            SCHREIBPRUEFUNG
+         BIN  FEHLER,Y       IRGENDEIN PLATTENFEHLER?
+         A    @1@,SEKTOR     NAECHSTER SEKTOR
+         MCW  SEKTOR,STF+6
+         A    @1@,ANZ
+         BLC  ZURUCK
+         B    SCHRB
+ZURUCK   MCW  @000100@,SEKTOR
+         MCW  SEKTOR,STF+6
+         CS   320
+         CS
+LESEN    MCW  @001@,STF+9
+         RD   STF            SEKTOR LESEN
+         BIN  FEHLER,Y
+         MCW  SEKTOR,ZEILE+5 SEKTORADRESSE
+         MCW  DATEN+79,ZEILE+89
+         W    ZEILE
+         A    @1@,SEKTOR
+         MCW  SEKTOR,STF+6
+         A    @1@,I
+         C    I,ANZ
+         BU   LESEN
+         H    *-3
+FEHLER   MCW  @PLATTENFEHLER - ANZEIGER N/W/X/Y IM DEBUGGER@,ZEILE+44
+         W    ZEILE
+         H    *-3
+SEKTOR   DCW  000100
+ANZ      DCW  000
+I        DCW  000
+         END  START`}
+];
+
+</script>
+
 <script>
 "use strict";
 /* =====================================================================
@@ -2854,14 +4057,17 @@ $('kStep').onclick=()=>singleStep(1);
 $('kInt').onclick=()=>{ m.extPending|=0x40; m.irqPending=true; msg('Externe Unterbrechung (Unterbrechungstaste) angemeldet.'); if(m.wait&&!m.running&&(m.sysMask&1)) start(); };
 $('kTimer').onchange=e=>{ m.timerOn=e.target.checked; };
 $('memSel').onchange=e=>{ if(!confirm('Hauptspeichergröße ändern? Das entspricht dem Aus- und Einschalten: Speicherinhalt geht verloren.')){ e.target.value=String(m.memSize); return; }
-  m.powerOn(+e.target.value); msg('Neu eingeschaltet mit '+(m.memSize/1024)+' KB Hauptspeicher.'); refreshAll(); };
+  m.powerOn(+e.target.value); msg('Neu eingeschaltet mit '+(m.memSize/1024)+' KB Hauptspeicher.');
+  if(emu.k){ if(emu.base+emu.size>m.memSize){ emu.k.running=false; emu.on=false; emu.k=null; } else emuAttach(); } if(typeof emuRefresh==='function') emuRefresh(); refreshAll(); };
 
-function start(){ if(m.wait&&(m.sysMask&0xFF)===0&&!m.loading){ msg('CPU im gesperrten Wartezustand – erst neues Programm laden.'); return; }
+function start(){ if(emu.on){ msg('Der 1401-Kompatibilitätsmodus ist eingeschaltet – im Reiter „1401-Emulation“ bedienen oder ausschalten.'); return; }
+  if(m.wait&&(m.sysMask&0xFF)===0&&!m.loading){ msg('CPU im gesperrten Wartezustand – erst neues Programm laden.'); return; }
   m.running=true; m.bpSkip=true; m.stopMsg=''; msg('Läuft …'); }
 function singleStep(n){ m.running=false;
   for(let i=0;i<n;i++){ if(m.irqPending) m.tryIrq(); if(m.wait){ msg('CPU im Wartezustand.'); break; } m.step(); }
   if(m.stopMsg) msg(m.stopMsg); else msg('Einzelschritt: nächste Adresse '+HX(m.ia,6)); refreshAll(); }
 function doIPL(addr){
+  if(emu.on){ msg('Der 1401-Kompatibilitätsmodus ist eingeschaltet – im Reiter „1401-Emulation“ ausschalten, dann LADEN.'); return; }
   const err=m.ipl(addr); if(err){ msg(err); return; }
   conState();
   msg('LADEN von '+HX(addr,3)+' …');
@@ -3056,7 +4262,9 @@ const MAGIC='S360ZST2';
 $('stSave').onclick=async()=>{
   const was=m.running; m.running=false;
   try{
-    const o=m.snapshot(); o.ui={con:conOut.textContent,rate:$('rateSel').value,io:$('ioSel').value};
+    const o=m.snapshot(); o.ui={con:conOut.textContent,rate:$('rateSel').value,io:$('ioSel').value,
+      emu:{on:emu.on,base:emu.base,size:emu.size,k:emu.k?emu.k.save():null,src:$('emuSrc').value,data:$('emuData').value,rate:$('emuRate').value}};
+    if(emu.k) emu.k.running=false;
     const js=new TextEncoder().encode(JSON.stringify(o)), buf=new Uint8Array(12+js.length+m.memSize);
     buf.set(new TextEncoder().encode(MAGIC),0); new DataView(buf.buffer).setUint32(8,js.length); buf.set(js,12); buf.set(m.M,12+js.length);
     const z=await gzip(buf); download('s360-zustand.s360',z); msg('Zustand gesichert ('+Math.round(z.length/1024).toLocaleString('de-DE')+' KB, gzip-komprimiert).');
@@ -3069,16 +4277,116 @@ $('stLoad').onchange=async e=>{ const f=e.target.files[0]; e.target.value=''; if
     const n=new DataView(buf.buffer,buf.byteOffset).getUint32(8), o=JSON.parse(new TextDecoder().decode(buf.subarray(12,12+n)));
     m.restore(o,buf.subarray(12+n));
     $('memSel').value=String(m.memSize); if(o.ui){ $('rateSel').value=o.ui.rate; $('ioSel').value=o.ui.io; conOut.textContent=o.ui.con||''; } setTiming();
+    if(o.ui&&o.ui.emu&&o.ui.emu.k){ const E=o.ui.emu; emu.base=E.base; emu.size=E.size; $('emuBase').value=HX(E.base,6); $('emuSize').value=String(E.size);
+      $('emuSrc').value=E.src||''; $('emuData').value=E.data||''; if(E.rate) $('emuRate').value=E.rate; emu.k=null; emuAttach(); emu.k.load(E.k); emu.on=!!E.on; }
+    else if(emu.k){ emu.k.running=false; emu.on=false; emu.k=null; }
+    emuRefresh();
     $('kTimer').checked=m.timerOn; conState(); refreshWp(); refreshRdr(); refreshAll();
     msg('Zustand aus '+f.name+' geladen – START setzt die Maschine fort.');
   }catch(err){ msg('Laden fehlgeschlagen: '+err.message); } };
 
+
+/* =====================================================================
+   1401-Kompatibilitätsmodus: 1401-Kern auf dem S/360-Hauptspeicher
+   ===================================================================== */
+const emu={on:false,base:0x10000,size:16000,k:null,addrSkip:false,wasRunning:false,budget:0};
+const b2e=b=>s2e(kB2A(b));                       // BCD → EBCDIC (über den Zeichensatz)
+function e2b(e){ let s=''; for(let i=0;i<e.length;i++){ const c=E2A[e[i]]; s+=c===null?' ':c; } return kA2B(s); }   // EBCDIC → BCD
+function emuMsg(t){ $('emuMsg').textContent=t; }
+function emuIO(){ return {
+  hopperEmpty:()=>rdr.hopper.length===0,
+  read:()=>{ const c=rdr.hopper.shift(); rdr.stacked++; rdrDirty=true; const o=new Uint8Array(80); o.set(e2b(c).subarray(0,80)); return o; },
+  print:b=>{ emu.cur=b2e(b); },
+  punch:b=>{ const c=new Uint8Array(80).fill(0x40); c.set(b2e(b).subarray(0,80)); pun.cards.push(c); rdrDirty=true; },
+  carriage:(kind,n)=>{ if(emu.cur){ prt.put(emu.cur); emu.cur=null; }
+    if(kind==='space') prt.move((n&3)<<3); else prt.move(0x80|((n+16)<<3)|3); },
+  channel:c=>prt.lineNo>=prt.chLine(c),
+  tape:u=>{ if(!emu.tapes){ emu.tapes=[null]; for(let i=1;i<=6;i++) emu.tapes.push(new K1401Tape('Band '+i)); } return emu.tapes[u]; }   // 1401-Bänder als Bänder der 360 (im Speicher)
+}; }
+function emuAttach(){
+  const view=m.M.subarray(emu.base,emu.base+emu.size);
+  if(!emu.k){ emu.k=new K1401(view,emu.size); emu.k.io=emuIO(); }
+  else emu.k.attach(view,emu.size);
+}
+function emuEnable(on){
+  if(on){
+    const b=parseInt($('emuBase').value,16), sz=+$('emuSize').value;
+    if(isNaN(b)||b<0||b+sz>m.memSize){ emuMsg('Der 1401-Speicher passt nicht in den S/360-Hauptspeicher ('+(m.memSize/1024)+' KB) – Adresse oder Größe ändern.'); return; }
+    if(m.running){ m.running=false; }
+    emu.base=b; emu.size=sz; emuAttach(); emu.on=true;
+    msg('Kompatibilitätsmodus eingeschaltet: die CPU führt 1401-Befehle aus (Speicher ab X\''+HX(b,6)+'\').');
+    emuMsg('Bereit. Programm assemblieren oder Kartendeck in den 2540 legen und LADEN drücken.');
+  } else {
+    if(emu.k) emu.k.running=false; emu.on=false; msg('Kompatibilitätsmodus ausgeschaltet – die S/360 arbeitet wieder normal.');
+  }
+  emuRefresh();
+}
+$('emuOn').onclick=()=>emuEnable(!emu.on);
+function emuNeedOn(){ if(!emu.on){ emuMsg('Erst den Kompatibilitätsmodus einschalten.'); return false; } return true; }
+function emuStart(){ if(!emuNeedOn()) return; const k=emu.k; if(k.running) return; k.running=true; k.bpSkip=true; k.stopMsg=''; emuMsg('1401-Programm läuft …'); }
+$('emuStart').onclick=emuStart;
+$('emuStop').onclick=()=>{ if(emu.k&&emu.k.running){ emu.k.running=false; emuMsg('Angehalten bei 1401-Adresse '+K_P4(emu.k.I)+'.'); } emuRefresh(); };
+$('emuStep').onclick=()=>{ if(!emuNeedOn()) return; const k=emu.k; k.running=true; k.bpSkip=true; k.run(1); const h=!k.running; k.running=false;
+  emuMsg(h&&k.stopMsg?k.stopMsg:'Einzelbefehl: nächste 1401-Adresse '+K_P4(k.I)); emuRefresh(); };
+$('emuReset').onclick=()=>{ if(!emuNeedOn()) return; emu.k.reset(); emuMsg('START RESET: Anzeiger gelöscht, I-Adresse 0001.'); emuRefresh(); };
+$('emuLoad').onclick=()=>{ if(!emuNeedOn()) return; const k=emu.k; k.reset();
+  if(k.loadKey()) emuMsg('LADEN: erste Karte aus dem 2540 nach 001–080, Sprung nach 0001.'); else emuMsg(k.stopMsg); emuRefresh(); };
+const emuSenseEl=$('emuSense');
+'ABCDEFG'.split('').forEach((c,i)=>{ const l=document.createElement('label'); l.innerHTML='<input type="checkbox"> '+c+' '; l.firstChild.onchange=e=>{ if(emu.k) emu.k.sense[i]=e.target.checked; }; emuSenseEl.appendChild(l); });
+K_EXAMPLES.forEach((e,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent=e.name; $('emuEx').appendChild(o); });
+function emuLoadEx(i){ $('emuSrc').value=K_EXAMPLES[i].src; $('emuData').value=K_EXAMPLES[i].cards; $('emuList').textContent=''; $('emuAsmInfo').textContent=''; }
+$('emuExLoad').onclick=()=>{ const i=+$('emuEx').value; emuLoadEx(i);
+  if(K_EXAMPLES[i].name.startsWith('7')){ rdr.hopper=K_EXAMPLES[i].cards.split('\n').map(textCard); rdr.stacked=0; refreshRdr(); emuMsg('Selbstladende Karte liegt im 2540 – Kompatibilitätsmodus einschalten und LADEN drücken.'); } };
+emuLoadEx(0);
+$('emuAsmRun').onclick=()=>{ if(!emu.on) emuEnable(true); if(!emu.on) return; const k=emu.k;
+  const a=new K1401Asm($('emuSrc').value).run(); const box=$('emuList'); box.textContent='';
+  for(const l of a.listing()){ const d=document.createElement('div'); if(l.err) d.className='err'; d.textContent=l.t; box.appendChild(d); }
+  if(a.errors.length){ $('emuAsmInfo').textContent=a.errors.length+' Fehler – siehe Liste.'; return; }
+  if(a.hi<0||a.start===null){ $('emuAsmInfo').textContent='Kein ausführbarer Code (bei Beispiel 7 die Karte mit LADEN starten).'; return; }
+  if(a.hi>=k.size){ $('emuAsmInfo').textContent='Programm passt nicht in '+k.size+' Stellen.'; return; }
+  k.running=false; k.clearMem(); k.reset(); kLoadImage(k,a); k.I=a.start;
+  const t=$('emuData').value.replace(/\r/g,''); rdr.hopper=t.trim()?t.replace(/\n$/,'').split('\n').map(textCard):[]; rdr.stacked=0; refreshRdr();
+  $('emuAsmInfo').textContent='OK: Stellen '+K_P4(a.lo)+'–'+K_P4(a.hi)+', liegen ab S/360-Adresse X\''+HX(emu.base+a.lo,6)+'\'.';
+  emuStart(); };
+let emuMemBase=0;
+$('emuMemGo').onclick=()=>{ const v=parseInt($('emuMemA').value,10); if(!isNaN(v)){ emuMemBase=Math.max(0,v-v%50); emuRefresh(); } };
+function emuRefresh(){
+  const k=emu.k;
+  $('emuOn').innerHTML=emu.on?'<b>Kompatibilitätsmodus ausschalten</b>':'<b>Kompatibilitätsmodus einschalten</b>';
+  $('emuState').textContent=emu.on?('ein – 1401-Speicher X\''+HX(emu.base,6)+'\'–X\''+HX(emu.base+emu.size-1,6)+'\''+(k&&k.running?', läuft':'')):'aus – die S/360 arbeitet normal.';
+  if(!k){ $('emuRegs').textContent=''; return; }
+  const yn=(n,v)=>v?'<b>'+n+'</b>':'<span style="color:#aaa">'+n+'</span>';
+  $('emuRegs').innerHTML='I '+K_P4(k.I)+' · A '+K_P4(k.A)+' · B '+K_P4(k.B)+' · Befehle '+k.icount.toLocaleString('de-DE')+' &nbsp; '+
+    [yn('GLEICH',k.eq),yn('HOCH',k.hi),yn('NIEDRIG',k.lo),yn('ÜBERLAUF',k.ov),yn('LETZTE KARTE',k.last)].join(' ');
+  if(curTab!=='tEmu') return;
+  const box=$('emuDis'); box.textContent=''; let a=k.I;
+  for(let i=0;i<12&&a>=0&&a<k.size;i++){ const d=kDisasm(k,a); const div=document.createElement('div');
+    let raw=''; for(let j=0;j<Math.min(d.len,9);j++){ const c=k.M[a+j]; raw+=(c&K_WM?'_':'')+K_CH[c&63]; }
+    div.textContent=K_P4(a)+'  '+raw.padEnd(13)+' '+d.txt; if(a===k.I) div.classList.add('cur'); box.appendChild(div); a+=Math.max(1,d.len); }
+  const L=['<span class="ad">      ....+....1....+....2....+....3....+....4....+....5</span>'];
+  for(let r=0;r<8;r++){ const b=emuMemBase+r*50; if(b>=k.size) break; let s='<span class="ad">'+K_P4(b)+'</span>  ';
+    for(let i=0;i<50&&b+i<k.size;i++){ const c=k.M[b+i], ch=K_CH[c&63].replace(/&/g,'&amp;').replace(/</g,'&lt;'); s+=c&K_WM?'<span class="wm">'+ch+'</span>':ch; }
+    L.push(s); }
+  $('emuMem').innerHTML=L.join('\n');
+  $('emuMemHint').textContent='entspricht S/360-Adresse X\''+HX(emu.base+emuMemBase,6)+'\'';
+}
+function emuFrame(dt){
+  const k=emu.k; if(!emu.on||!k) return;
+  if(k.running){
+    const rate=+$('emuRate').value, c0=k.cycles;
+    if(rate>0){ emu.budget+=rate*dt/1000; while(k.running&&k.cycles-c0<emu.budget) k.run(1); emu.budget-=k.cycles-c0; if(emu.budget>rate) emu.budget=0; }
+    else { const t0=performance.now(); let n=0; while(k.running){ k.run(1); if((++n&2047)===0&&performance.now()-t0>12) break; } }
+    emu.wasRunning=true;
+  } else if(emu.wasRunning){ emu.wasRunning=false; emuMsg(k.stopMsg||('Angehalten bei 1401-Adresse '+K_P4(k.I)+'.')); emuRefresh(); }
+}
+
 /* ---------- Aktualisierung & Hauptschleife ---------- */
 function refreshTab(){ if(curTab==='tDbg') refreshDbg(); else if(curTab==='tMem') refreshMem(); else if(curTab==='tChn') refreshChn();
-  else if(curTab==='tRdr'){ refreshRdr(); rdrDirty=false; } else if(curTab==='tTrc') refreshTrc(); }
+  else if(curTab==='tRdr'){ refreshRdr(); rdrDirty=false; } else if(curTab==='tTrc') refreshTrc(); else if(curTab==='tEmu') emuRefresh(); }
 function refreshAll(){ refreshPanel(); refreshTab(); }
 let lastUI=0, lastT=0, budget=0, ipsCnt=0, ipsT=0;
 function frame(t){
+  emuFrame(Math.min(50,t-(lastT||t)));
   if(m.running){
     const rate=+$('rateSel').value, ic0=m.icount, dt=Math.min(50,t-(lastT||t)); let r='ok';
     if(rate>0){ budget+=rate*dt/1000; const n=Math.floor(budget); budget-=n; if(n>0) r=m.run(n); }
@@ -3088,7 +4396,7 @@ function frame(t){
   } else budget=0;
   lastT=t;
   if(t-ipsT>1000){ $('ips').textContent=m.running?(Math.round(ipsCnt*1000/(t-ipsT)).toLocaleString('de-DE')+' Befehle/s'):''; ipsCnt=0; ipsT=t; }
-  if(t-lastUI>120){ refreshPanel(); if(curTab==='tDbg'||curTab==='tChn'||curTab==='tMem') refreshTab(); if(curTab==='tRdr'&&rdrDirty){ refreshRdr(); rdrDirty=false; } lastUI=t; }
+  if(t-lastUI>120){ refreshPanel(); if(curTab==='tDbg'||curTab==='tChn'||curTab==='tMem'||curTab==='tEmu') refreshTab(); else if(emu.on) emuRefresh(); if(curTab==='tRdr'&&rdrDirty){ refreshRdr(); rdrDirty=false; } lastUI=t; }
   requestAnimationFrame(frame);
 }
 refreshAll(); refreshRdr();
