@@ -217,6 +217,7 @@ h3{margin:6px 0 8px;font-size:16px}
     </ol>
     <div class="row"><button class="b" id="acGen"><b>1.</b> Systemband erzeugen</button><button class="b" id="acAsm"><b>2.</b> Mit echtem Autocoder übersetzen</button>
       <button class="b" id="acRun"><b>3.</b> Objektdeck laden und starten</button>
+      <button class="b" id="acCards">Quelltext nur als Karten in den Leser</button>
       <label class="small"><input type="checkbox" id="acAuto" checked> Halte des Ablaufs automatisch mit START fortsetzen</label></div>
     <div class="msg" id="acState" style="color:#7a4a00"></div>
     <p class="small">Unterschiede zur Werkbank-Teilmenge: Marken höchstens 6 Zeichen; der echte Autocoder erwartet CTL 6611 (16.000 Stellen) – die Werkbank schaltet dafür den Speicher auf 16.000. Fehler stehen in der Liste rechts neben der Zeile (z. B. OP, SYM, BAD STATEMENT) und am Ende als „n ERRORS“.</p>
@@ -231,11 +232,11 @@ h3{margin:6px 0 8px;font-size:16px}
     <textarea id="lgSrc" rows="18" class="mono" spellcheck="false"></textarea>
     <div class="small">Datenkarten (FORTRAN: hinter $EXECUTION; COBOL: hinter dem Objektdeck):</div>
     <textarea id="lgData" rows="3" class="mono" spellcheck="false"></textarea>
-    <div class="row"><button class="b" id="lgGen"></button><button class="b" id="lgRun"></button>
+    <div class="row"><button class="b" id="lgGen"></button><button class="b" id="lgRun"></button><button class="b" id="lgCards">Kartenstapel nur in den Leser legen</button>
       <label class="small"><input type="checkbox" id="lgAuto" checked> Halte (PAUSE, „PRESS START“) automatisch mit START fortsetzen</label></div>
     <div class="msg" id="lgState" style="color:#7a4a00"></div>
     <div class="small" id="lgHelpF"><p><b>FORTRAN IV</b> (IBM 1401 FORTRAN, FO-052, Version 2 Mod 2). Schritt 1 baut das Systemband wie im Handbuch: Das Verteilband adc00233 stanzt vier Decks, Systemdeck und Bibliothek werden mit LADEN auf ein leeres Band (Einheit 4) geschrieben, dann folgen BAND LADEN, „PAUSE CHANGE TAPE UNITS“ (Band 4 → 1) und der Bibliothekslauf bis „SYSTEM TAPE COMPLETED“. Schritt 2 legt den Kartenstapel <code>FORTRAN RUN</code> · Quelle · <code>LOADER RUN</code> · <code>$EXECUTION</code> · Daten · <code>HALT</code> in den Leser (steht schon eine eigene FORTRAN-RUN-Karte im Text, wird er unverändert genommen) und drückt BAND LADEN. Festes Format: Anweisungsnummer Spalte 1–5, Fortsetzung Spalte 6, Anweisung Spalte 7–72, C in Spalte 1 = Kommentar. Die Zeichen <code>( ) = ' +</code> werden auf die Codes der FORTRAN-Druckkette (H-Kette) gestanzt; die Werkbank stellt dafür den Drucker auf die H-Kette. Gerät 1 = Kartenleser, 3 = Drucker, 2 = Stanzer.</p></div>
-    <div class="small" id="lgHelpC" style="display:none"><p><b>COBOL</b> (1401 Tape COBOL, Version 2 Mod 11). Schritt 1 kopiert vom Band adc00223 das Prozessorband (Einheit 2) und das Extraktionsband (Einheit 3), stanzt vom Extraktionsband die COBOL-Unterprogramme (nach dem Halt bei 0360 mit START RESET + START) und trägt sie in die Bibliothek des Autocoder-Systembands ein (Schalter A und F, neues Band auf Einheit 6). Fehlt das Autocoder-Systemband, wird es vorher erzeugt. Schritt 2: COBOL RUN-Karte + Quelle in den Leser, Prozessorband auf 1, Schalter A und C, BAND LADEN – der Compiler schreibt <b>Autocoder</b> auf Band 4. Dieses Band übersetzt dann der Autocoder mit COBOL-Bibliothek (Schalter A und C) zum Objektdeck, das mit LADEN startet. Festes Format: Folgenummer Spalte 1–6, Text ab Spalte 8 bis 72. Literale in <code>'…'</code>; <code>( ) =</code> werden wie bei FORTRAN gestanzt. Das IBM-Beispiel (Gehaltstabelle) steht nach Schritt 1 als erstes Beispiel bereit.</p></div>
+    <div class="small" id="lgHelpC" style="display:none"><p><b>COBOL</b> (1401 Tape COBOL, Version 2 Mod 11). Schritt 1 kopiert vom Band adc00223 das Prozessorband (Einheit 2) und das Extraktionsband (Einheit 3), stanzt vom Extraktionsband die COBOL-Unterprogramme (nach dem Halt bei 0360 mit START RESET + START) und trägt sie in die Bibliothek des Autocoder-Systembands ein (Schalter A und F, neues Band auf Einheit 6). Fehlt das Autocoder-Systemband, wird es vorher erzeugt. Schritt 2: COBOL RUN-Karte + Quelle in den Leser, Prozessorband auf 1, Schalter A und C, BAND LADEN – der Compiler schreibt <b>Autocoder</b> auf Band 4. Dieses Band übersetzt dann der Autocoder mit COBOL-Bibliothek (Schalter A und C) zum Objektdeck, das mit LADEN startet. Festes Format: Folgenummer Spalte 1–6, Text ab Spalte 8 bis 72. Literale in <code>'…'</code>; <code>( ) =</code> werden wie bei FORTRAN gestanzt. Das IBM-Beispiel (Gehaltstabelle) ist das Prüfprogramm vom COBOL-Band; es rechnet eine Gehaltstabelle und meldet am Ende „TABLE VALUES ARE CORRECT“.</p></div>
   </div>
 
   <div class="tab" id="tDbg">
@@ -1819,6 +1820,10 @@ $('acGen').onclick=async()=>{ if(!acPrepare()) return; acNeed16k(); ac.phase='pr
   tapes[1]=await libTape(0); pun.cards=[]; k.sense.fill(false); k.reset();
   ac.phase='pre'; acMsg('Vorlauf: Verteilband adc00226 auf Einheit 1, BAND LADEN … (druckt die Liste und stanzt das Systemdeck)');
   if(k.tapeLoadKey()){ addrSkip=true; } else acMsg(k.stopMsg); refreshAll(); };
+$('acCards').onclick=()=>{ if(k.running){ acMsg('Erst STOP drücken.'); return; }
+  const cards=kAutocoderCards($('asmSrc').value,(($('exSel').selectedOptions[0]||{}).textContent||'PROGRAMM').replace(/[^A-Za-z0-9 ]/g,' ').trim(),'6611');
+  cards.forEach(l=>rdr.hopper.push(kCard(l))); refreshRdr(); refreshAll();
+  acMsg(cards.length+' Quelltextkarten (Autocoder-Spaltenformat mit JOB- und CTL-Karte) ans Lesermagazin angehängt – siehe Reiter „Karten 1402“.'); };
 $('acAsm').onclick=()=>{ if(!acPrepare()) return;
   const t1=tapes[1]; if(!t1||!t1.recs.length){ acMsg('Auf Einheit 1 liegt kein Systemband – zuerst Schritt 1 ausführen (oder ein gesichertes Systemband einlegen).'); return; }
   if(!t1.acSys&&!confirm('Liegt auf Einheit 1 wirklich ein Autocoder-Systemband („'+t1.name+'“)?')) return;
@@ -1911,7 +1916,87 @@ C       ATTAINED BY A SET OF NUMBERS
   100 FORMAT (3H N=, I3, 6H   N!=, E16.8)
       STOP
       END`,data:''}],
-  C:[{name:'IBM-Beispiel: Gehaltstabelle (Prüfprogramm)',src:null,data:''},
+  C:[{name:'IBM-Beispiel: Gehaltstabelle (Prüfprogramm)',src:`000020 IDENTIFICATION DIVISION.
+000030 PROGRAM-ID. 'SALARIES-IBM-1401-SAMPLE'.
+000040 ENVIRONMENT DIVISION.
+000050 CONFIGURATION SECTION.
+000060 SOURCE-COMPUTER. IBM-1401
+000070     MEMORY SIZE 8000 CHARACTERS
+000080     NO-RELEASE
+000090     NO-PRINT-STORAGE.
+000100 OBJECT-COMPUTER. IBM-1401
+000110     MEMORY SIZE ADDRESS 400 THRU 8000
+000120     NO-OVERLAP
+000130     NO-PRINT-STORAGE.
+000140 INPUT-OUTPUT SECTION.
+000150 FILE-CONTROL.
+000160     SELECT SALARY-FILE
+000170     ASSIGN 1403-P.
+000180 DATA DIVISION.
+000190 FILE SECTION.
+000200 FD  SALARY-FILE
+000210     LABEL RECORDS ARE OMITTED
+000220     DATA RECORD IS SALARY-RECORD.
+000230 01  SALARY-RECORD SIZE IS 100 ALPHANUMERIC DISPLAY CHARACTERS.
+000240 WORKING-STORAGE SECTION.
+000250 77  TOTAL-A        PICTURE 9(6)V99 VALUE ZERO.
+000260 77  TOTAL-B        PICTURE 9(6)V99 VALUE ZERO.
+000270 77  TOTAL-C        PICTURE 9(6)V99 VALUE ZERO.
+000280 77  WEEKLY-PAY     PICTURE 999V99.
+000290 77  MONTHLY-PAY    PICTURE 9999V99.
+000300 77  ANNUAL-PAY     PICTURE 99999V99.
+000310 01  SALARIES.
+000320     02 FILLER      PICTURE A(46)    VALUE SPACE.
+000330     02 WEEKLY      PICTURE ZZZ.99.
+000340     02 FILLER      PICTURE AAA      VALUE SPACE.
+000350     02 MONTHLY     PICTURE ZZZZ.99.
+000360     02 FILLER      PICTURE AAA      VALUE SPACE.
+000370     02 ANNUAL      PICTURE ZZZZZ.99.
+000380     02 FILLER      PICTURE A(27)    VALUE SPACE.
+000390 CONSTANT SECTION.
+000400 77  CON-A  PICTURE 9(6)V99    VALUE IS 008826.69.
+000410 77  CON-B  PICTURE 9(6)V99    VALUE IS 038250.00.
+000420 77  CON-C  PICTURE 9(6)V99    VALUE IS 459000.00.
+000430  1  MESG.
+000440  2  FILLER SIZE 40 ALPHABETIC CHARACTERS  VALUE IS SPACES.
+000450  2  SHOW   SIZE 26 ALPHABETIC CHARACTERS.
+000460  1  DSPY.
+000470  2  FILLER SIZE 40 ALPHABETIC CHARACTERS  VALUE IS SPACES.
+000480  2  PRSNT  SIZE 33 ALPHABETIC CHARACTERS.
+000490  1  HEADING.
+000500  2  FILLER  SIZE 46 ALPHABETIC CHARACTERS   VALUE IS SPACES.
+000510  2  WEEKLY  SIZE  6 ALPHABETIC     VALUE IS 'WEEKLY'.
+000520  2  FILLER  SIZE  3 ALPHABETIC              VALUE IS SPACES.
+000530  2  MONTHLY SIZE  7 ALPHABETIC     VALUE IS 'MONTHLY'.
+000540  2  FILLER  SIZE  3 ALPHABETIC              VALUE IS SPACES.
+000550  2  ANNUAL  SIZE  6 ALPHABETIC     VALUE IS 'ANNUAL'.
+000560  2  FILLER  SIZE 29 ALPHABETIC              VALUE IS SPACES.
+000570 PROCEDURE DIVISION.
+000580 START. OPEN OUTPUT SALARY-FILE.
+000590     WRITE SALARY-RECORD FROM HEADING BEFORE ADVANCING 2 LINES.
+000600     PERFORM CALCULATIONS
+000610     VARYING  MONTHLY-PAY
+000620     FROM 500
+000630     BY   10
+000640     UNTIL MONTHLY-PAY IS GREATER THAN 1000.
+000650     IF TOTAL-A = CON-A AND TOTAL-B = CON-B AND TOTAL-C = CON-C
+000660     MOVE 'TABLE VALUES ARE CORRECT' TO SHOW
+000670     WRITE SALARY-RECORD FROM MESG AFTER ADVANCING 2 LINES
+000680     ELSE
+000690     MOVE 'TABLE VALUES ARE NOT CORRECT' TO PRSNT
+000700     WRITE SALARY-RECORD FROM DSPY AFTER ADVANCING 2 LINES.
+000710     CLOSE SALARY-FILE.
+000720     STOP RUN.
+000730 CALCULATIONS.
+000740     COMPUTE WEEKLY-PAY = 3 * MONTHLY-PAY / 13
+000750     COMPUTE ANNUAL-PAY = 12 * MONTHLY-PAY
+000760     MOVE WEEKLY-PAY TO WEEKLY IN SALARIES
+000770     MOVE MONTHLY-PAY TO MONTHLY IN SALARIES
+000780     MOVE ANNUAL-PAY TO ANNUAL IN SALARIES
+000790     ADD WEEKLY-PAY TO TOTAL-A
+000800     ADD MONTHLY-PAY TO TOTAL-B
+000810     ADD ANNUAL-PAY TO TOTAL-C
+000820     WRITE SALARY-RECORD FROM SALARIES.`,data:''},
    {name:'Einmaleins-Zeile',src:`000010 IDENTIFICATION DIVISION.
 000020 PROGRAM-ID. 'EINMALEINS'.
 000030 ENVIRONMENT DIVISION.
@@ -1955,8 +2040,6 @@ function lgFillEx(){ const L=lgLang(); $('lgEx').textContent=''; LG_EX[L].forEac
   $('lgRun').innerHTML=L==='F'?'<b>2.</b> Übersetzen, laden und ausführen':'<b>2.</b> Übersetzen (COBOL → Autocoder → Objektdeck) und ausführen';
   $('lgHelpF').style.display=L==='F'?'':'none'; $('lgHelpC').style.display=L==='C'?'':'none'; }
 function lgLoadEx(i){ const e=LG_EX[lgLang()][i]; let src=e.src;
-  if(src===null){ if(!lg.cSample){ lgMsg('Das IBM-Beispiel steht auf dem COBOL-Band – es wird bei Schritt 1 gestanzt und danach hier eingesetzt.'); src=''; }
-    else src=lg.cSample.map(c=>kB2A(c,true).slice(0,72).replace(/\s+$/,'')).join('\n'); }
   $('lgSrc').value=src; $('lgData').value=e.data; }
 $('lgSel').onchange=()=>{ lgFillEx(); lgLoadEx(0); };
 $('lgExLoad').onclick=()=>lgLoadEx(+$('lgEx').value);
@@ -1964,6 +2047,13 @@ $('lgSaveSrc').onclick=()=>download(lgLang()==='F'?'programm.f':'programm.cbl',$
 $('lgFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('lgSrc').value=(await f.text()).replace(/\r/g,''); e.target.value=''; };
 lgFillEx(); lgLoadEx(0);
 
+/* Kartenstapel aus dem Textfeld: FORTRAN mit Steuerkarten, COBOL mit RUN-Karte (eigene Steuerkarten werden übernommen) */
+function lgDeck(){ const src=lgLines('lgSrc'), data=$('lgData').value.trim()?lgLines('lgData'):[];
+  if(lgLang()==='F') return src.some(l=>/^ {5}FORTRAN {3}RUN/.test(l))?src:['     FORTRAN   RUN',...src,'     LOADER    RUN','$EXECUTION',...data,'               HALT  ENDE DES LAUFS'];
+  return src.some(l=>/^.{5}COBOL {5}RUN/.test(l))?src:['     COBOL     RUN',...src]; }
+$('lgCards').onclick=()=>{ if(k.running){ lgMsg('Erst STOP drücken.'); return; } const d=lgDeck();
+  d.forEach(l=>rdr.hopper.push(kCardH(l.toUpperCase()))); refreshRdr(); refreshAll();
+  lgMsg(d.length+' Karten ans Lesermagazin angehängt'+(lgLang()==='F'?' (FORTRAN RUN · Quelle · LOADER RUN · $EXECUTION · Daten · HALT)':' (COBOL RUN · Quelle)')+' – siehe Reiter „Karten 1402“. Schritt 2 legt den Stapel selbst neu ein.'); };
 /* Schritt 1 */
 $('lgGen').onclick=async()=>{ if(!lgPrep()) return; ac.phase=lgLang()==='F'?'f0':'c0'; pun.cards=[]; k.sense.fill(false); k.startReset();
   if(lgLang()==='F'){ tapes[1]=await libTape(1); for(const u of [2,3,4,5,6]) tapes[u]=scratch(); lg.seg=[];
@@ -1976,17 +2066,15 @@ $('lgGen').onclick=async()=>{ if(!lgPrep()) return; ac.phase=lgLang()==='F'?'f0'
 /* Schritt 2 */
 $('lgRun').onclick=()=>{ if(!lgPrep()) return;
   const src=lgLines('lgSrc'), data=$('lgData').value.trim()?lgLines('lgData'):[];
+  const deck=lgDeck();
   if(lgLang()==='F'){ const t=lg.fsys||(tapes[1]&&tapes[1].fSys?tapes[1]:null);
     if(!t){ lgMsg('Kein FORTRAN-Systemband – zuerst Schritt 1 ausführen (oder ein gesichertes Systemband auf Einheit 1 einlegen und dort als FORTRAN-System markieren lassen).'); return; }
-    lg.fsys=t; const full=src.some(l=>/^ {5}FORTRAN {3}RUN/.test(l));
-    const deck=full?src:['     FORTRAN   RUN',...src,'     LOADER    RUN','$EXECUTION',...data,'               HALT  ENDE DES LAUFS'];
+    lg.fsys=t;
     rdr.hopper=deck.map(l=>kCardH(l.toUpperCase())); rdr.stacked=0; pun.cards=[];
     tapes[1]=t; t.pos=0; t.loaded=true; for(const u of [2,3,4,5,6]) tapes[u]=scratch();
     k.sense.fill(false); k.startReset(); ac.phase='fr';
     lgMsg('FORTRAN: '+deck.length+' Karten (FORTRAN RUN, Quelle, LOADER RUN, $EXECUTION, Daten, HALT) im Leser, Systemband auf 1, Arbeitsbänder 2–6, BAND LADEN …'); lgTapeLoad(); return; }
   if(!lg.cproc||!lg.acob){ lgMsg('COBOL-System fehlt – zuerst Schritt 1 ausführen.'); return; }
-  const full=src.some(l=>/^.{5}COBOL {5}RUN/.test(l));
-  const deck=full?src:['     COBOL     RUN',...src];
   rdr.hopper=deck.map(l=>kCardH(l.toUpperCase())); rdr.stacked=0; pun.cards=[]; lg.cData=data;
   tapes[1]=lg.cproc; lg.cproc.pos=0; for(const u of [2,3,4,5,6]) tapes[u]=scratch();
   k.sense.fill(false); k.sense[0]=true; k.sense[2]=true; k.startReset(); ac.phase='cc';
@@ -2023,7 +2111,6 @@ function lgOnStop(){
       lgMsg('COBOL 3/3: Autocoder-Band auf 1, leeres Band auf 6, Unterprogramme (>4K, '+subs.length+' Karten) im Leser, Schalter A und F, BAND LADEN …'); return lgTapeLoad(); }
     if(halt) return lgGo(m); }
   if(p==='c3'){ if(halt&&k.B===122){ lg.acob=tapes[6]; lg.acob.acSys=true; lg.acob.pos=0; k.sense.fill(false);
-      if(lgLang()==='C'&&!$('lgSrc').value.trim()) lgLoadEx(0);
       return done('Fertig: COBOL-Prozessorband (Einheit 2 → '+lg.cproc.recs.length+' Sätze) und Autocoder mit COBOL-Bibliothek ('+lg.acob.recs.length+' Sätze) liegen bereit. Weiter mit Schritt 2.'); }
     if(halt) return lgGo(m); }
   if(p==='cc'){ if(halt&&at==='2877'){ const out=tapes[4]; if(!out.recs.length) return done('COBOL: keine Autocoder-Ausgabe auf Band 4 – siehe Fehlermeldungen in der Liste.');
