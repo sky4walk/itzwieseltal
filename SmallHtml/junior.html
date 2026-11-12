@@ -1,0 +1,2259 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Junior-Werkbank</title>
+<style>
+:root {
+  --bg: #15171a; --panel: #1f2328; --panel2: #262b31; --line: #3a414a;
+  --text: #d6d9dc; --dim: #8b939c; --accent: #e8b44c; --ok: #6fcf7a; --bad: #ff6b5a;
+  --led: #ff2a14; --mono: 'Courier New', ui-monospace, monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  font-size: 14px; padding: 16px; min-height: 100vh; }
+h1 { font-size: 20px; letter-spacing: 1px; }
+h1 small { color: var(--dim); font-weight: normal; font-size: 13px; margin-left: 8px; }
+header { max-width: 1240px; margin: 0 auto 12px; display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: 8px; }
+#wrap { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: 430px 1fr; gap: 16px; align-items: start; }
+#wrap > div { min-width: 0; }
+@media (max-width: 960px) { #wrap { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 480px) { body { padding: 8px; } #board { padding: 12px 10px; } #disp { padding: 10px 6px; } #disp .gap { width: 8px; } #keypad { gap: 7px; padding: 4px 2px; } }
+
+/* ---------- Junior-Frontplatte ---------- */
+#board { background: linear-gradient(160deg, #2b2f2c 0%, #222623 60%, #1c1f1c 100%);
+  border: 2px solid #4a4f48; border-radius: 10px; padding: 18px 18px 14px;
+  box-shadow: 0 10px 30px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06); }
+.brand { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.brand b { font-family: var(--mono); letter-spacing: 5px; color: #e6dcc0; font-size: 18px; }
+.brand span { font-family: var(--mono); color: #9c937a; font-size: 11px; letter-spacing: 2px; }
+#disp { background: #1a0504; border: 2px solid #000; border-radius: 6px; padding: 12px 10px 10px;
+  box-shadow: inset 0 3px 12px rgba(0,0,0,.9); display: flex; justify-content: center; gap: 4px; }
+#disp .gap { width: 16px; }
+#disp svg { width: min(46px, 11.5vw); height: auto; aspect-ratio: 46 / 74; }
+#disp polygon { fill: var(--led); }
+#disp .dp { fill: var(--led); }
+.dlabels { display: flex; justify-content: space-around; font-family: var(--mono); font-size: 10px; color: #8a8270;
+  letter-spacing: 3px; margin: 4px 0 12px; padding: 0 20px; }
+#switches { display: flex; gap: 18px; justify-content: center; margin-bottom: 12px; }
+.sw { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; user-select: none;
+  font-family: var(--mono); font-size: 10px; color: #bdb59c; letter-spacing: 1px; background: none; border: none; }
+.sw .slot { width: 22px; height: 40px; background: #0d0e0d; border-radius: 4px; border: 1px solid #555; position: relative; }
+.sw .lever { position: absolute; left: 3px; width: 14px; height: 18px; border-radius: 3px;
+  background: linear-gradient(#e0e0e0, #8d8d8d); top: 19px; transition: top .12s; }
+.sw.on .lever { top: 2px; }
+.sw small { color: #7d7663; }
+#keypad { display: grid; grid-template-columns: repeat(4, 1fr); gap: 9px; padding: 4px 10px 2px; }
+.key { height: 50px; border-radius: 6px; border: 1px solid #111; cursor: pointer; user-select: none; -webkit-user-select: none;
+  font-family: var(--mono); font-weight: bold; font-size: 17px; color: #222;
+  background: linear-gradient(#f1efe8, #c8c4b8); box-shadow: 0 3px 0 #6f6b62, 0 4px 6px rgba(0,0,0,.4);
+  position: relative; touch-action: none; }
+.key.fn { background: linear-gradient(#5d6670, #3a4148); color: #f1f1f1; box-shadow: 0 3px 0 #1e2327, 0 4px 6px rgba(0,0,0,.4); font-size: 15px; }
+.key.red { background: linear-gradient(#c8473a, #8f2a22); color: #fff; box-shadow: 0 3px 0 #4f150f, 0 4px 6px rgba(0,0,0,.4); }
+.key.down { transform: translateY(3px); box-shadow: 0 0 0 #000, 0 1px 2px rgba(0,0,0,.4); }
+.key .kled { position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: #3a0d08; }
+.key .kled.on { background: #ff3b20; box-shadow: 0 0 6px #ff3b20; }
+.key .sub { position: absolute; bottom: 3px; left: 0; right: 0; font-size: 8px; font-weight: normal; letter-spacing: 1px; opacity: .75; }
+.keyspacer { grid-column: span 1; }
+#boardstatus { display: flex; justify-content: space-between; margin-top: 12px; font-family: var(--mono); font-size: 11px; color: #a9a28c; }
+#boardstatus .pwr::before { content: '●'; color: #3cff6a; margin-right: 4px; text-shadow: 0 0 5px #3cff6a; }
+
+/* ---------- Werkbank ---------- */
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; margin-bottom: 12px; }
+.card > summary { cursor: pointer; padding: 9px 12px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
+.card > summary::after { content: '▸'; color: var(--dim); }
+.card[open] > summary::after { content: '▾'; }
+.card > summary::-webkit-details-marker { display: none; }
+.cbody { padding: 4px 12px 12px; }
+.row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 8px; }
+button.b, label.b, select, input[type=text] { background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+  border-radius: 5px; padding: 5px 9px; font-size: 13px; font-family: inherit; }
+input[type=text] { font-family: var(--mono); width: 70px; }
+input[type=text].wide { width: 220px; }
+button.b, label.b { cursor: pointer; }
+label.b { display: inline-block; }
+button.b:hover, label.b:hover { border-color: var(--accent); }
+.cbody select { max-width: 100%; text-overflow: ellipsis; }
+.cbody .row > * { min-width: 0; }
+button.b.on { background: #4a3a14; border-color: var(--accent); color: #ffe2a3; }
+.mono { font-family: var(--mono); font-size: 13px; }
+.dim { color: var(--dim); }
+#status { font-family: var(--mono); padding: 3px 8px; border-radius: 4px; background: #11331a; color: var(--ok); }
+#status.paused { background: #3a2a0d; color: var(--accent); }
+#status.halt { background: #3d1612; color: var(--bad); }
+.regs { display: grid; grid-template-columns: repeat(6, auto); gap: 4px 10px; align-items: center; justify-content: start; margin-bottom: 8px; }
+.regs label { color: var(--dim); font-family: var(--mono); font-size: 12px; }
+.regs input { width: 52px; }
+.flags { display: flex; gap: 4px; }
+.flag { width: 24px; height: 24px; border-radius: 4px; border: 1px solid var(--line); background: var(--panel2);
+  font-family: var(--mono); font-size: 12px; color: var(--dim); cursor: pointer; }
+.flag.on { background: #26421f; color: #b9f5a9; border-color: #4c8a3e; }
+.split { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 700px) { .split { grid-template-columns: 1fr; } }
+#dis { font-family: var(--mono); font-size: 13px; background: #121417; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.dl { display: grid; grid-template-columns: 18px 44px 74px 1fr; padding: 1px 6px; white-space: pre; cursor: default; }
+.dl:hover { background: #1c2026; }
+.dl .bp { cursor: pointer; color: #555; text-align: center; }
+.dl .bp.set { color: var(--bad); }
+.dl.cur { background: #3a3110; }
+.dl .sym { color: #7fb5ff; }
+.dl .cm { color: #6a737d; }
+.dl .lab { color: #c792ea; }
+#mem { font-family: var(--mono); font-size: 12.5px; background: #121417; border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px 8px; white-space: pre; overflow-x: auto; line-height: 1.45; }
+#mem .hl { background: #4a3a14; color: #ffe2a3; }
+#mem .pc { background: #3a1f1a; color: #ffb3a7; }
+#mem .ad { color: var(--dim); }
+#mem .as { color: #6a737d; }
+.kv { font-family: var(--mono); font-size: 12.5px; line-height: 1.6; }
+.kv b { color: var(--accent); font-weight: normal; }
+#bplist span { display: inline-flex; gap: 4px; align-items: center; background: #3d1612; border: 1px solid #6b2a22;
+  border-radius: 4px; padding: 1px 6px; font-family: var(--mono); font-size: 12px; margin: 2px; }
+#bplist span button { background: none; border: none; color: #ffb3a7; cursor: pointer; }
+#info { background: #1a1d21; border-left: 3px solid var(--accent); padding: 8px 10px; border-radius: 4px; line-height: 1.5; margin-top: 6px; display: none; }
+.help p, .help li { line-height: 1.55; margin-bottom: 6px; }
+.help ul { padding-left: 18px; }
+.help table { border-collapse: collapse; margin: 6px 0 10px; font-size: 13px; }
+.help td, .help th { border: 1px solid var(--line); padding: 3px 8px; text-align: left; }
+.help code, .help kbd { font-family: var(--mono); background: #121417; padding: 0 4px; border-radius: 3px; }
+/* ---------- Interface-Platine ---------- */
+.deck { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; background: #121417; border: 1px solid var(--line);
+  border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.reels { display: flex; gap: 6px; }
+.reel { width: 30px; height: 30px; border-radius: 50%; border: 3px solid #555; position: relative; background: #1d2024; }
+.reel::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: #555; }
+.reel::before { content: ''; position: absolute; left: 12px; top: 2px; width: 2px; height: 22px; background: #555; }
+.deck.play .reel, .deck.rec .reel { animation: spin 1.2s linear infinite; }
+.deck.idle .reel { animation-play-state: paused; }
+.deck.rec .reel { border-color: #b33; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#tape-count { font-family: var(--mono); font-size: 15px; color: var(--accent); min-width: 120px; }
+#tape-led { width: 10px; height: 10px; border-radius: 50%; background: #2a2f35; display: inline-block; }
+#tape-led.on { background: #ffb020; box-shadow: 0 0 6px #ffb020; }
+.rled, .gled { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: #2a2f35; vertical-align: middle; }
+.rled.on { background: #ff3b20; box-shadow: 0 0 6px #ff3b20; } .gled.on { background: #3cff6a; box-shadow: 0 0 6px #3cff6a; }
+#term { background: #0b1a0d; color: #7dff8a; font-family: var(--mono); font-size: 13px; line-height: 1.35; height: 230px;
+  overflow-y: auto; white-space: pre-wrap; word-break: break-all; padding: 8px 10px; border-radius: 6px; border: 1px solid #234a28; outline: none; }
+#term:focus { border-color: #5bd36a; box-shadow: 0 0 0 1px #5bd36a; }
+#term .cur { background: #7dff8a; color: #0b1a0d; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { background: transparent; color: #7dff8a; } }
+#term .ln { min-height: 1.35em; }
+/* Elekterminal: SFF96364-Bildschirm, 16 × 64 Großbuchstaben, Schwarzweiß-Fernseher */
+#termwrap.elek { background: #2a2c2e; border-radius: 22px; padding: 18px; box-shadow: inset 0 0 0 2px #46494c, 0 6px 18px rgba(0,0,0,.5); }
+#termwrap.elek #term { height: auto; overflow: hidden; white-space: pre; word-break: normal; background: radial-gradient(ellipse at center, #1b1d1f 0%, #0b0c0d 75%, #050506 100%);
+  color: #e9efe9; border: none; border-radius: 26px / 20px; padding: 18px 22px; line-height: 1.32; letter-spacing: .04em;
+  text-shadow: 0 0 3px rgba(225,240,225,.85), 0 0 9px rgba(190,220,200,.35); position: relative; font-weight: bold; }
+#termwrap.elek #term::after { content: ''; position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,.28) 3px); }
+#termwrap.elek #term .cur { background: #e9efe9; color: #0b0c0d; }
+#termwrap.elek #term:focus { box-shadow: 0 0 0 2px #8a9; }
+/* Drucker: Endlospapier mit Führungslöchern und grünen Streifen */
+#paper { background: #f6f3e8; color: #23262a; font-family: 'Courier New', ui-monospace, monospace; font-size: 12.5px; line-height: 16px;
+  white-space: pre; overflow: auto; max-height: 320px; border-radius: 3px; padding: 8px 34px; position: relative;
+  background-image: radial-gradient(circle at 13px 8px, #1f2328 4px, transparent 4.5px), radial-gradient(circle at calc(100% - 13px) 8px, #1f2328 4px, transparent 4.5px),
+    repeating-linear-gradient(to bottom, #dfeedd 0, #dfeedd 48px, #f6f3e8 48px, #f6f3e8 96px);
+  background-size: 100% 16px, 100% 16px, 100% 96px; background-attachment: local; }
+#paper .ov { margin-left: -1ch; }
+/* ---------- Bus-Erweiterung ---------- */
+#busgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 6px; margin-bottom: 8px; }
+.bblk { background: #121417; border: 1px solid var(--line); border-radius: 6px; padding: 5px 6px; display: flex; flex-direction: column; gap: 4px; }
+.bblk.ram { border-color: #3f6b3a; } .bblk.eprom { border-color: #7a5a1c; } .bblk.off { opacity: .4; }
+.bblk b { font-family: var(--mono); font-size: 12px; font-weight: normal; color: var(--dim); }
+.bblk.ram b { color: var(--ok); } .bblk.eprom b { color: var(--accent); }
+.bblk select { padding: 3px 4px; font-size: 12px; }
+.bblk .bb { display: flex; gap: 4px; }
+.bblk .bb .b { padding: 2px 6px; font-size: 11px; white-space: nowrap; }
+#bus-msg { line-height: 1.5; }
+#bus-msg .warn { color: var(--bad); }
+/* ---------- Port-Stecker ---------- */
+.pswitches { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; background: #121417; border: 1px solid var(--line);
+  border-radius: 6px; padding: 8px 10px; margin-bottom: 8px; }
+.pswitches .sw { color: var(--dim); }
+.pswitches .sw .slot { height: 34px; }
+.pswitches .sw .lever { top: 14px; }
+.pswitches .sw.on .lever { top: 2px; background: linear-gradient(#ffe2a3, #c08a20); }
+#piano { position: relative; height: 128px; max-width: 460px; background: #0d0e10; border: 1px solid var(--line); border-radius: 6px;
+  padding: 6px; margin-bottom: 8px; outline: none; user-select: none; -webkit-user-select: none; touch-action: none; }
+#piano:focus { border-color: var(--accent); }
+#piano .wk, #piano .bk { position: absolute; border-radius: 0 0 5px 5px; cursor: pointer; display: flex; flex-direction: column;
+  justify-content: flex-end; align-items: center; font-family: var(--mono); font-size: 10px; padding-bottom: 5px; }
+#piano .wk { top: 6px; bottom: 6px; background: linear-gradient(#f3f1ea, #d3cfc4); color: #333; border: 1px solid #222; }
+#piano .bk { top: 6px; height: 62%; background: linear-gradient(#3a3d42, #111); color: #ddd; border: 1px solid #000; z-index: 2; }
+#piano .wk.down { background: linear-gradient(#ffe2a3, #e8b44c); }
+#piano .bk.down { background: linear-gradient(#a07a2a, #6a4c10); }
+#piano small { opacity: .65; font-size: 9px; }
+.subhead { color: var(--dim); font-size: 12px; letter-spacing: 1px; text-transform: uppercase; margin: 12px 0 6px; }
+footer { max-width: 1240px; margin: 18px auto 0; color: var(--dim); font-size: 12.5px; line-height: 1.6; border-top: 1px solid var(--line); padding-top: 10px; }
+footer a, .help a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Junior-Werkbank <small>Elektor Junior Computer (1980) · 6502 · 6532 RIOT · 1 KB RAM · 1 KB Monitor</small></h1>
+  <span id="status">RUN</span>
+</header>
+
+<div id="wrap">
+<!-- ===================== Frontplatte ===================== -->
+<div>
+  <div id="board">
+    <div class="brand"><b>JUNIOR</b><span>ELEKTOR · COMPUTER</span></div>
+    <div id="disp"></div>
+    <div class="dlabels"><span>ADRESSE</span><span>DATEN</span></div>
+    <div id="switches">
+      <button class="sw" id="sw-step" title="S24: Einzelschritt (Taste S)"><div class="slot"><div class="lever"></div></div>STEP<small>S24</small></button>
+      <button class="sw on" id="sw-disp" title="S25: Anzeige ein/aus"><div class="slot"><div class="lever"></div></div>DISPLAY<small>S25</small></button>
+    </div>
+    <div id="keypad"></div>
+    <div id="boardstatus"><span class="pwr">+5 V</span><span id="cyc">0 Takte</span></div>
+  </div>
+  <div id="info"></div>
+</div>
+
+<!-- ===================== Werkbank ===================== -->
+<div>
+  <details class="card" open>
+    <summary>Debugger</summary>
+    <div class="cbody">
+      <div class="row">
+        <button class="b" id="b-run">▶ Lauf</button>
+        <button class="b" id="b-pause">⏸ Halt</button>
+        <button class="b" id="b-step" title="Einen Befehl ausführen (F10)">Schritt</button>
+        <button class="b" id="b-over" title="JSR als Ganzes ausführen (F11)">Schritt über</button>
+        <button class="b" id="b-out" title="Bis zum nächsten RTS/RTI">Bis Rücksprung</button>
+        <select id="speed" title="Taktfrequenz">
+          <option value="10000">10 kHz</option>
+          <option value="100000">100 kHz</option>
+          <option value="500000">500 kHz</option>
+          <option value="1000000" selected>1 MHz (Original)</option>
+          <option value="2000000">2 MHz</option>
+          <option value="8000000">8 MHz</option>
+        </select>
+      </div>
+      <div class="regs" id="regs">
+        <label>PC</label><input type="text" id="r-PC">
+        <label>A</label><input type="text" id="r-A">
+        <label>X</label><input type="text" id="r-X">
+        <label>SP</label><input type="text" id="r-SP">
+        <label>Y</label><input type="text" id="r-Y">
+        <label>P</label><div class="flags" id="flags"></div>
+      </div>
+      <div class="split">
+        <div>
+          <div class="row"><span class="dim">Disassembler ab</span>
+            <input type="text" id="dis-addr" value="PC" title="Adresse oder PC">
+            <label class="dim"><input type="checkbox" id="dis-follow" checked> PC folgen</label></div>
+          <div id="dis"></div>
+        </div>
+        <div>
+          <div class="row"><span class="dim">Breakpoint</span><input type="text" id="bp-addr" placeholder="0200">
+            <button class="b" id="bp-add">setzen</button><button class="b" id="bp-clear">alle löschen</button></div>
+          <div id="bplist" class="dim">keine</div>
+          <div class="row" style="margin-top:10px"><span class="dim">Monitor (Seite 0)</span></div>
+          <div class="kv" id="monstate"></div>
+          <div class="row" style="margin-top:10px"><span class="dim">6532 RIOT</span></div>
+          <div class="kv" id="riotstate"></div>
+        </div>
+      </div>
+    </div>
+  </details>
+
+  <details class="card" open>
+    <summary>Speicher</summary>
+    <div class="cbody">
+      <div class="row"><span class="dim">ab</span><input type="text" id="mem-addr" value="0200">
+        <button class="b" data-m="0000">Seite 0</button><button class="b" data-m="0100">Stack</button>
+        <button class="b" data-m="0200">0200</button><button class="b" data-m="1A00">RIOT</button>
+        <button class="b" data-m="1C00">Monitor</button><button class="b" data-m="2000" title="Busspeicher (mit Bus-Erweiterung)">2000</button><button class="b" data-m="FFF0">FFF0</button></div>
+      <div id="mem"></div>
+      <div class="row" style="margin-top:8px"><span class="dim">Schreiben</span>
+        <input type="text" class="wide" id="poke" placeholder="0200: A9 01 85 10">
+        <button class="b" id="poke-go">eintragen</button></div>
+    </div>
+  </details>
+
+  <details class="card" open>
+    <summary>Programme &amp; Dateien</summary>
+    <div class="cbody">
+      <div class="row"><span class="dim">Beispiel</span><select id="demo"></select><button class="b" id="demo-load">laden</button></div>
+      <div class="row"><span class="dim">Datei laden</span>
+        <input type="file" id="file" accept=".bin,.hex,.ihx,.ptp,.txt,.obj" style="max-width:230px">
+        <span class="dim">Binär an</span><input type="text" id="load-addr" value="0200"></div>
+      <div class="row"><span class="dim">Speichern von</span><input type="text" id="sv-from" value="0200">
+        <span class="dim">bis</span><input type="text" id="sv-to" value="03FF">
+        <button class="b" id="sv-bin">Binär</button><button class="b" id="sv-hex">Intel-HEX</button><button class="b" id="sv-txt">Hexdump</button></div>
+      <div class="row"><label class="dim"><input type="checkbox" id="opt-vec" checked> NMI/IRQ-Vektoren ($1A7A/$1A7E) bei RST auf $1C00 setzen</label></div>
+      <div class="row"><label class="dim"><input type="checkbox" id="opt-ext"> Speichererweiterung K1–K5 ($0400–$17FF) als RAM</label></div>
+      <div class="row"><span class="dim">Monitor-ROM</span><span class="mono" id="rom-info"></span>
+        <label class="b" style="cursor:pointer" for="romfile">eigenes ROM (1 KB) …</label>
+        <input type="file" id="romfile" accept=".bin,.rom,.obj,.hex" style="display:none">
+        <button class="b" id="rom-orig">Original</button></div>
+    </div>
+  </details>
+
+  <details class="card" open>
+    <summary>Interface-Platine</summary>
+    <div class="cbody">
+      <div class="row"><label class="dim"><input type="checkbox" id="opt-iface" checked> eingesteckt: 1 KB RAM $0400, Tape-Monitor (TM) $0800, Printer-Monitor (PM) $1000, 6522 VIA $1800</label></div>
+      <div class="row"><span class="dim">PM-EPROM (IC5)</span>
+        <select id="opt-pm"><option value="1" selected>ESS507N: PM + PM-Editor PME ($1000–$17FF)</option><option value="0">ESS507: nur PM ($1000–$14F3)</option></select></div>
+      <div class="row"><span class="dim">STEP-Sperre (Aufsteckplatine, N5)</span>
+        <select id="opt-steplock"><option value="0">nur K7 – Monitor (Buch 1)</option><option value="1" selected>K4/K5 + K7 – Umbau für PM-Einzelschritt (Buch 3)</option><option value="2">K4–K7 – auch K6 (dezimales Rechnen)</option></select></div>
+      <div class="subhead">Kassettenrekorder · PB7</div>
+      <div class="deck" id="deck">
+        <div class="reels"><div class="reel"></div><div class="reel"></div></div>
+        <span id="tape-count">000.0 s / 000.0 s</span>
+        <span id="tape-led" title="PB7-Pegel"></span>
+        <button class="b" id="t-rec" title="Aufnahme ab Bandposition">⏺ Aufnahme</button>
+        <button class="b" id="t-play">▶ Wiedergabe</button>
+        <button class="b" id="t-stop">⏹ Stopp</button>
+        <button class="b" id="t-rew">⏮ Anfang</button>
+        <span class="mono" title="Re2 / PB5"><span class="rled" id="led-out"></span> OUTPUT ON</span>
+        <span class="mono" title="Re1 / PB6"><span class="gled" id="led-in"></span> INPUT ON</span>
+      </div>
+      <div class="row"><label class="dim"><input type="checkbox" id="opt-relay" checked> Motor über Relais Re1/Re2 (Fernbedienung) – sonst Handbetrieb, Band läuft sofort</label></div>
+      <div class="row">
+        <label class="b" for="t-wavfile">WAV laden …</label><input type="file" id="t-wavfile" accept=".wav,audio/*" style="display:none">
+        <button class="b" id="t-wav">als WAV speichern</button>
+        <button class="b" id="t-clear">Band löschen</button>
+        <button class="b" id="t-scan">Band auswerten</button>
+      </div>
+      <div class="row"><span class="dim">Speicher direkt aufs Band: ID</span><input type="text" id="t-id" value="01" style="width:42px">
+        <span class="dim">von</span><input type="text" id="t-from" value="0200"><span class="dim">bis (exkl.)</span><input type="text" id="t-to" value="0300">
+        <button class="b" id="t-enc">schreiben</button><button class="b" id="t-dec" title="Alle Sätze sofort in den Speicher laden">Band direkt laden</button></div>
+      <div class="subhead">Terminal · RS-232 (RxD = PA7, TxD = PB0)</div>
+      <div class="row">
+        <select id="baud"><option>300</option><option>600</option><option selected>1200</option><option>2400</option><option>4800</option></select>
+        <span class="dim">Baud, 8N2</span>
+        <label class="dim" title="Schalter S1 des Elekterminals: Half Duplex zeigt jede Taste sofort selbst an (Hardware-Echo), Full Duplex nur, was der Junior zurückschickt"><input type="checkbox" id="echo" checked> Half Duplex (Hardware-Echo)</label>
+        <button class="b" id="term-del" title="DEL: Baudratenerkennung des PM">DEL senden</button>
+        <button class="b" id="term-brk" title="BREAK: Empfangsleitung kurz auf Space – bricht eine PM-Ausgabe ab">BREAK</button>
+        <button class="b" id="term-clr">leeren</button>
+        <button class="b" id="term-pm" title="RST, PM ab $1000 starten, DEL senden">PM starten</button>
+      </div>
+      <div class="row"><span class="dim">Bildschirm</span>
+        <select id="term-look"><option value="modern" selected>modern – fortlaufend mit Rückblick</option><option value="elek">Elekterminal – 16 Zeilen × 64 Zeichen am Fernseher</option></select>
+        <button class="b" id="term-save" title="Bildschirminhalt als Textdatei">als Text speichern</button></div>
+      <div id="termwrap"><div id="term" tabindex="0" title="Hier klicken und tippen"></div></div>
+      <div class="subhead">Drucker · am RS-232-Ausgang mitgeschaltet</div>
+      <div class="row"><label class="dim"><input type="checkbox" id="prn-on"> Drucker eingeschaltet (80 Spalten, druckt Ausgabe und – bei Half Duplex – die Tastenanschläge)</label></div>
+      <div class="row" id="prn-tools" style="display:none"><button class="b" id="prn-tear">Papier abreißen</button><button class="b" id="prn-save">als Text speichern</button>
+        <span class="dim" id="prn-info"></span></div>
+      <div id="paper" style="display:none"></div>
+    </div>
+  </details>
+
+  <details class="card" id="buscard">
+    <summary>Bus-Erweiterung (Buch 3)</summary>
+    <div class="cbody">
+      <p class="dim" style="margin-bottom:8px;line-height:1.5">Die Basiskarte wertet A13–A15 nicht aus – jede Adresse hat acht Doppelgänger. Für Busspeicherkarten oberhalb von $1FFF
+        wird Eingang D des Adressdecoders IC6 per Drahtbrücke an EX gelegt (Buch 3, Kap. 10). RAM/EPROM-Karte (EPS 80120): je Karte bis 8 K RAM (16 × 2114) und bis zu vier EPROMs, Hauptdecoder IC5 wählt 4-K-Blöcke.</p>
+      <div class="row"><span class="dim">Decodierung</span>
+        <select id="bus-mode">
+          <option value="0" selected>unvollständig – Grundausstattung, 8 K gespiegelt</option>
+          <option value="1">vollständig – Brücke D→EX, Buskarte an der Interface-Platine</option>
+          <option value="2">eine RAM/EPROM-Karte direkt an der Basiskarte (Anhang 1)</option>
+        </select></div>
+      <div class="row" id="bus-vecrow"><span class="dim">PROM IC17, Eingang E</span>
+        <select id="bus-vec">
+          <option value="1" selected>Brücke R-S: mit Busspeicher, Vektoren aus Seite FF</option>
+          <option value="0">Brücke R-T: ohne Busspeicher, Vektoren aus dem Basis-EPROM</option>
+        </select></div>
+      <div id="busgrid"></div>
+      <div class="row"><button class="b" id="bus-preset">Beispiel: 8 K RAM $2000–$3FFF + Vektor-EPROM Seite F</button>
+        <button class="b" id="bus-clear">alle Blöcke leeren</button>
+        <input type="file" id="bus-file" accept=".bin,.rom,.hex,.ihx,.obj" style="display:none"></div>
+      <div id="bus-msg" class="dim"></div>
+    </div>
+  </details>
+
+  <details class="card" id="portcard">
+    <summary>Port-Stecker (PA/PB)</summary>
+    <div class="cbody">
+      <p class="dim" style="margin-bottom:8px;line-height:1.5">Zusätzliche Hardware am Port-Steckverbinder wie in Buch 2, Anhang 3. Sie hängt parallel zu Tastatur und Anzeige (PA0–PA6, Monitor)
+        und zur RS-232 der Interface-Platine (PA7, PB0) – ein Programm muss die Ports also selbst umschalten.</p>
+      <div class="row"><label class="dim"><input type="checkbox" id="ps-sw"> 8 Schalter an PA0–PA7 (geschlossen = 0)</label>
+        <span class="mono" id="ps-swval"></span></div>
+      <div class="pswitches" id="ps-switches"></div>
+      <div class="row"><label class="dim"><input type="checkbox" id="ps-piano"> Klaviatur 4×4: Zeilen PA4–PA7 (Ausgänge), Spalten PA0–PA3 (Eingänge)</label></div>
+      <div id="piano" tabindex="0" title="Mit der Maus spielen oder hier klicken und die Tasten A S D F G H J K L / W E T Z U O P benutzen"></div>
+      <div class="row"><label class="dim"><input type="checkbox" id="ps-spk"> Lautsprecher an PB0 (über BC516, tönt bei PB0 = 0)</label>
+        <span class="dim">Lautstärke</span><input type="range" id="ps-vol" min="0" max="100" value="35" style="width:110px">
+        <span class="rled" id="ps-spkled"></span></div>
+    </div>
+  </details>
+
+  <details class="card">
+    <summary>Hilfe</summary>
+    <div class="cbody help">
+      <p><b>Start:</b> Nach dem Einschalten zeigt der Monitor Adresse und Inhalt an. Eintippen von Hex-Ziffern schiebt sie von rechts in die Adresse (AD-Modus) bzw. in das Datenbyte (DA-Modus).</p>
+      <table>
+        <tr><th>Taste</th><th>PC-Tastatur</th><th>Wirkung</th></tr>
+        <tr><td>0–F</td><td><kbd>0</kbd>–<kbd>9</kbd>, <kbd>A</kbd>–<kbd>F</kbd></td><td>Hex-Ziffer</td></tr>
+        <tr><td>AD</td><td><kbd>.</kbd> oder <kbd>Einfg</kbd></td><td>Adresseingabe</td></tr>
+        <tr><td>DA</td><td><kbd>,</kbd> oder <kbd>Entf</kbd></td><td>Dateneingabe</td></tr>
+        <tr><td>+</td><td><kbd>+</kbd> oder <kbd>↓</kbd></td><td>nächste Adresse</td></tr>
+        <tr><td>PC</td><td><kbd>P</kbd></td><td>zuletzt geretteten Programmzähler anzeigen</td></tr>
+        <tr><td>GO</td><td><kbd>Enter</kbd> oder <kbd>G</kbd></td><td>Programm ab angezeigter Adresse starten</td></tr>
+        <tr><td>ST</td><td><kbd>Esc</kbd></td><td>NMI – über $1A7A zurück in den Monitor</td></tr>
+        <tr><td>RST</td><td><kbd>Rück</kbd> (Backspace)</td><td>Reset, Sprung über $FFFC nach $1C1D</td></tr>
+        <tr><td>STEP (S24)</td><td><kbd>S</kbd></td><td>Einzelschritt: jedes GO führt einen Befehl aus</td></tr>
+      </table>
+      <p><b>Kleines Programm eintippen:</b> <code>AD 0200 DA A9 + 42 + 85 + F3 + 00</code>, dann <code>AD 0200 GO</code>. BRK kehrt in den Monitor zurück, <code>AD 00F3</code> zeigt dann 42.</p>
+      <p><b>Einzelschritt wie 1980:</b> STEP einschalten, <code>AD 0200 GO</code>. Nach jedem GO steht der nächste Befehl im Display; <code>AD 00EF</code> … zeigt PCL, PCH, P, SP, A, Y, X ($EF–$F5). Mit <b>PC</b> zurück zum Programm, weiter mit GO.</p>
+      <p><b>Editor und Assembler im ROM:</b> Arbeitsbereich in $E2/$E3 (Anfang, Low/High) und $E4/$E5 (Ende) eintragen, dann <code>AD 1CB5 GO</code> für den Hex-Editor bzw. <code>AD 1F51 GO</code> für den Label-Assembler. Der Sprungweitenrechner liegt bei <code>1FD5</code>. Die Bedienung beschreibt Junior-Buch 2.</p>
+      <p><b>Debugger:</b> „Halt“ friert die Maschine ein, ohne dass der Monitor davon etwas merkt. Breakpoints setzt man mit Klick auf den Punkt links im Disassembler oder per Adressfeld. Register und Speicher lassen sich im Halt-Zustand direkt ändern.</p>
+      <p><b>Tape Management (TM, Buch 3 Kap. 11):</b> <code>AD 0810 GO</code>, Anzeige <code>id 00</code>. Im TM haben die Funktionstasten neue Namen:
+        <b>+ = PAR</b> blättert durch die neun Parameter id, SAH, SAL, EAH, EAL, bEGH, bEGL, EndH, EndL (zwei Hextasten setzen den Wert);
+        <b>AD = SAVE</b> schreibt SA bis EA−1 unter der id aufs Band (id 01…FE; Rekorder vorher auf „Aufnahme“);
+        <b>PC = GET</b> liest (Rekorder auf „Wiedergabe“): id 01…FE sucht genau diesen Block, id 00 nimmt den nächsten an seiner Adresse, id FF lädt ihn ab der eingestellten SA;
+        <b>DA = EDIT</b> startet den Editor, <b>GO = SEF</b> schreibt den Editor-Arbeitsbereich BEGAD…CEND. Danach meldet sich TM mit <code>id XX</code>; bei Prüfsummenfehler bleibt er im Lesen hängen.
+        Mit eingeschalteter Relaissteuerung läuft der Rekorder nur, solange die rote (SAVE) bzw. grüne LED (GET) leuchtet.</p>
+      <p><b>Printer Monitor (PM, Buch 3 Kap. 12):</b> „PM starten“ drücken – oder <code>AD 1000 GO</code> und dann RUBOUT (DEL) im Terminal. PM misst an diesem Zeichen die Baudrate (Elekterminal: 1200 Bd) und meldet sich mit <code>JUNIOR</code>.
+        Ziffern + <b>Leertaste</b> = Arbeitsadresse, Ziffern + <b>.</b> = Daten speichern (Adresse rückt weiter), <b>+</b>/<b>−</b> blättern, <b>R</b> starten (wie GO), <b>P</b> = PC, <b>L</b> Register,
+        <b>M</b> Hexdump <code>anfang,ende</code> CR, <b>S</b> <code>id,sa,ea</code> CR schreibt aufs Band, <b>G</b> <code>id</code> CR liest (bei G FF fragt PM nach <code>SA:</code>). <b>BREAK</b> bricht eine Ausgabe ab.</p>
+      <p><b>PM-Editor PME (Buch 4, nur ESS507N):</b> im PM <code>1500</code> + Leertaste + <b>R</b> (Kaltstart), PME fragt <code>BEGAD,ENDAD:</code> – z. B. <code>200,3FF</code> CR.
+        Antwort <code>PM EDITOR</code> und <code>0200 77</code>. Die erste Instruktion mit <b>I</b> einfügen (z. B. <code>IA900</code>), weitere einfach als Hexziffern tippen (INPUT).
+        <b>SP</b> nächste, <b>Z</b> vorige Instruktion, <b>T</b> Anfang, <b>K</b> löschen, <b>S</b> suchen (<b>Y</b> weitersuchen), <b>L</b> Liste, <b>P</b> Block drucken, <b>X</b> assemblieren.
+        Weitere Eingänge: <code>1533</code> Warmstart, <code>1667</code> lauwarm (fertige Programme ansehen, auch im EPROM: <code>1C00,1FFF</code>), <code>17C5</code> warmer CEND-Start.
+        BRK bricht eine Ausgabe ab.</p>
+      <p><b>Einzelschritt mit PM (Buch 3, Kap. 12):</b> STEP-Sperre auf „K4/K5 + K7“ (Umbau der Aufsteckplatine), STEP-Schalter an, PM starten. PM stellt den NMI-Vektor selbst auf $14CF.
+        <code>201 R</code> führt den ersten Befehl aus, danach druckt PM Adresse und Opcode des nächsten; jedes weitere <b>R</b> ist ein Schritt, <b>L</b> zeigt die Register.
+        Beispiel: Programm „NUMBERS“ laden. Mit „nur K7“ würde der NMI schon in der PM-Routine selbst ausgelöst – genau deshalb war der Umbau nötig.</p>
+      <p><b>Programme aus Buch 4:</b> HEXDEC, DECADD, DECHEX und ASCII laufen unter PM und rechnen am Terminal – laden, „PM starten“, <code>200 R</code>.
+        Die Gruppe „PME-Quelltexte“ enthält dieselben Programme in der Eingabeform mit Labeln (<code>FF nn 00</code>): <code>17C5 R</code>, <code>200,3FF</code> CR, <b>X</b> –
+        der Assembler im Monitor-ROM läuft still, danach <b>ST</b> drücken, PME druckt die Labeltabelle. Das Ergebnis stimmt Byte für Byte mit den Listings im Buch überein.</p>
+      <p><b>Bus-Erweiterung (Buch 3, Kap. 10):</b> „vollständig“ entspricht der Drahtbrücke D→EX: Basis- und Interfacekarte belegen nur noch $0000–$1FFF, darüber liegen die 4-K-Blöcke der RAM/EPROM-Karten.
+        Mit Brücke R-S kommen die Vektoren aus Seite FF – fehlt dort das EPROM, bleibt nach RST das Display dunkel, genau wie in der Fehlersuche im Buch. „Beispiel“ richtet den empfohlenen Ausbau ein.
+        Anhang 1 (eine Karte direkt an der Basiskarte) lässt unbestückte Blöcke weiter spiegeln.</p>
+      <p><b>Elekterminal und Drucker:</b> Die Ansicht „Elekterminal“ zeigt 16 Zeilen × 64 Großbuchstaben wie am Fernseher; CR und LF wirken getrennt, eine Zeile kann also überschrieben werden (DECADD nutzt das).
+        Half Duplex entspricht Schalter S1: jede Taste erscheint sofort. Der Drucker hängt an derselben Leitung und schlägt beim Überschreiben zusätzlich an – deshalb rät Buch 4 beim Drucken zu Full Duplex.</p>
+      <p><b>Port-Stecker (Buch 2, Anhang 3):</b> Schalter, 4×4-Klaviatur und Lautsprecher werden im gleichnamigen Feld eingesteckt; die Beispiele DEMO, PLAY, INPUT und REPEAT stecken sie beim Laden selbst ein.
+        Die Klaviatur spielt man mit der Maus oder – nach Klick hinein – mit <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> <kbd>F</kbd> <kbd>G</kbd> <kbd>H</kbd> <kbd>J</kbd> <kbd>K</kbd> <kbd>L</kbd> (weiß) und <kbd>W</kbd> <kbd>E</kbd> <kbd>T</kbd> <kbd>Z</kbd> <kbd>U</kbd> <kbd>O</kbd> <kbd>P</kbd> (schwarz).
+        Solange der Lautsprecher an PB0 steckt, bleibt das Terminal stumm. Programme, die Port A umschalten, beendet man mit <b>RST</b>, damit der Monitor seine Tastatur wieder lesen kann.</p>
+      <p><b>Dateien:</b> Intel-HEX und KIM-Papertape tragen ihre Adresse selbst; reine Binärdateien landen an der eingestellten Ladeadresse. Hexdump-Text der Form <code>0200: A9 01 85 10</code> wird ebenfalls erkannt.</p>
+    </div>
+  </details>
+</div>
+</div>
+
+<footer>
+  Junior-Werkbank – Emulator des Elektor Junior Computers (Entwurf: Loys Nachtmann, 1980). Monitor-ROM nach Nachtmanns Listing vom 7.&nbsp;Februar 1980,
+  restauriert von A.&nbsp;J.&nbsp;Prosman und E.&nbsp;v.&nbsp;d.&nbsp;Logt (Projekt JC2). Tape- und Printer-Monitor der Interface-Platine: Elektor-EPROMs ESS506/ESS507 (Abbilder aus Laurents Junior-Replik); PM-Editor PME des ESS507N nach dem Listing in Buch 4 eingegeben. Beispielprogramme aus den Junior-Büchern 1–4 (Elektor). Schwesterseite:
+  <a href="https://sky4walk.github.io/SmallCircuits/SmallHtml/kim1.html">KIM-1-Emulator</a>.
+  Mehr Rechnergeschichte auf <a href="https://itzwieseltal.wordpress.com/">itzwieseltal.wordpress.com</a>.
+</footer>
+
+<script>
+'use strict';
+// ==CORE-BEGIN==
+const ROM_HEX = '85F36885F16885EF85FA6885F085FB84F486F5BA86F2A20186FF4C331CA91E8D831AA90485F1A90385FF85F6A2FF9A86F2D87820881DD0FB20881DF0FB20881DF0F620F91DC913D013A6F29AA5FB48A5FA48A5F148A6F5A4F4A5F340C910D006A90385FFD014C911D006A90085FFF00AC912D009E6FAD002E6FB4C331CC914D00BA5EF85FAA5F085FB4C7A1CC91510EA85E1A4FFD00DB1FA0A0A0A0A05E191FA4C7A1CA20406FA26FBCAD0F9A5FA05E185FA4C7A1C20D31EA4E3A6E2E8D001C886E884E9A977A00091E6204D1DC914D02A206F1D10F785FB206F1D10F085FA20D31EA000B1E6C5FBD007C8B1E6C5FAF0D9205C1E20F81E30E9103EC910D00A20201E10C920471EF0C1C913D01420201E10BB205C1E20F81EA5FD85F620471EF0A9C912D00720F81E30A0100DC911D00920831E20EA1E4CCA1CA9EE85FB85FA85F9A90385F6208E1DD0FB4CCA1CA202A000B1E695F9C8CA10F8205C1E208E1DD0FB208E1DF0FB208E1DF0F620F91D60205C1DC91010110A0A0A0A85FE205C1DC910100405FEA2FF60A000B1FA85F9A97F8D811AA208A4F6A5FB20CC1D88F00DA5FA20CC1D88F005A5F920CC1DA9008D811AA003A200A9FF8E821AE8E82D801A88D0F5A0068C821A098049FF604884FC4A4A4A4A20DF1D68290F20DF1DA4FC60A8B90F1F8D801A8E821AA07F8810FD8C801AA0068C821AE8E860A221A00120B51DD007E027D0F5A91560A0FF0AB003C810FA8A290F4AAA981003186907CAD0FA60206F1D102185FB20601E84F784FDC6F7F012206F1D100F85FAC6F7F007206F1D100485F9A2FF6020A61E20DC1EA202A000B5F991E6CAC8C4F6D0F660A000B1E6A001C900F01AC940F016C960F012A003C920F00C291FC919F006290FAABC1F1F84F660A5E685EAA5E785EBA4F6B1EAA00091EAE6EAD002E6EBA5EAC5E8D0ECA5EBC5E9D0E660A5E885EAA5E985EBA000B1EAA4F691EAA5EAC5E6D006A5EBC5E7F01038A5EAE90185EAA5EBE90085EB4CAE1E60A5E285E6A5E385E76018A5E865F685E8A5E9690085E96038A5E8E5F685E8A5E9E90085E96018A5E665F685E6A5E7690085E738A5E6E5E8A5E7E5E9604079243019120278001008034621060E020202010202020101020101030303036C7A1A6C7E1AB1E6A0FFC4EEF00DD1ECD00A88B1ECAA88B1ECA00160888888D0E96038A5E4E9FF85ECA5E5E90085EDA9FF85EE20D31E205C1EA000B1E6C9FFD01DC8B1E6A4EE91EC88A5E791EC88A5E691EC8884EE20831E20EA1E4C651F20F81E30D320D31E205C1EA000B1E6C94CF016C920F012291FC910F01A20F81E30E6A90385F64C331CC820351FF0EE91E68AC891E6D0E6C820351FF0E038E5E638E90291E64CAA1FD8A90085FB85FA85F9206F1D10F285FB206F1D10EB85FA18A5FAE5FB85F9C6F94CDE1FFFFF2F1F1D1C321F';
+const DEMOS = {"b1wuerfel": {"name": "Software-Würfel (Buch 1)", "addr": 512, "code": [169, 255, 133, 249, 133, 250, 133, 251, 32, 142, 29, 240, 251, 32, 142, 29, 240, 246, 32, 249, 29, 201, 18, 208, 239, 169, 0, 133, 250, 230, 250, 165, 250, 201, 7, 240, 244, 32, 177, 29, 208, 243, 76, 8, 2], "desc": "Original aus Junior-Computer Buch 1, Kapitel 4, Bild 4. Die <b>+</b>-Taste gedrückt halten: Das Display erlischt, der Zähler läuft 1…6 (nur AK fragt die Tastatur ab). Nach dem Loslassen steht <b>FF0X FF</b> im Display – X ist die gewürfelte Zahl. Andere Tasten werden ignoriert.", "group": "Buch 1"}, "b1addierer": {"name": "Dezimal-Addierer (Buch 1)", "addr": 512, "code": [32, 148, 2, 32, 130, 2, 32, 139, 2, 32, 111, 2, 201, 16, 240, 240, 201, 18, 240, 6, 32, 73, 2, 76, 9, 2, 32, 170, 2, 32, 148, 2, 32, 111, 2, 201, 16, 240, 10, 201, 17, 240, 12, 32, 73, 2, 76, 32, 2, 32, 148, 2, 76, 32, 2, 32, 157, 2, 32, 89, 2, 32, 183, 2, 32, 130, 2, 32, 139, 2, 76, 9, 2, 160, 4, 6, 249, 38, 250, 38, 251, 136, 208, 247, 5, 249, 133, 249, 96, 248, 24, 165, 0, 101, 3, 133, 6, 165, 1, 101, 4, 133, 7, 165, 2, 101, 5, 133, 8, 216, 96, 32, 142, 29, 208, 251, 32, 142, 29, 240, 251, 32, 142, 29, 240, 246, 32, 249, 29, 96, 169, 0, 133, 0, 133, 1, 133, 2, 96, 169, 0, 133, 3, 133, 4, 133, 5, 96, 169, 0, 133, 249, 133, 250, 133, 251, 96, 165, 249, 133, 3, 165, 250, 133, 4, 165, 251, 133, 5, 96, 165, 249, 133, 0, 165, 250, 133, 1, 165, 251, 133, 2, 96, 165, 6, 133, 249, 165, 7, 133, 250, 165, 8, 133, 251, 96], "desc": "Original aus Junior-Computer Buch 1 (Kapitel 3, Bilder 20/21, Tastenprogramm in Kapitel 4, 196 Bytes). Sechsstellige Dezimalzahl tippen, <b>+</b>, zweite Zahl, <b>DA</b> (=) zeigt die Summe. <b>AD</b> löscht (CLEAR). Beispiel aus dem Buch: 2456 + 4132 = 006588.", "group": "Buch 1"}, "b1laenge": {"name": "Befehlslängen-Messer (Buch 1)", "addr": 512, "code": [169, 255, 133, 249, 133, 250, 133, 251, 32, 111, 29, 16, 243, 133, 251, 32, 25, 2, 165, 224, 133, 250, 76, 8, 2, 162, 1, 201, 0, 240, 26, 201, 64, 240, 22, 201, 96, 240, 18, 162, 3, 201, 32, 240, 12, 41, 31, 201, 25, 240, 6, 41, 15, 168, 190, 61, 2, 142, 224, 0, 96, 2, 2, 2, 0, 2, 2, 2, 0, 1, 2, 1, 0, 3, 3, 3, 0], "desc": "Original aus Junior-Computer Buch 1, Kapitel 4, Bild 9 (77 Bytes, mit eigener Kopie von LENACC ab $0219 und Tabelle LENTBL ab $023D). Zwei Hextasten = Opcode: links steht der Opcode, in der Mitte die Länge (00 bei unbelegten Spalten 3, 7, B, F). Eine Funktionstaste setzt die Anzeige auf FFFFFF zurück.", "group": "Buch 1"}, "b2bindez": {"name": "Binär→Dezimal-Wandler (Buch 2)", "addr": 512, "code": [169, 0, 133, 249, 133, 250, 133, 251, 32, 111, 29, 16, 243, 133, 249, 133, 215, 32, 23, 2, 76, 8, 2, 32, 46, 2, 133, 250, 132, 215, 32, 46, 2, 162, 4, 10, 202, 208, 252, 5, 250, 133, 250, 132, 251, 96, 160, 0, 132, 216, 32, 59, 2, 24, 165, 215, 105, 10, 96, 56, 165, 215, 233, 10, 133, 215, 165, 216, 233, 0, 48, 4, 200, 76, 59, 2, 96], "start": 512, "desc": "Original aus Buch 2, Anhang 3. Zwei Hextasten = ein Byte; rechts steht der Hexwert, links daneben derselbe Wert dezimal (z. B. <b>FF</b> → <b>0255 FF</b>). Arbeitet mit wiederholter Subtraktion von 10 (SUBTRA) wie in Kapitel 8 beschrieben.", "needs": [], "extra": [], "group": "Buch 2 – Anhang 3"}, "b2demo": {"name": "DEMO: Schalter → Ton (Buch 2)", "addr": 0, "code": [162, 0, 142, 129, 26, 232, 142, 131, 26, 173, 128, 26, 73, 255, 160, 0, 140, 130, 26, 32, 32, 0, 200, 140, 130, 26, 32, 32, 0, 76, 9, 0, 170, 202, 208, 253, 96], "start": 0, "desc": "Original aus Buch 2, Anhang 3 (Port-Stecker: 8 Schalter an PA0–PA7, Lautsprecher mit BC516 an PB0). Die geschlossenen Schalter bilden eine Binärzahl N; PB0 schaltet nach jeweils N Schleifendurchläufen um – mehr geschlossene Schalter, tieferer Ton. Im Feld <b>Port-Stecker</b> Schalter und Lautsprecher einstecken, dann <b>AD 0000 GO</b>.", "needs": ["switches", "speaker"], "extra": [], "group": "Buch 2 – Anhang 3"}, "b2play": {"name": "PLAY: Klaviatur (Buch 2)", "addr": 0, "code": [169, 240, 141, 129, 26, 169, 1, 141, 131, 26, 141, 130, 26, 169, 0, 141, 128, 26, 32, 156, 0, 240, 251, 32, 164, 0, 32, 156, 0, 240, 243, 32, 68, 0, 164, 218, 169, 0, 141, 130, 26, 190, 0, 26, 32, 170, 0, 202, 208, 250, 169, 1, 141, 130, 26, 190, 0, 26, 32, 156, 0, 240, 211, 202, 208, 248, 240, 224, 169, 247, 133, 217, 162, 4, 202, 48, 247, 6, 217, 165, 217, 141, 128, 26, 173, 128, 26, 41, 15, 201, 15, 240, 237, 134, 219, 133, 218, 162, 0, 70, 218, 144, 7, 232, 224, 4, 208, 247, 240, 214, 165, 219, 201, 3, 208, 4, 138, 76, 148, 0, 201, 2, 208, 6, 138, 24, 105, 4, 208, 18, 201, 1, 208, 6, 138, 24, 105, 8, 208, 8, 201, 0, 208, 180, 138, 24, 105, 12, 133, 218, 169, 0, 141, 128, 26, 96, 173, 128, 26, 41, 15, 73, 15, 96, 160, 255, 136, 208, 253, 96, 234, 234, 234, 234, 234, 96], "start": 0, "desc": "Original aus Buch 2, Anhang 3: 4×4-Tastenmatrix an Port A (Zeilen PA4–PA7 Ausgänge, Spalten PA0–PA3 Eingänge), Lautsprecher an PB0. Jede Taste spielt einen Ton aus der Verzögerungstabelle DEL bei $1A00 (Taste 9 = a, 220 Hz). Klaviatur und Lautsprecher im Feld <b>Port-Stecker</b> einstecken, dann <b>AD 0000 GO</b>.", "needs": ["piano", "speaker"], "extra": [{"addr": 6656, "code": [142, 134, 126, 119, 112, 106, 100, 94, 89, 84, 78, 74, 71, 67, 62, 60]}], "group": "Buch 2 – Anhang 3"}, "b2input": {"name": "INPUT: Melodie aufnehmen (Buch 2)", "addr": 512, "code": [120, 216, 169, 32, 141, 126, 26, 169, 26, 141, 127, 26, 169, 240, 141, 129, 26, 169, 1, 141, 131, 26, 141, 130, 26, 133, 221, 160, 0, 140, 128, 26, 132, 220, 160, 216, 132, 223, 169, 119, 145, 220, 136, 192, 255, 208, 249, 32, 224, 2, 240, 251, 32, 232, 2, 32, 224, 2, 240, 243, 32, 136, 2, 169, 0, 133, 222, 169, 255, 141, 254, 26, 88, 164, 218, 169, 0, 141, 130, 26, 190, 0, 26, 32, 238, 2, 202, 208, 250, 169, 1, 141, 130, 26, 190, 0, 26, 32, 224, 2, 240, 5, 202, 208, 248, 240, 224, 141, 244, 26, 165, 220, 197, 223, 240, 17, 152, 160, 0, 145, 220, 200, 165, 222, 145, 220, 230, 220, 230, 220, 76, 47, 2, 76, 29, 28, 169, 247, 133, 217, 162, 4, 202, 48, 247, 6, 217, 165, 217, 141, 128, 26, 173, 128, 26, 41, 15, 201, 15, 240, 237, 134, 219, 133, 218, 162, 0, 70, 218, 144, 7, 232, 224, 4, 208, 247, 240, 214, 165, 219, 201, 3, 208, 4, 138, 76, 216, 2, 201, 2, 208, 6, 138, 24, 105, 4, 208, 18, 201, 1, 208, 6, 138, 24, 105, 8, 208, 8, 201, 0, 208, 180, 138, 24, 105, 12, 133, 218, 169, 0, 141, 128, 26, 96, 173, 128, 26, 41, 15, 73, 15, 96, 160, 255, 136, 208, 253, 96, 234, 234, 234, 234, 234, 96], "start": 512, "desc": "Original aus Buch 2, Anhang 3: wie PLAY, schreibt aber jede gespielte Note mit ihrer Dauer in den Notenpuffer $0100–$01D7 (je zwei Byte: Tastenwert, Länge in Einheiten von 255 × 64 µs; Ende = $77). Die Dauer zählt die Timer-Interrupt-Routine IRQIN bei $1A20. <b>AD 0200 GO</b>, Melodie spielen, mit <b>RST</b> beenden (RST stellt auch die Ports für die Monitor-Tastatur wieder her) – danach REPEAT laden und abspielen.", "needs": ["piano", "speaker"], "extra": [{"addr": 6656, "code": [142, 134, 126, 119, 112, 106, 100, 94, 89, 84, 78, 74, 71, 67, 62, 60]}, {"addr": 6688, "code": [72, 230, 222, 169, 255, 141, 254, 26, 104, 64]}], "group": "Buch 2 – Anhang 3"}, "b2repeat": {"name": "REPEAT: Melodie abspielen (Buch 2)", "addr": 0, "code": [120, 216, 169, 48, 141, 126, 26, 169, 26, 141, 127, 26, 169, 1, 141, 131, 26, 141, 130, 26, 133, 221, 169, 0, 133, 220, 141, 244, 26, 88, 169, 255, 141, 254, 26, 160, 0, 177, 220, 133, 218, 200, 177, 220, 133, 222, 164, 218, 169, 0, 141, 130, 26, 190, 0, 26, 32, 112, 0, 202, 208, 250, 169, 1, 141, 130, 26, 190, 0, 26, 165, 222, 48, 8, 32, 116, 0, 202, 208, 246, 240, 222, 162, 4, 169, 48, 141, 247, 26, 44, 213, 26, 16, 251, 202, 208, 243, 230, 220, 230, 220, 160, 0, 177, 220, 201, 119, 208, 177, 76, 29, 28, 234, 76, 116, 0, 234, 76, 120, 0, 96], "start": 0, "desc": "Original aus Buch 2, Anhang 3: spielt die mit INPUT aufgenommene Melodie aus dem Notenpuffer ab $0100. Ein Timer-Interrupt (IRQRE bei $1A30) zählt die Länge herunter, zwischen den Noten pollt das Programm eine Pause von 4 × $30 × 1024 µs am Timer-Flag. Erst INPUT aufnehmen, dann REPEAT laden und <b>AD 0000 GO</b>. Ohne Aufnahme: die Beispielmelodie mitladen (unten).", "needs": ["speaker"], "extra": [{"addr": 6656, "code": [142, 134, 126, 119, 112, 106, 100, 94, 89, 84, 78, 74, 71, 67, 62, 60]}, {"addr": 6704, "code": [72, 198, 222, 169, 255, 141, 254, 26, 104, 64]}], "group": "Buch 2 – Anhang 3"}, "b3numbers": {"name": "NUMBERS für PM-Einzelschritt (Buch 3)", "addr": 512, "code": [0, 160, 1, 169, 0, 72, 140, 0, 2, 104, 72, 24, 109, 0, 2, 72, 200, 192, 11, 208, 241, 0], "start": 513, "desc": "Original aus Buch 3, Kapitel 12, Bild 13: legt die Zahlen 0, 1, 3, 6, 10 … 55 ab $01FF abwärts in den Stack. Der IRQ-Vektor $1A7E zeigt auf $14CF (STEP-Eingang von PM), BRK landet also im PM. Zum Ausprobieren des PM-Einzelschritts: STEP-Sperre auf <b>K4/K5 + K7</b>, Schalter STEP an, „PM starten“, im Terminal <code>201 R</code>, dann für jeden weiteren Schritt <b>R</b>. <b>L</b> zeigt die Register, <code>1F5 M1F5,1FF</code> CR den Stack.", "needs": [], "extra": [{"addr": 6782, "code": [207, 20]}], "group": "Buch 3"}, "b4hexdec": {"name": "HEXDEC: Hex → Dezimal am Terminal (Buch 4)", "addr": 512, "code": [32, 232, 17, 32, 174, 18, 201, 58, 208, 52, 169, 16, 133, 0, 169, 39, 133, 1, 32, 76, 2, 169, 232, 133, 0, 169, 3, 133, 1, 32, 76, 2, 169, 100, 133, 0, 169, 0, 133, 1, 32, 76, 2, 169, 10, 133, 0, 169, 0, 133, 1, 32, 76, 2, 165, 248, 32, 155, 18, 76, 70, 2, 32, 111, 18, 208, 3, 76, 3, 2, 32, 104, 18, 76, 0, 2, 160, 0, 32, 109, 2, 144, 4, 200, 76, 78, 2, 32, 91, 2, 96, 24, 165, 248, 101, 0, 133, 248, 165, 249, 101, 1, 133, 249, 152, 32, 155, 18, 96, 56, 165, 248, 229, 0, 133, 248, 165, 249, 229, 1, 133, 249, 96, 119], "desc": "Praxisbeispiel 2, Tabelle 4. Wandelt bis zu vier Hexziffern in eine fünfstellige Dezimalzahl, Ausgabe über PM-Routinen (CRLF, RECCHA, PRNIBL). „PM starten“, im Terminal <code>200 R</code>, dann z. B. <code>FFFF:</code> → <code>65535</code>, <code>ABCD:</code> → <code>43981</code>. Andere Zeichen: <code>WHAT?</code>.", "needs": ["pm"], "group": "Buch 4 – unter PM"}, "b4decadd": {"name": "DECADD: Dezimal-Addierer am Terminal (Buch 4)", "addr": 512, "code": [169, 0, 133, 248, 133, 249, 133, 250, 32, 232, 17, 32, 174, 18, 201, 46, 208, 36, 169, 0, 133, 251, 165, 248, 133, 222, 165, 249, 133, 223, 165, 250, 133, 224, 169, 13, 32, 52, 19, 32, 243, 17, 32, 243, 17, 32, 243, 17, 32, 111, 2, 76, 0, 2, 201, 80, 208, 46, 32, 127, 2, 248, 24, 165, 222, 101, 248, 133, 222, 165, 223, 101, 249, 133, 223, 165, 224, 101, 250, 133, 224, 165, 251, 105, 0, 133, 251, 216, 169, 61, 32, 52, 19, 165, 251, 32, 143, 18, 32, 111, 2, 76, 0, 2, 32, 162, 2, 208, 147, 240, 156, 165, 224, 32, 143, 18, 165, 223, 32, 143, 18, 165, 222, 32, 143, 18, 96, 169, 13, 32, 52, 19, 169, 43, 32, 52, 19, 32, 243, 17, 32, 243, 17, 165, 250, 32, 143, 18, 165, 249, 32, 143, 18, 165, 248, 32, 143, 18, 32, 232, 17, 96, 32, 196, 2, 48, 18, 162, 4, 6, 248, 38, 249, 38, 250, 202, 208, 247, 5, 248, 133, 248, 160, 0, 96, 160, 70, 32, 214, 17, 32, 232, 17, 160, 255, 96, 201, 48, 48, 4, 201, 58, 48, 3, 160, 255, 96, 41, 15, 96, 119], "desc": "Praxisbeispiel 3, Tabelle 5. Sechsstellige Zahl und <b>.</b> (Punkt) legt den Anfangswert fest, Zahl und <b>P</b> („Plus“) addiert – Summen bis 99 999 999 im Dezimalmodus. „PM starten“, <code>200 R</code>, dann <code>123456.</code> und <code>654321P</code> → <code>=00777777</code>.", "needs": ["pm"], "group": "Buch 4 – unter PM"}, "b4dechex": {"name": "DECHEX: Dezimal → Hex am Terminal (Buch 4)", "addr": 512, "code": [32, 232, 17, 32, 174, 18, 201, 58, 208, 43, 169, 150, 133, 0, 169, 64, 133, 1, 32, 73, 2, 169, 86, 133, 0, 169, 2, 133, 1, 32, 73, 2, 169, 22, 133, 0, 169, 0, 133, 1, 32, 73, 2, 169, 1, 133, 0, 32, 73, 2, 76, 67, 2, 32, 136, 2, 208, 9, 165, 250, 41, 7, 133, 250, 76, 3, 2, 32, 104, 18, 76, 0, 2, 160, 0, 32, 114, 2, 144, 4, 200, 76, 75, 2, 32, 88, 2, 96, 248, 24, 165, 248, 101, 0, 133, 248, 165, 249, 101, 1, 133, 249, 165, 250, 105, 0, 133, 250, 216, 152, 32, 155, 18, 96, 248, 56, 165, 248, 229, 0, 133, 248, 165, 249, 229, 1, 133, 249, 165, 250, 233, 0, 133, 250, 216, 96, 32, 170, 2, 48, 18, 162, 4, 6, 248, 38, 249, 38, 250, 202, 208, 247, 5, 248, 133, 248, 160, 0, 96, 160, 70, 32, 214, 17, 32, 232, 17, 160, 255, 96, 201, 48, 48, 4, 201, 58, 48, 3, 160, 255, 96, 41, 15, 96, 119], "desc": "Praxisbeispiel 4, Tabelle 6, Gegenstück zu HEXDEC. „PM starten“, <code>200 R</code>, dann z. B. <code>65535:</code> → <code>FFFF</code>, <code>12345:</code> → <code>3039</code>.", "needs": ["pm"], "group": "Buch 4 – unter PM"}, "b4ascii": {"name": "ASCII: Zeichen → Hex und Bits (Buch 4)", "addr": 512, "code": [32, 232, 17, 32, 174, 18, 168, 32, 243, 17, 152, 32, 143, 18, 32, 243, 17, 152, 133, 241, 32, 40, 18, 76, 0, 2, 119], "desc": "Praxisbeispiel 5, Tabelle 7 (Programm aus Buch 3, Kap. 12). Jede Taste im Terminal wird als Zeichen, Hexwert und Bitmuster gezeigt, z. B. <code>A 41 01000001</code>. Das Bitmuster druckt die PM-Routine SHOWPR, die eigentlich das Prozessorstatusregister ausgibt. „PM starten“, <code>200 R</code>.", "needs": ["pm"], "group": "Buch 4 – unter PM"}, "b4hexdecsrc": {"name": "HEXDEC – PME-Quelltext mit Labeln (Buch 4)", "addr": 512, "code": [255, 16, 0, 32, 232, 17, 255, 17, 0, 32, 174, 18, 201, 58, 208, 18, 169, 16, 133, 0, 169, 39, 133, 1, 32, 20, 0, 169, 232, 133, 0, 169, 3, 133, 1, 32, 20, 0, 169, 100, 133, 0, 169, 0, 133, 1, 32, 20, 0, 169, 10, 133, 0, 169, 0, 133, 1, 32, 20, 0, 165, 248, 32, 155, 18, 76, 19, 0, 255, 18, 0, 32, 111, 18, 208, 19, 76, 17, 0, 255, 19, 0, 32, 104, 18, 76, 16, 0, 255, 20, 0, 160, 0, 255, 21, 0, 32, 24, 0, 144, 22, 200, 76, 21, 0, 255, 22, 0, 32, 23, 0, 96, 255, 23, 0, 24, 165, 248, 101, 0, 133, 248, 165, 249, 101, 1, 133, 249, 152, 32, 155, 18, 96, 255, 24, 0, 56, 165, 248, 229, 0, 133, 248, 165, 249, 229, 1, 133, 249, 96, 119], "needs": ["pm"], "extra": [{"addr": 226, "code": [0, 2, 255, 3]}], "desc": "Dasselbe Programm in der Form, in der es im Buch mit PME eingegeben wurde: Labels als <code>FF nn 00</code>, Sprünge auf Labelnummern, Ende = <code>77</code>. Selbst assemblieren: „PM starten“, <code>17C5 R</code> (warmer CEND-Start), <code>BEGAD,ENDAD: 200,3FF</code> CR, dann <b>X</b>. Der Assembler läuft still; leuchtet das Display wieder, <b>ST</b> drücken – PME druckt die Labeltabelle, das Programm steht assembliert ab $0200, Byte für Byte wie im Buch. Zurück in PM mit BREAK während einer Ausgabe (z. B. nach <b>L</b>), dann <code>200 R</code>. Hinweis: Der warme CEND-Start übernimmt BEGAD/ENDAD laut Originallisting nicht selbst, sondern nutzt die Werte aus $E2–$E5 – das Laden setzt sie deshalb mit.", "group": "Buch 4 – PME-Quelltexte"}, "b4decaddsrc": {"name": "DECADD – PME-Quelltext mit Labeln (Buch 4)", "addr": 512, "code": [255, 153, 0, 169, 0, 133, 248, 133, 249, 133, 250, 32, 232, 17, 255, 152, 0, 32, 174, 18, 201, 46, 208, 151, 169, 0, 133, 251, 165, 248, 133, 222, 165, 249, 133, 223, 165, 250, 133, 224, 169, 13, 32, 52, 19, 32, 243, 17, 32, 243, 17, 32, 243, 17, 32, 149, 0, 76, 153, 0, 255, 151, 0, 201, 80, 208, 150, 32, 148, 0, 248, 24, 165, 222, 101, 248, 133, 222, 165, 223, 101, 249, 133, 223, 165, 224, 101, 250, 133, 224, 165, 251, 105, 0, 133, 251, 216, 169, 61, 32, 52, 19, 165, 251, 32, 143, 18, 32, 149, 0, 76, 153, 0, 255, 150, 0, 32, 147, 0, 208, 153, 240, 152, 255, 149, 0, 165, 224, 32, 143, 18, 165, 223, 32, 143, 18, 165, 222, 32, 143, 18, 96, 255, 148, 0, 169, 13, 32, 52, 19, 169, 43, 32, 52, 19, 32, 243, 17, 32, 243, 17, 165, 250, 32, 143, 18, 165, 249, 32, 143, 18, 165, 248, 32, 143, 18, 32, 232, 17, 96, 255, 147, 0, 32, 144, 0, 48, 145, 162, 4, 255, 146, 0, 6, 248, 38, 249, 38, 250, 202, 208, 146, 5, 248, 133, 248, 160, 0, 96, 255, 145, 0, 160, 70, 32, 214, 17, 32, 232, 17, 160, 255, 96, 255, 144, 0, 201, 48, 48, 137, 201, 58, 48, 136, 255, 137, 0, 160, 255, 96, 255, 136, 0, 41, 15, 96, 119], "needs": ["pm"], "extra": [{"addr": 226, "code": [0, 2, 255, 3]}], "desc": "Dasselbe Programm in der Form, in der es im Buch mit PME eingegeben wurde: Labels als <code>FF nn 00</code>, Sprünge auf Labelnummern, Ende = <code>77</code>. Selbst assemblieren: „PM starten“, <code>17C5 R</code> (warmer CEND-Start), <code>BEGAD,ENDAD: 200,3FF</code> CR, dann <b>X</b>. Der Assembler läuft still; leuchtet das Display wieder, <b>ST</b> drücken – PME druckt die Labeltabelle, das Programm steht assembliert ab $0200, Byte für Byte wie im Buch. Zurück in PM mit BREAK während einer Ausgabe (z. B. nach <b>L</b>), dann <code>200 R</code>. Hinweis: Der warme CEND-Start übernimmt BEGAD/ENDAD laut Originallisting nicht selbst, sondern nutzt die Werte aus $E2–$E5 – das Laden setzt sie deshalb mit.", "group": "Buch 4 – PME-Quelltexte"}, "b4dechexsrc": {"name": "DECHEX – PME-Quelltext mit Labeln (Buch 4)", "addr": 512, "code": [255, 16, 0, 32, 232, 17, 255, 17, 0, 32, 174, 18, 201, 58, 208, 18, 169, 150, 133, 0, 169, 64, 133, 1, 32, 20, 0, 169, 86, 133, 0, 169, 2, 133, 1, 32, 20, 0, 169, 22, 133, 0, 169, 0, 133, 1, 32, 20, 0, 169, 1, 133, 0, 32, 20, 0, 76, 19, 0, 255, 18, 0, 32, 147, 0, 208, 19, 165, 250, 41, 7, 133, 250, 76, 17, 0, 255, 19, 0, 32, 104, 18, 76, 16, 0, 255, 20, 0, 160, 0, 255, 21, 0, 32, 24, 0, 144, 22, 200, 76, 21, 0, 255, 22, 0, 32, 23, 0, 96, 255, 23, 0, 248, 24, 165, 248, 101, 0, 133, 248, 165, 249, 101, 1, 133, 249, 165, 250, 105, 0, 133, 250, 216, 152, 32, 155, 18, 96, 255, 24, 0, 248, 56, 165, 248, 229, 0, 133, 248, 165, 249, 229, 1, 133, 249, 165, 250, 233, 0, 133, 250, 216, 96, 255, 147, 0, 32, 144, 0, 48, 145, 162, 4, 255, 146, 0, 6, 248, 38, 249, 38, 250, 202, 208, 146, 5, 248, 133, 248, 160, 0, 96, 255, 145, 0, 160, 70, 32, 214, 17, 32, 232, 17, 160, 255, 96, 255, 144, 0, 201, 48, 48, 137, 201, 58, 48, 136, 255, 137, 0, 160, 255, 96, 255, 136, 0, 41, 15, 96, 119], "needs": ["pm"], "extra": [{"addr": 226, "code": [0, 2, 255, 3]}], "desc": "Dasselbe Programm in der Form, in der es im Buch mit PME eingegeben wurde: Labels als <code>FF nn 00</code>, Sprünge auf Labelnummern, Ende = <code>77</code>. Selbst assemblieren: „PM starten“, <code>17C5 R</code> (warmer CEND-Start), <code>BEGAD,ENDAD: 200,3FF</code> CR, dann <b>X</b>. Der Assembler läuft still; leuchtet das Display wieder, <b>ST</b> drücken – PME druckt die Labeltabelle, das Programm steht assembliert ab $0200, Byte für Byte wie im Buch. Zurück in PM mit BREAK während einer Ausgabe (z. B. nach <b>L</b>), dann <code>200 R</code>. Hinweis: Der warme CEND-Start übernimmt BEGAD/ENDAD laut Originallisting nicht selbst, sondern nutzt die Werte aus $E2–$E5 – das Laden setzt sie deshalb mit.", "group": "Buch 4 – PME-Quelltexte"}, "b4asciisrc": {"name": "ASCII – PME-Quelltext mit Labeln (Buch 4)", "addr": 512, "code": [255, 16, 0, 32, 232, 17, 32, 174, 18, 168, 32, 243, 17, 152, 32, 143, 18, 32, 243, 17, 152, 133, 241, 32, 40, 18, 76, 16, 0, 119], "needs": ["pm"], "extra": [{"addr": 226, "code": [0, 2, 255, 2]}], "desc": "Dasselbe Programm in der Form, in der es im Buch mit PME eingegeben wurde: Labels als <code>FF nn 00</code>, Sprünge auf Labelnummern, Ende = <code>77</code>. Selbst assemblieren: „PM starten“, <code>17C5 R</code> (warmer CEND-Start), <code>BEGAD,ENDAD: 200,2FF</code> CR, dann <b>X</b>. Der Assembler läuft still; leuchtet das Display wieder, <b>ST</b> drücken – PME druckt die Labeltabelle, das Programm steht assembliert ab $0200, Byte für Byte wie im Buch. Zurück in PM mit BREAK während einer Ausgabe (z. B. nach <b>L</b>), dann <code>200 R</code>. Hinweis: Der warme CEND-Start übernimmt BEGAD/ENDAD laut Originallisting nicht selbst, sondern nutzt die Werte aus $E2–$E5 – das Laden setzt sie deshalb mit.", "group": "Buch 4 – PME-Quelltexte"}, "taste": {"name": "Tastencode (eigenes)", "addr": 512, "code": [216, 169, 3, 133, 246, 169, 0, 133, 251, 133, 250, 133, 249, 32, 92, 29, 133, 249, 76, 13, 2], "desc": "Zeigt den Wert jeder gedrückten Taste rechts an: 0–F für die Zifferntasten, 10 = AD, 11 = DA, 12 = +, 13 = GO, 14 = PC. Benutzt die Monitor-Routine SCANA/GETKEY. ST oder RST beendet.", "group": "Eigene Beispiele"}, "zaehler": {"name": "Dezimalzähler (eigenes)", "addr": 512, "code": [216, 169, 3, 133, 246, 169, 0, 133, 251, 133, 250, 133, 249, 32, 142, 29, 248, 24, 165, 249, 105, 1, 133, 249, 165, 250, 105, 0, 133, 250, 165, 251, 105, 0, 133, 251, 216, 76, 13, 2], "desc": "Sechsstelliger Zähler 000000–999999 im Dezimalmodus (SED/ADC). Jeder Durchlauf zeigt einmal alle Stellen an und zählt eins weiter.", "group": "Eigene Beispiele"}, "brk": {"name": "Addition mit BRK (eigenes)", "addr": 512, "code": [216, 24, 169, 19, 105, 8, 0, 234], "desc": "Rechnet $13 + $08. BRK springt über den Vektor $1A7E/$1A7F (= $1C00) in den Monitor, der alle Register rettet. Danach <b>AD 00F3</b> eintippen: dort steht der gerettete Akku <b>1B</b>. Register: $F3 = A, $F4 = Y, $F5 = X, $F1 = P.", "group": "Eigene Beispiele"}, "lauftext": {"name": "Lauftext (eigenes)", "addr": 512, "code": [216, 169, 30, 141, 131, 26, 169, 127, 141, 129, 26, 169, 0, 133, 16, 169, 64, 133, 17, 166, 16, 160, 8, 189, 69, 2, 141, 128, 26, 140, 130, 26, 169, 96, 56, 233, 1, 208, 251, 169, 127, 141, 128, 26, 232, 200, 200, 192, 20, 208, 228, 198, 17, 208, 220, 230, 16, 165, 16, 201, 18, 208, 208, 169, 0, 133, 16, 240, 202, 127, 127, 127, 127, 127, 127, 97, 65, 43, 79, 64, 47, 127, 121, 16, 0, 64, 127, 127, 127, 127, 127, 127], "desc": "Schiebt „JUnIOr 1980“ von rechts nach links über die sechs Stellen. Das Programm multiplext die Anzeige selbst: Muster an PA0–PA6, Ziffer über PB1–PB4 und den 74145 wählen, kurz warten, nächste Ziffer.", "group": "Eigene Beispiele"}, "stoppuhr": {"name": "Stoppuhr mit Timer-IRQ (eigenes)", "addr": 512, "code": [216, 120, 169, 57, 141, 126, 26, 169, 2, 141, 127, 26, 169, 3, 133, 246, 169, 0, 133, 251, 133, 250, 133, 249, 133, 18, 169, 255, 133, 19, 169, 156, 141, 254, 26, 88, 32, 142, 29, 170, 240, 10, 165, 19, 208, 6, 165, 18, 73, 1, 133, 18, 134, 19, 76, 36, 2, 72, 169, 156, 141, 254, 26, 165, 18, 240, 33, 248, 24, 165, 249, 105, 1, 133, 249, 144, 23, 165, 250, 105, 0, 201, 96, 208, 13, 169, 0, 133, 250, 165, 251, 105, 0, 133, 251, 76, 100, 2, 133, 250, 104, 64], "desc": "Minuten · Sekunden · Hundertstel. Jede Taste startet bzw. stoppt. Der Takt kommt aus dem 6532-Timer (156 × 64 µs) per Interrupt; die Routine setzt dafür selbst den IRQ-Vektor $1A7E. Danach RST drücken, um den Vektor zurückzusetzen.", "group": "Eigene Beispiele"}};
+const OPTAB = [["BRK","imp"],["ORA","izx"],null,null,null,["ORA","zp"],["ASL","zp"],null,["PHP","imp"],["ORA","imm"],["ASL","acc"],null,null,["ORA","abs"],["ASL","abs"],null,["BPL","rel"],["ORA","izy"],null,null,null,["ORA","zpx"],["ASL","zpx"],null,["CLC","imp"],["ORA","aby"],null,null,null,["ORA","abx"],["ASL","abx"],null,["JSR","abs"],["AND","izx"],null,null,["BIT","zp"],["AND","zp"],["ROL","zp"],null,["PLP","imp"],["AND","imm"],["ROL","acc"],null,["BIT","abs"],["AND","abs"],["ROL","abs"],null,["BMI","rel"],["AND","izy"],null,null,null,["AND","zpx"],["ROL","zpx"],null,["SEC","imp"],["AND","aby"],null,null,null,["AND","abx"],["ROL","abx"],null,["RTI","imp"],["EOR","izx"],null,null,null,["EOR","zp"],["LSR","zp"],null,["PHA","imp"],["EOR","imm"],["LSR","acc"],null,["JMP","abs"],["EOR","abs"],["LSR","abs"],null,["BVC","rel"],["EOR","izy"],null,null,null,["EOR","zpx"],["LSR","zpx"],null,["CLI","imp"],["EOR","aby"],null,null,null,["EOR","abx"],["LSR","abx"],null,["RTS","imp"],["ADC","izx"],null,null,null,["ADC","zp"],["ROR","zp"],null,["PLA","imp"],["ADC","imm"],["ROR","acc"],null,["JMP","ind"],["ADC","abs"],["ROR","abs"],null,["BVS","rel"],["ADC","izy"],null,null,null,["ADC","zpx"],["ROR","zpx"],null,["SEI","imp"],["ADC","aby"],null,null,null,["ADC","abx"],["ROR","abx"],null,null,["STA","izx"],null,null,["STY","zp"],["STA","zp"],["STX","zp"],null,["DEY","imp"],null,["TXA","imp"],null,["STY","abs"],["STA","abs"],["STX","abs"],null,["BCC","rel"],["STA","izy"],null,null,["STY","zpx"],["STA","zpx"],["STX","zpy"],null,["TYA","imp"],["STA","aby"],["TXS","imp"],null,null,["STA","abx"],null,null,["LDY","imm"],["LDA","izx"],["LDX","imm"],null,["LDY","zp"],["LDA","zp"],["LDX","zp"],null,["TAY","imp"],["LDA","imm"],["TAX","imp"],null,["LDY","abs"],["LDA","abs"],["LDX","abs"],null,["BCS","rel"],["LDA","izy"],null,null,["LDY","zpx"],["LDA","zpx"],["LDX","zpy"],null,["CLV","imp"],["LDA","aby"],["TSX","imp"],null,["LDY","abx"],["LDA","abx"],["LDX","aby"],null,["CPY","imm"],["CMP","izx"],null,null,["CPY","zp"],["CMP","zp"],["DEC","zp"],null,["INY","imp"],["CMP","imm"],["DEX","imp"],null,["CPY","abs"],["CMP","abs"],["DEC","abs"],null,["BNE","rel"],["CMP","izy"],null,null,null,["CMP","zpx"],["DEC","zpx"],null,["CLD","imp"],["CMP","aby"],null,null,null,["CMP","abx"],["DEC","abx"],null,["CPX","imm"],["SBC","izx"],null,null,["CPX","zp"],["SBC","zp"],["INC","zp"],null,["INX","imp"],["SBC","imm"],["NOP","imp"],null,["CPX","abs"],["SBC","abs"],["INC","abs"],null,["BEQ","rel"],["SBC","izy"],null,null,null,["SBC","zpx"],["INC","zpx"],null,["SED","imp"],["SBC","aby"],null,null,null,["SBC","abx"],["INC","abx"],null];   // [Mnemonic, Adressierungsart] je Opcode
+
+const hexToBytes = h => Uint8Array.from(h.match(/../g).map(x => parseInt(x, 16)));
+const hex2 = v => (v & 0xFF).toString(16).toUpperCase().padStart(2, '0');
+const hex4 = v => (v & 0xFFFF).toString(16).toUpperCase().padStart(4, '0');
+const ORIG_ROM = hexToBytes(ROM_HEX);
+const TM_ROM = hexToBytes('20720CA5FA8D701AA5FB8D711A4C4E08A2008E791A8E701A8E711A8E721A8E731A8E681AA9068D821AA91E8D831A203609D0FB203609F0FB203609F0F620F91DC914D00E20020BA2FFEC791AF0B2E84C2108C910D00820DF09A2004C2108C912D011EE681AA009CC681AD0C2A0008C681AF0BBC913D025A5E28D701AA5E38D711AA5E88D721AA5E98D731A20DF0920D31EA91E8D831AA2FF9A4CCA1CC911D0034CB51C06F906F906F906F905F985F9A000CC681AD0068D791A4C2E08C8CC681AD0068D711A4C2E08C8CC681AD0068D701A4C2E08C8CC681AD0068D731A4C2E08C8CC681AD0068D721A4C2E08C8CC681AD00585E34C2E08C8CC681AD00585E24C2E08C8CC681AD00585E54C2E08C8CC681AD00585E44C2E084C1008B9BB098D801A8E821A98A07F88D0FDA8E8E8C8E010D0E920A71D60A97F8D811AA208A000CC681AD009AD791A85F9201B0960C8CC681AD009AD711A85F9A004D0EDC8CC681AD009AD701A85F9A008D0DEC8CC681AD009AD731A85F9A00CD0CFC8CC681AD009AD721A85F9A010D0C0C8CC681AD008A5E385F9A014D0B2C8CC681AD008A5E285F9A018D0A4C8CC681AD008A5E585F9A01CD096A5E485F9A020D08E66217F7F5208097F5208477F0608097F0608477F0306420903064247062B2109062B2147A97D8D6C1AA9C38D6D1AA9038D761AA9028D771AA947A2FF8D821A8D781A8E831AA900A27F8D801A8E811A8D6E1A8D6F1AAD701A85FAAD711A85FBA2FF8E741AA91620A30ACE741AD0F6A92A20A30AAD791A208B0AAD701A207A0AAD711A207A0AA5FBCD731AD023A5FACD721AD01CA92F20A30AAD6E1A208B0AAD6F1A208B0AA90420A30AA90420A30A60A000B1FA207A0AE6FAD0CBE6FB4C400AA8186D6E1A8D6E1AAD6F1A69008D6F1A98A84A4A4A4A209A0A98290F209A0A60C90A18300269076930A2088E751A4A48900C20C80A20E50A20E50A4CC10A20C80A20C80A20E50A68CE751AD0E160AE761A2CD51A10FBAD6C1A8DF41AAD781A49808D821A8D781ACAD0E760AE771A2CD51A10FBAD6D1A8DF41AAD781A49808D821A8D781ACAD0E760A9328D821A8D781AA97E8D831AA97F8D811AA9008D6E1A8D6F1AA9FF8D6B1A20C20B6E6B1AAD6B1A20E80BC916D0F0A00A8C691A20360C205D0CC916D0DCCE691AD0F120360C205D0CC92AF006C916F0F2D0AD205D0C20F30BCD791AD03E20F30B204B0C85FA20F30B204B0C85FB20F30B308DF013204B0CA00091FAE6FAD002E6FB20640C4C700B20F30BCD6E1AD00920F30BCD6F1AD001604C020BAD791AC900F0BBC9FFD0F220F30B204B0C20F30B204B0CAD701A85FAAD711A85FB4C700B2C821A10FBADD41AA0FF8CF61AA01488D0FD2C821A30FB38EDD41AA0FF8CF61AA00788D0FD6048A9368D801A6820640C6020360CC92FD0016020190C30FA0A0A0A0A8D6A1A20360CC92FF0EC20190C30E70D6A1AA00160C930300CC93A300BC9413004C9473003A0FF60C9403003186909290F60A20820C20B6E6B1ACAD0F72E6B1A4E6B1AAD6B1A6048186D6E1A8D6E1AAD6F1A69008D6F1A686048497F8D801A6848AD781A49028D821A8D781A686038A5FAE90185FAA5FBE90085FB60');   // Interface-Platine: Tape-Monitor (Elektor ESS506), ab $0800
+const PM_ROM = hexToBytes('D878A9678D821AA9008D801AA2FE8E5A1AE88E5B1A9A86F2A97F8D811A8D831AA2028E591AA95F8D7C1AA9108D7D1AA9CF8D7A1AA9148D7B1A2C801A30FB20E0124E5F1A6E5E1AAD5E1A8D5C1AAD5F1A8D5D1AA20820031320BE12C97FD0A120461220E811A2FF9A86F220591220681220AE12C92BD00920131220F8114C6A10C92DD009201A1220F8114C6A10C920D00EA5F885FAA5F985FB20F8114C6A10C92ED00FA5F8A00091FA20131220F8114C6A10C952D013A6F29AA5FB48A5FA48A5F148A6F5A4F4A5F340C94CD052A01420D611A5F3208F12A01A20D611A5F4208F12A02020D611A5F5208F12A02620D611A5F0208F12A5EF208F12A02C20D611A901208F12A5F2208F12A03220D611202812A03820D61120F3114C6A104CB011C950D00EA5EF85FAA5F085FB20F8114C6A10C94DD0E7A05220D61120871310034C5F1038AD651AED631AAD661AED641A90EE20E811A20620F311CAD0FAA00098209B1220F31120F311C8C010D0F1AD631A85FAAD641A85FB20E811A210A5FB208F12A5FA208F12A01720D91138AD651AE5FAAD661AE5FBB00620E8114C5F10A000B1FA208F1220F311201312CAD0DDF0C7C947D00B208A1430034C6A104C5F10C953D008203B1430F44C6A10206F12D0034C70104C6A1020E811B9BD13C903F007203413C84CD91160A90D203413A90A20341360A9204CEF1120E811A5FB208F12A5FA208F1220F311A000B1FA208F1220F31160E6FAD002E6FB6038A5FAE90185FAA5FBE90085FB60A5F18D671AA2080E671A9009A901209B12CAD0F360A900209B12CAD0EA60A00020D61120E81160A0074C4812A00E4C4812A0008C631A8C641A8C651A8C661A60A00084F884F960201E143010A20406F826F9CAD0F905F885F8A00060A04620D61120E811A0FF60484A4A4A4A20A41220341368290F20A41220341360C90A18300269076930602C801A30FB8E611AA2082003132012132C801A100A386E621ACAD0F14CD412186E621ACAD0E7201213AD621A297FAE611A6018AD5A1A69018D5A1AAD5B1A69008D5B1A2C801A10EAAD5A1A8D5E1AAD5B1A8D5F1A60AD5C1A8D5E1AAD5D1A8D5F1A4C1E13AD5A1A8D5E1AAD5B1A8D5F1A38AD5E1AE9018D5E1AAD5F1AE9008D5F1AEAEAB0EB608E601A8D621AAD821A29FE8D821A201213A2074E621A9030AD821A09018D821A201213CAD0EDAE591AAD821A09018D821A201213CAD0F22C801A1004AE601A602C801A10FB6C7C1AAD821A29FE8D821A4C541320AE12C92CF007206F123029F0F2A5F88D631AA5F98D641A20681220AE12C90DF007206F12300EF0F2A5F98D661AA5F88D651AA000604A554E494F5203454449544F5203415353454D034143433A20035920203A20035820203A20035043203A20035350203A20035052203A200320202020204E56204244495A4303574841543F0352454144590348455844554D503A200353413A2003C930300CC93A300BC9413004C9473003A0FF60C9403003186909290F6020AE12C92CF007206F12303FF0F2A5F88D791AC900F035C9FFF0312068122087133028AD631A8D701AAD641A8D711AAD651A8D721AAD661A8D731A20DF0920BC14A04C20D61120E811A00060A0FF6020A21330178D791AC9FFF01120020B20BC14A04C20D61120E811A00060A05C20D61120EB1430F58D701AA5F98D711A4C9614A9678D821AA9008D801AA97F8D811A8D831A6085F36885F16885EF85FA6885F085FB84F486F5BA86F220F8114C6A10A90085F885F94CA213FFFFFFFFA91E8D831A4C511F206812A000203E1720871330F3AD631A85E218690185E8AD641A85E3690085E9AD651A85E4AD661A85E520D31EA977A00091E6A93D8D7C1AA9158D7D1AA024203E17A2FF9A200B1720AE12C94BD00920831E20EA1E4C4515C94CD01220D31E200B1720F81E30F8A01F203E17F0D7C920D00720F81E30CE10EEC949D01720C916300A20F616900920471EF0B9A00ED0D9A01AD0D5C953D04020C91630EF20D31EA5FB20601EA000B1E6C5FBD020C6F6F012C8B1E6C5FAD015C6F6F007C8B1E6C5F9D00A200B1720AE12C959D008205C1E20F81E30CB4C6715C95AD030A5E285ECA5E385EDC5E7D008A5E2C5E6D002F019A000B1EC20601E20A016A5E6C5ECD0F0A5E7C5EDD0EA2092164C4515C954D00620D31E4C4515C950D01CA90F85F7205C1E20F81EC6F7F0EBA000B1E6C977F0E3200B174C1E16C958D013A9478D7A1AA9168D7B1A4CF81420BC144C881720B116301220CE16300D205C1E20F81EA5FD85F64C82154C8C15206812A000203E1720871330F3AD631A85E2AD641A85E3AD651A85E485E8AD661A85E585E920D31E4C331538A5E6E5F685E6A5E7E90085E76018A5EC65F685ECA5ED690085ED6020AE12201E1430120A0A0A0A85FE20AE12201E14300405FEA2006020AE16302785FB20601E84F784FDC6F7F01820F31120AE16301285FAC6F7F00A20F31120AE16300485F9A2006020DC1E38A5E4E902E5E8A5E5E5E9900420EA1E386020E811205C1EA6F6A5E7208F12A5E6208F12A90F85EEA00020F311B1E6208F1238A5EEE90385EEC8CAD0ED20F311C6EED0F96020E811B95017C903F007203413C84C41176042454741442C454E4441443A2003494C4C4547414C204B45590346554C4C03444F4E4503504D20454449544F52034C41422024033A202403A0FF20E811A20484FDA02E204117A4FDB1EC208F128884FDA034204117A4FDB1EC208F1288B1EC208F1220F31188C4EEF005CAD0D2F0CB20D31E4C3D15206812A000203E1720871330F320D31EA000B1E6C977F00920601E20F81E4CD51718A5E6690185E8A5E7690085E94C3315D84C001CD84CCF147777');   // Interface-Platine: PM-EPROM ESS507N (Printer-Monitor + PM-Editor PME), $1000-$17FF
+const PM_PLAIN_LEN = 0x4F4;           // ESS507 ohne PME: nur $1000-$14F3 belegt
+
+// Monitor-Labels (Nachtmann 1980) und Hardware-Register für den Disassembler
+const SYMS = {
+  0x1C00:'SAVE',0x1C05:'SAVEA',0x1C0F:'SAVEB',0x1C1D:'RESET',0x1C33:'START',0x1C38:'STARA',0x1C45:'GOEXEC',
+  0x1C5C:'ADMODE',0x1C66:'DAMODE',0x1C70:'STEP',0x1C7A:'STEPA',0x1C7D:'PCKEY',0x1C8C:'ILLKEY',0x1C90:'DATA',
+  0x1CA3:'ADDRESS',0x1CB5:'EDITOR',0x1CCA:'CMND',0x1CCD:'SEARCH',0x1CFB:'INSERT',0x1D09:'INPUT',0x1D21:'SKIP',
+  0x1D2C:'DELETE',0x1D39:'ERRA',0x1D4D:'SCAN',0x1D5C:'SCANA',0x1D61:'SCANB',0x1D6F:'GETBYT',0x1D88:'SCAND',
+  0x1D8E:'SCANDS',0x1DAC:'SCDSB',0x1DB1:'AK',0x1DB5:'ONEKEY',0x1DCC:'SHOW',0x1DDF:'CONVD',0x1DEB:'DELAY',
+  0x1DF9:'GETKEY',0x1E09:'KEYIN',0x1E20:'RDINST',0x1E47:'FILLWS',0x1E5C:'OPLEN',0x1E60:'LENACC',0x1E83:'UP',
+  0x1EA6:'DOWN',0x1ED3:'BEGIN',0x1EDC:'ADCEND',0x1EEA:'RECEND',0x1EF8:'NEXT',0x1F0F:'LOOK',0x1F1F:'LEN',
+  0x1F2F:'NMI',0x1F32:'IRQ',0x1F35:'GETLBL',0x1F51:'ASSEMB',0x1F65:'PASSA',0x1F95:'PASSB',0x1FD5:'BRANCH',
+  0x1A80:'PAD',0x1A81:'PADD',0x1A82:'PBD',0x1A83:'PBDD',0x1AD5:'RDFLAG',0x1AF4:'CNTA',0x1AF5:'CNTB',
+  0x1AF6:'CNTC',0x1AF7:'CNTD',0x1AFC:'CNTE',0x1AFD:'CNTF',0x1AFE:'CNTG',0x1AFF:'CNTH',
+  0x1A7A:'NMIL',0x1A7B:'NMIH',0x1A7C:'BRKTL',0x1A7D:'BRKTH',0x1A7E:'IRQL',0x1A7F:'IRQH',
+  // Interface-Platine
+  0x0800:'TMGET',0x0810:'TM',0x082E:'TMLOOP',0x0936:'TMSHOW',0x09DF:'DUMPT',0x0B02:'RDTAPE',0x0A7A:'OUTBTC',0x0A8B:'HEXOUT',
+  0x0AA3:'OUTCHT',0x0AC8:'HFBURST',0x0AE5:'LFBURST',0x0BC2:'RDBIT',0x0C36:'RDCHT',0x0BF3:'RDBYTE',
+  0x1000:'PM',0x105F:'PMREADY',0x106A:'PMCMD',0x11E8:'CRLF',0x11F3:'SPACE',0x128F:'PRTBYT',0x12AE:'GETCH',
+  0x12E0:'BAUD',0x1312:'BITDLY',0x1334:'OUTCH',0x1387:'GETRNG',0x143B:'PMSAVE',0x148A:'PMLOAD',0x14BC:'RESTTY',0x14CF:'STEP',0x14EB:'IPBRES',
+  // PM-Editor PME (Buch 4) und Anhang-4-Routinen im ESS507N
+  0x1500:'EDITC',0x1533:'PMEWARM',0x1594:'SEARCH',0x1667:'SEMIW',0x17C5:'SEACND',0x17F6:'BINAR',0x17FA:'PMBINA',
+  0x1800:'ORB',0x1801:'ORA',0x1802:'DDRB',0x1803:'DDRA',0x1804:'T1CL',0x1805:'T1CH',0x1806:'T1LL',0x1807:'T1LH',
+  0x1808:'T2CL',0x1809:'T2CH',0x180A:'SR',0x180B:'ACR',0x180C:'PCR',0x180D:'IFR',0x180E:'IER',0x180F:'ORA_NH',
+};
+const ZSYMS = { 0xE1:'KEY',0xE2:'BEGADR',0xE4:'ENDADR',0xE6:'CURADR',0xE8:'CENDADR',0xEF:'PCL',0xF0:'PCH',
+  0xF1:'PREG',0xF2:'SPUSER',0xF3:'ACC',0xF4:'YREG',0xF5:'XREG',0xF6:'BYTES',0xF7:'COUNT',0xF8:'INL',
+  0xF9:'INH',0xFA:'POINT',0xFB:'POINT+1',0xFC:'TEMP',0xFD:'TEMPX',0xFE:'NIBBLE',0xFF:'MODE' };
+
+// ============================================================
+// 6502-Kern (aus kim1.html übernommen)
+// ============================================================
+class CPU6502 {
+  constructor(rd, wr) {
+    this.rd = rd; this.wr = wr;
+    this.A=0; this.X=0; this.Y=0; this.SP=0xFD; this.PC=0;
+    this.N=0; this.V=0; this.B=0; this.D=0; this.I=1; this.Z=0; this.C=0;
+    this.halted = false; this.nmiPending = false; this.irqLine = false;
+  }
+  getP() { return (this.N<<7)|(this.V<<6)|0x20|0x10|(this.D<<3)|(this.I<<2)|(this.Z<<1)|this.C; }
+  setP(v) { this.N=(v>>7)&1; this.V=(v>>6)&1; this.D=(v>>3)&1; this.I=(v>>2)&1; this.Z=(v>>1)&1; this.C=v&1; }
+  nz(v) { this.N=(v>>7)&1; this.Z=v===0?1:0; return v; }
+  push(v) { this.wr(0x100+this.SP, v&0xFF); this.SP=(this.SP-1)&0xFF; }
+  pull() { this.SP=(this.SP+1)&0xFF; return this.rd(0x100+this.SP); }
+  push16(v) { this.push((v>>8)&0xFF); this.push(v&0xFF); }
+  pull16() { const lo=this.pull(); return lo|(this.pull()<<8); }
+  rd16(a) { return this.rd(a)|(this.rd((a+1)&0xFFFF)<<8); }
+  rd16w(a) { return this.rd(a)|(this.rd((a&0xFF00)|((a+1)&0xFF))<<8); } // JMP-()-Seitenfehler
+  reset() { this.PC=this.rd16(0xFFFC); this.SP=(this.SP-3)&0xFF; this.I=1; this.halted=false; this.nmiPending=false; }
+  triggerNMI() { this.nmiPending = true; }
+  interruptPending() { return this.nmiPending || (this.irqLine && !this.I); }
+
+  step() {
+    if (this.halted) return 2;
+    if (this.nmiPending) {
+      this.nmiPending = false;
+      this.push16(this.PC); this.push(this.getP() & ~0x10); this.I=1;
+      this.PC = this.rd16(0xFFFA); return 7;
+    }
+    if (this.irqLine && !this.I) {
+      this.push16(this.PC); this.push(this.getP() & ~0x10); this.I=1;
+      this.PC = this.rd16(0xFFFE); return 7;
+    }
+    const op = this.rd(this.PC); this.PC = (this.PC+1) & 0xFFFF;
+    let a, v, t;
+    const imm=()=>{const r=this.PC;this.PC=(this.PC+1)&0xFFFF;return r};
+    const nb=()=>{const r=this.rd(this.PC);this.PC=(this.PC+1)&0xFFFF;return r};
+    const zp=()=>nb();
+    const zpx=()=>(nb()+this.X)&0xFF;
+    const zpy=()=>(nb()+this.Y)&0xFF;
+    const ab=()=>{const l=nb();return l|(nb()<<8)};
+    const abx=()=>(ab()+this.X)&0xFFFF;
+    const aby=()=>(ab()+this.Y)&0xFFFF;
+    const izx=()=>{const p=(nb()+this.X)&0xFF;return this.rd(p)|(this.rd((p+1)&0xFF)<<8)};
+    const izy=()=>{const p=nb();const base=this.rd(p)|(this.rd((p+1)&0xFF)<<8);return(base+this.Y)&0xFFFF};
+    const rel=()=>{let o=nb();if(o&0x80)o-=256;return(this.PC+o)&0xFFFF};
+    const adc=(v)=>{
+      if(this.D){let al=(this.A&0xF)+(v&0xF)+this.C;if(al>9)al+=6;let ah=(this.A>>4)+(v>>4)+(al>15?1:0);
+        this.Z=((this.A+v+this.C)&0xFF)===0?1:0;
+        this.N=(ah&8)?1:0; this.V=(~(this.A^v)&(this.A^(ah<<4))&0x80)?1:0;if(ah>9)ah+=6;this.C=ah>15?1:0;
+        this.A=((al&0xF)|((ah&0xF)<<4))&0xFF;}
+      else{const s=this.A+v+this.C;this.V=(~(this.A^v)&(this.A^s)&0x80)?1:0;this.C=s>255?1:0;this.A=s&0xFF;this.nz(this.A);}};
+    const sbc=(v)=>{
+      const d=this.A-v-(1-this.C);
+      if(this.D){let al=(this.A&0xF)-(v&0xF)-(1-this.C);if(al<0)al=((al-6)&0xF)|0x10;
+        let ah=(this.A>>4)-(v>>4)-(al&0x10?1:0);if(ah<0)ah=(ah-6)&0xF;
+        this.C=d>=0?1:0;this.V=((this.A^v)&(this.A^d)&0x80)?1:0;this.nz(d&0xFF);
+        this.A=((al&0xF)|(ah<<4))&0xFF;}
+      else{this.V=((this.A^v)&(this.A^d)&0x80)?1:0;this.C=d>=0?1:0;this.A=this.nz(d&0xFF);}};
+    const br=(c)=>{const d=rel();if(c){const x=((this.PC^d)&0xFF00)?2:1;this.PC=d;return 2+x;}return 2;};
+    const cmp=(r,v)=>{const d=r-v;this.C=d>=0?1:0;this.nz(d&0xFF)};
+    switch(op) {
+      case 0x00:this.PC=(this.PC+1)&0xFFFF;this.push16(this.PC);this.push(this.getP());this.I=1;this.PC=this.rd16(0xFFFE);return 7;
+      case 0x01:this.A=this.nz(this.A|this.rd(izx()));return 6;
+      case 0x05:this.A=this.nz(this.A|this.rd(zp()));return 3;
+      case 0x06:a=zp();v=this.rd(a);this.C=(v>>7)&1;this.wr(a,this.nz((v<<1)&0xFF));return 5;
+      case 0x08:this.push(this.getP());return 3;
+      case 0x09:this.A=this.nz(this.A|this.rd(imm()));return 2;
+      case 0x0A:this.C=(this.A>>7)&1;this.A=this.nz((this.A<<1)&0xFF);return 2;
+      case 0x0D:this.A=this.nz(this.A|this.rd(ab()));return 4;
+      case 0x0E:a=ab();v=this.rd(a);this.C=(v>>7)&1;this.wr(a,this.nz((v<<1)&0xFF));return 6;
+      case 0x10:return br(!this.N);
+      case 0x11:this.A=this.nz(this.A|this.rd(izy()));return 5;
+      case 0x15:this.A=this.nz(this.A|this.rd(zpx()));return 4;
+      case 0x16:a=zpx();v=this.rd(a);this.C=(v>>7)&1;this.wr(a,this.nz((v<<1)&0xFF));return 6;
+      case 0x18:this.C=0;return 2;
+      case 0x19:this.A=this.nz(this.A|this.rd(aby()));return 4;
+      case 0x1D:this.A=this.nz(this.A|this.rd(abx()));return 4;
+      case 0x1E:a=abx();v=this.rd(a);this.C=(v>>7)&1;this.wr(a,this.nz((v<<1)&0xFF));return 7;
+      case 0x20:a=ab();this.push16((this.PC-1)&0xFFFF);this.PC=a;return 6;
+      case 0x21:this.A=this.nz(this.A&this.rd(izx()));return 6;
+      case 0x24:v=this.rd(zp());this.N=(v>>7)&1;this.V=(v>>6)&1;this.Z=(this.A&v)===0?1:0;return 3;
+      case 0x25:this.A=this.nz(this.A&this.rd(zp()));return 3;
+      case 0x26:a=zp();v=this.rd(a);t=this.C;this.C=(v>>7)&1;this.wr(a,this.nz(((v<<1)|t)&0xFF));return 5;
+      case 0x28:this.setP(this.pull());return 4;
+      case 0x29:this.A=this.nz(this.A&this.rd(imm()));return 2;
+      case 0x2A:t=this.C;this.C=(this.A>>7)&1;this.A=this.nz(((this.A<<1)|t)&0xFF);return 2;
+      case 0x2C:v=this.rd(ab());this.N=(v>>7)&1;this.V=(v>>6)&1;this.Z=(this.A&v)===0?1:0;return 4;
+      case 0x2D:this.A=this.nz(this.A&this.rd(ab()));return 4;
+      case 0x2E:a=ab();v=this.rd(a);t=this.C;this.C=(v>>7)&1;this.wr(a,this.nz(((v<<1)|t)&0xFF));return 6;
+      case 0x30:return br(!!this.N);
+      case 0x31:this.A=this.nz(this.A&this.rd(izy()));return 5;
+      case 0x35:this.A=this.nz(this.A&this.rd(zpx()));return 4;
+      case 0x36:a=zpx();v=this.rd(a);t=this.C;this.C=(v>>7)&1;this.wr(a,this.nz(((v<<1)|t)&0xFF));return 6;
+      case 0x38:this.C=1;return 2;
+      case 0x39:this.A=this.nz(this.A&this.rd(aby()));return 4;
+      case 0x3D:this.A=this.nz(this.A&this.rd(abx()));return 4;
+      case 0x3E:a=abx();v=this.rd(a);t=this.C;this.C=(v>>7)&1;this.wr(a,this.nz(((v<<1)|t)&0xFF));return 7;
+      case 0x40:this.setP(this.pull());this.PC=this.pull16();return 6;
+      case 0x41:this.A=this.nz(this.A^this.rd(izx()));return 6;
+      case 0x45:this.A=this.nz(this.A^this.rd(zp()));return 3;
+      case 0x46:a=zp();v=this.rd(a);this.C=v&1;this.wr(a,this.nz(v>>1));return 5;
+      case 0x48:this.push(this.A);return 3;
+      case 0x49:this.A=this.nz(this.A^this.rd(imm()));return 2;
+      case 0x4A:this.C=this.A&1;this.A=this.nz(this.A>>1);return 2;
+      case 0x4C:this.PC=ab();return 3;
+      case 0x4D:this.A=this.nz(this.A^this.rd(ab()));return 4;
+      case 0x4E:a=ab();v=this.rd(a);this.C=v&1;this.wr(a,this.nz(v>>1));return 6;
+      case 0x50:return br(!this.V);
+      case 0x51:this.A=this.nz(this.A^this.rd(izy()));return 5;
+      case 0x55:this.A=this.nz(this.A^this.rd(zpx()));return 4;
+      case 0x56:a=zpx();v=this.rd(a);this.C=v&1;this.wr(a,this.nz(v>>1));return 6;
+      case 0x58:this.I=0;return 2;
+      case 0x59:this.A=this.nz(this.A^this.rd(aby()));return 4;
+      case 0x5D:this.A=this.nz(this.A^this.rd(abx()));return 4;
+      case 0x5E:a=abx();v=this.rd(a);this.C=v&1;this.wr(a,this.nz(v>>1));return 7;
+      case 0x60:this.PC=(this.pull16()+1)&0xFFFF;return 6;
+      case 0x61:adc(this.rd(izx()));return 6;
+      case 0x65:adc(this.rd(zp()));return 3;
+      case 0x66:a=zp();v=this.rd(a);t=this.C;this.C=v&1;this.wr(a,this.nz((v>>1)|(t<<7)));return 5;
+      case 0x68:this.A=this.nz(this.pull());return 4;
+      case 0x69:adc(this.rd(imm()));return 2;
+      case 0x6A:t=this.C;this.C=this.A&1;this.A=this.nz((this.A>>1)|(t<<7));return 2;
+      case 0x6C:this.PC=this.rd16w(ab());return 5;
+      case 0x6D:adc(this.rd(ab()));return 4;
+      case 0x6E:a=ab();v=this.rd(a);t=this.C;this.C=v&1;this.wr(a,this.nz((v>>1)|(t<<7)));return 6;
+      case 0x70:return br(!!this.V);
+      case 0x71:adc(this.rd(izy()));return 5;
+      case 0x75:adc(this.rd(zpx()));return 4;
+      case 0x76:a=zpx();v=this.rd(a);t=this.C;this.C=v&1;this.wr(a,this.nz((v>>1)|(t<<7)));return 6;
+      case 0x78:this.I=1;return 2;
+      case 0x79:adc(this.rd(aby()));return 4;
+      case 0x7D:adc(this.rd(abx()));return 4;
+      case 0x7E:a=abx();v=this.rd(a);t=this.C;this.C=v&1;this.wr(a,this.nz((v>>1)|(t<<7)));return 7;
+      case 0x81:this.wr(izx(),this.A);return 6;
+      case 0x84:this.wr(zp(),this.Y);return 3;
+      case 0x85:this.wr(zp(),this.A);return 3;
+      case 0x86:this.wr(zp(),this.X);return 3;
+      case 0x88:this.Y=this.nz((this.Y-1)&0xFF);return 2;
+      case 0x8A:this.A=this.nz(this.X);return 2;
+      case 0x8C:this.wr(ab(),this.Y);return 4;
+      case 0x8D:this.wr(ab(),this.A);return 4;
+      case 0x8E:this.wr(ab(),this.X);return 4;
+      case 0x90:return br(!this.C);
+      case 0x91:this.wr(izy(),this.A);return 6;
+      case 0x94:this.wr(zpx(),this.Y);return 4;
+      case 0x95:this.wr(zpx(),this.A);return 4;
+      case 0x96:this.wr(zpy(),this.X);return 4;
+      case 0x98:this.A=this.nz(this.Y);return 2;
+      case 0x99:this.wr(aby(),this.A);return 5;
+      case 0x9A:this.SP=this.X;return 2;
+      case 0x9D:this.wr(abx(),this.A);return 5;
+      case 0xA0:this.Y=this.nz(this.rd(imm()));return 2;
+      case 0xA1:this.A=this.nz(this.rd(izx()));return 6;
+      case 0xA2:this.X=this.nz(this.rd(imm()));return 2;
+      case 0xA4:this.Y=this.nz(this.rd(zp()));return 3;
+      case 0xA5:this.A=this.nz(this.rd(zp()));return 3;
+      case 0xA6:this.X=this.nz(this.rd(zp()));return 3;
+      case 0xA8:this.Y=this.nz(this.A);return 2;
+      case 0xA9:this.A=this.nz(this.rd(imm()));return 2;
+      case 0xAA:this.X=this.nz(this.A);return 2;
+      case 0xAC:this.Y=this.nz(this.rd(ab()));return 4;
+      case 0xAD:this.A=this.nz(this.rd(ab()));return 4;
+      case 0xAE:this.X=this.nz(this.rd(ab()));return 4;
+      case 0xB0:return br(!!this.C);
+      case 0xB1:this.A=this.nz(this.rd(izy()));return 5;
+      case 0xB4:this.Y=this.nz(this.rd(zpx()));return 4;
+      case 0xB5:this.A=this.nz(this.rd(zpx()));return 4;
+      case 0xB6:this.X=this.nz(this.rd(zpy()));return 4;
+      case 0xB8:this.V=0;return 2;
+      case 0xB9:this.A=this.nz(this.rd(aby()));return 4;
+      case 0xBA:this.X=this.nz(this.SP);return 2;
+      case 0xBC:this.Y=this.nz(this.rd(abx()));return 4;
+      case 0xBD:this.A=this.nz(this.rd(abx()));return 4;
+      case 0xBE:this.X=this.nz(this.rd(aby()));return 4;
+      case 0xC0:cmp(this.Y,this.rd(imm()));return 2;
+      case 0xC1:cmp(this.A,this.rd(izx()));return 6;
+      case 0xC4:cmp(this.Y,this.rd(zp()));return 3;
+      case 0xC5:cmp(this.A,this.rd(zp()));return 3;
+      case 0xC6:a=zp();this.wr(a,this.nz((this.rd(a)-1)&0xFF));return 5;
+      case 0xC8:this.Y=this.nz((this.Y+1)&0xFF);return 2;
+      case 0xC9:cmp(this.A,this.rd(imm()));return 2;
+      case 0xCA:this.X=this.nz((this.X-1)&0xFF);return 2;
+      case 0xCC:cmp(this.Y,this.rd(ab()));return 4;
+      case 0xCD:cmp(this.A,this.rd(ab()));return 4;
+      case 0xCE:a=ab();this.wr(a,this.nz((this.rd(a)-1)&0xFF));return 6;
+      case 0xD0:return br(!this.Z);
+      case 0xD1:cmp(this.A,this.rd(izy()));return 5;
+      case 0xD5:cmp(this.A,this.rd(zpx()));return 4;
+      case 0xD6:a=zpx();this.wr(a,this.nz((this.rd(a)-1)&0xFF));return 6;
+      case 0xD8:this.D=0;return 2;
+      case 0xD9:cmp(this.A,this.rd(aby()));return 4;
+      case 0xDD:cmp(this.A,this.rd(abx()));return 4;
+      case 0xDE:a=abx();this.wr(a,this.nz((this.rd(a)-1)&0xFF));return 7;
+      case 0xE0:cmp(this.X,this.rd(imm()));return 2;
+      case 0xE1:sbc(this.rd(izx()));return 6;
+      case 0xE4:cmp(this.X,this.rd(zp()));return 3;
+      case 0xE5:sbc(this.rd(zp()));return 3;
+      case 0xE6:a=zp();this.wr(a,this.nz((this.rd(a)+1)&0xFF));return 5;
+      case 0xE8:this.X=this.nz((this.X+1)&0xFF);return 2;
+      case 0xE9:sbc(this.rd(imm()));return 2;
+      case 0xEA:return 2;
+      case 0xEC:cmp(this.X,this.rd(ab()));return 4;
+      case 0xED:sbc(this.rd(ab()));return 4;
+      case 0xEE:a=ab();this.wr(a,this.nz((this.rd(a)+1)&0xFF));return 6;
+      case 0xF0:return br(!!this.Z);
+      case 0xF1:sbc(this.rd(izy()));return 5;
+      case 0xF5:sbc(this.rd(zpx()));return 4;
+      case 0xF6:a=zpx();this.wr(a,this.nz((this.rd(a)+1)&0xFF));return 6;
+      case 0xF8:this.D=1;return 2;
+      case 0xF9:sbc(this.rd(aby()));return 4;
+      case 0xFD:sbc(this.rd(abx()));return 4;
+      case 0xFE:a=abx();this.wr(a,this.nz((this.rd(a)+1)&0xFF));return 7;
+      // inoffizielle NOPs
+      case 0x1A:case 0x3A:case 0x5A:case 0x7A:case 0xDA:case 0xFA:return 2;
+      case 0x04:case 0x44:case 0x64:case 0x80:case 0x82:case 0x89:case 0xC2:case 0xE2:this.PC=(this.PC+1)&0xFFFF;return 3;
+      case 0x14:case 0x34:case 0x54:case 0x74:case 0xD4:case 0xF4:this.PC=(this.PC+1)&0xFFFF;return 4;
+      case 0x0C:case 0x1C:case 0x3C:case 0x5C:case 0x7C:case 0xDC:case 0xFC:this.PC=(this.PC+2)&0xFFFF;return 4;
+      // JAM: Prozessor bleibt stehen
+      case 0x02:case 0x12:case 0x22:case 0x32:case 0x42:case 0x52:
+      case 0x62:case 0x72:case 0x92:case 0xB2:case 0xD2:case 0xF2:
+        this.halted=true;this.PC=(this.PC-1)&0xFFFF;return 2;
+      default:return 2; // übrige inoffizielle Opcodes: wie NOP behandelt
+    }
+  }
+}
+
+// ============================================================
+// 6532 RIOT: 128 Byte RAM, zwei 8-Bit-Ports, Intervall-Timer, PA7-Flankenerkennung
+// I/O-Register (A7=1):  A2=0: A1A0 = PA, DDRA, PB, DDRB
+//   A2=1 schreiben: A4=1 Timer (A1A0 = 1/8/64/1024, A3 = IRQ frei), A4=0 Flankensteuerung PA7
+//   A2=1 lesen:     A0=0 Timerstand (A3 = IRQ frei), A0=1 Flags (Bit7 Timer, Bit6 PA7)
+// ============================================================
+class RIOT6532 {
+  constructor() {
+    this.ram = new Uint8Array(128);
+    this.paIn = () => 0xFF; this.pbIn = () => 0xFF; this.onPort = () => {};
+    this.reset();
+  }
+  reset() {
+    this.pa = 0; this.ddra = 0; this.pb = 0; this.ddrb = 0;
+    this.count = 0xFF; this.div = 1024; this.pre = 0;
+    this.tflag = false; this.expired = false; this.tIrq = false;
+    this.pa7flag = false; this.pa7Irq = false; this.pa7pos = false; this.lastPA7 = 1;
+    this.onPort();
+  }
+  paPins() { return (this.pa & this.ddra) | (this.paIn() & ~this.ddra & 0xFF); }
+  pbPins() { return (this.pb & this.ddrb) | (this.pbIn() & ~this.ddrb & 0xFF); }
+  read(reg) {
+    if (!(reg & 4)) {
+      switch (reg & 3) { case 0: return this.paPins(); case 1: return this.ddra; case 2: return this.pbPins(); default: return this.ddrb; }
+    }
+    if (!(reg & 1)) { this.tIrq = !!(reg & 8); this.tflag = false; return this.count; }
+    const f = (this.tflag ? 0x80 : 0) | (this.pa7flag ? 0x40 : 0);
+    this.pa7flag = false;
+    return f;
+  }
+  peek(reg) { // ohne Seiteneffekte, für die Anzeige
+    if (!(reg & 4)) return [this.paPins(), this.ddra, this.pbPins(), this.ddrb][reg & 3];
+    return (reg & 1) ? ((this.tflag ? 0x80 : 0) | (this.pa7flag ? 0x40 : 0)) : this.count;
+  }
+  write(reg, v) {
+    if (!(reg & 4)) {
+      switch (reg & 3) { case 0: this.pa = v; break; case 1: this.ddra = v; break; case 2: this.pb = v; break; default: this.ddrb = v; }
+      this.onPort(); return;
+    }
+    if (reg & 0x10) {
+      this.count = v; this.div = [1, 8, 64, 1024][reg & 3]; this.pre = 0;
+      this.tflag = false; this.expired = false; this.tIrq = !!(reg & 8);
+    } else { this.pa7pos = !!(reg & 1); this.pa7Irq = !!(reg & 2); }
+  }
+  pinPA7(level) { // Flankenerkennung, für spätere Erweiterungen (Kassette)
+    if (level !== this.lastPA7 && (this.pa7pos ? level : !level)) this.pa7flag = true;
+    this.lastPA7 = level;
+  }
+  tick(cycles) {
+    this.pre += cycles;
+    for (;;) {
+      const d = this.expired ? 1 : this.div;
+      if (this.pre < d) break;
+      this.pre -= d;
+      if (this.count === 0) { this.count = 0xFF; this.tflag = true; this.expired = true; }
+      else this.count--;
+    }
+  }
+  get irq() { return (this.tflag && this.tIrq) || (this.pa7flag && this.pa7Irq); }
+}
+
+// ============================================================
+// Junior Computer
+// 74145 an A10..A12:  K0 $0000 RAM (2x 2114) · K1..K5 frei (Erweiterungen) · K6 $1800 6532 · K7 $1C00 EPROM 2708
+// A13..A15 werden in der Grundausstattung nicht dekodiert: $2000..$FFFF spiegeln $0000..$1FFF (so findet die CPU die Vektoren bei $FFFA).
+// Erweiterung (Buch 3, Kap. 10 und Anhang 1): Brücke D->EX am 74145 und RAM/EPROM-Busspeicherkarten in 4-K-Blöcken $2000..$FFFF.
+// Anzeige & Tastatur: PA0..PA6 = Segmente a..g (über ULN2003, aktiv low) bzw. Tastaturspalten,
+// PB1..PB4 -> 74145: Ausgänge 0..2 = Tastaturzeilen, 4..9 = Ziffern 1..6, 3 = alles dunkel.
+// ============================================================
+// ============================================================
+// 6522 VIA der Interface-Platine (Ports, T1, T2, IFR/IER; Schieberegister und Handshake nur als Register)
+// ============================================================
+class VIA6522 {
+  constructor() { this.reset(); }
+  reset() {
+    this.orb = 0; this.ora = 0; this.ddrb = 0; this.ddra = 0;
+    this.t1c = 0xFFFF; this.t1l = 0xFFFF; this.t1armed = false;
+    this.t2c = 0xFFFF; this.t2l = 0xFF; this.t2armed = false;
+    this.sr = 0; this.acr = 0; this.pcr = 0; this.ifr = 0; this.ier = 0;
+  }
+  get irq() { return (this.ifr & this.ier & 0x7F) !== 0; }
+  ifrValue() { return (this.ifr & 0x7F) | (this.irq ? 0x80 : 0); }
+  peek(r) {
+    switch (r & 15) {
+      case 0: return (this.orb & this.ddrb) | (~this.ddrb & 0xFF);
+      case 1: case 15: return (this.ora & this.ddra) | (~this.ddra & 0xFF);
+      case 2: return this.ddrb; case 3: return this.ddra;
+      case 4: return this.t1c & 0xFF; case 5: return this.t1c >> 8;
+      case 6: return this.t1l & 0xFF; case 7: return this.t1l >> 8;
+      case 8: return this.t2c & 0xFF; case 9: return this.t2c >> 8;
+      case 10: return this.sr; case 11: return this.acr; case 12: return this.pcr;
+      case 13: return this.ifrValue(); default: return this.ier | 0x80;
+    }
+  }
+  read(r) {
+    const v = this.peek(r);
+    switch (r & 15) {
+      case 0: this.ifr &= ~0x18; break;
+      case 1: this.ifr &= ~0x03; break;
+      case 4: this.ifr &= ~0x40; break;
+      case 8: this.ifr &= ~0x20; break;
+      case 10: this.ifr &= ~0x04; break;
+    }
+    return v;
+  }
+  write(r, v) {
+    switch (r & 15) {
+      case 0: this.orb = v; this.ifr &= ~0x18; break;
+      case 1: this.ora = v; this.ifr &= ~0x03; break;
+      case 15: this.ora = v; break;
+      case 2: this.ddrb = v; break; case 3: this.ddra = v; break;
+      case 4: case 6: this.t1l = (this.t1l & 0xFF00) | v; break;
+      case 5: this.t1l = (this.t1l & 0xFF) | (v << 8); this.t1c = this.t1l; this.ifr &= ~0x40; this.t1armed = true; break;
+      case 7: this.t1l = (this.t1l & 0xFF) | (v << 8); this.ifr &= ~0x40; break;
+      case 8: this.t2l = v; break;
+      case 9: this.t2c = this.t2l | (v << 8); this.ifr &= ~0x20; this.t2armed = true; break;
+      case 10: this.sr = v; this.ifr &= ~0x04; break;
+      case 11: this.acr = v; break; case 12: this.pcr = v; break;
+      case 13: this.ifr &= ~(v & 0x7F); break;
+      case 14: if (v & 0x80) this.ier |= v & 0x7F; else this.ier &= ~(v & 0x7F); break;
+    }
+  }
+  tick(c) {
+    let n = this.t1c - c;
+    while (n < 0) {
+      if (this.t1armed) this.ifr |= 0x40;
+      if (this.acr & 0x40) n += this.t1l + 2;          // Freilauf: Latch nachladen
+      else { this.t1armed = false; n += 0x10000; }     // One-Shot: zählt einfach weiter
+    }
+    this.t1c = n;
+    if (!(this.acr & 0x20)) {                          // T2 nur im Zeitgebermodus
+      let m = this.t2c - c;
+      while (m < 0) { if (this.t2armed) { this.ifr |= 0x20; this.t2armed = false; } m += 0x10000; }
+      this.t2c = m;
+    }
+  }
+}
+
+// ============================================================
+// Kassette (Tape-Monitor-Format der Interface-Platine)
+// Ein Band ist eine Folge von Halbperioden in µs (= Takte bei 1 MHz).
+// TM schreibt Rechteck auf PB7: Bit 1 = 3 × hoch (HF) + 4 × tief (LF), Bit 0 = 6 × HF + 2 × LF,
+// HF = 3600 Hz (139 µs je Halbperiode), LF = 2400 Hz (208 µs), ein Bit = 9 HF-Halbperioden = 1,25 ms,
+// also 800 bit/s (Junior-Computer Buch 3, Kap. 11). Der PLL-Demodulator (NE565 + LM311) liefert auf PB7:
+// HF -> 0, LF -> 1, aber nur solange PB5 = 1 ist (Gatter N38).
+// Motorsteuerung: PB5 = 0 -> Relais Re2, rote LED OUTPUT ON (Aufnahmerekorder läuft);
+//                 PB6 = 0 -> Relais Re1, grüne LED INPUT ON (Wiedergaberekorder läuft). TM liest ein Bit als 1, wenn die Hochphase länger ist als die Tiefphase davor.
+// Zeichen: 8 Bit, LSB zuerst. Satz: 255 × SYN ($16), '*', ID, SAL, SAH, Daten (je zwei ASCII-Hexziffern),
+// '/', Prüfsumme L, H (16-Bit-Summe von SA und Daten), 2 × EOT ($04). Endadresse ist exklusiv.
+// ============================================================
+const TAPE_HF = 139, TAPE_LF = 208, TAPE_SPLIT = 173, TAPE_GAP = 2500;
+function tapeEncode(id, sa, data) {
+  const d = [];
+  const bit = b => { const n = b ? [3, 4] : [6, 2];
+    for (let i = 0; i < n[0]; i++) d.push(TAPE_HF);
+    for (let i = 0; i < n[1]; i++) d.push(TAPE_LF); };
+  const ch = c => { for (let i = 0; i < 8; i++) bit((c >> i) & 1); };
+  const hx = v => { ch('0123456789ABCDEF'.charCodeAt(v >> 4)); ch('0123456789ABCDEF'.charCodeAt(v & 15)); };
+  d.push(200000);                                        // Vorlauf (Stille)
+  for (let i = 0; i < 255; i++) ch(0x16);
+  ch(0x2A); hx(id);
+  let sum = (sa & 0xFF) + (sa >> 8);
+  hx(sa & 0xFF); hx(sa >> 8);
+  for (const b of data) { hx(b); sum += b; }
+  ch(0x2F); hx(sum & 0xFF); hx((sum >> 8) & 0xFF);
+  ch(4); ch(4);
+  d.push(200000);
+  return d;
+}
+function tapeLevels(dur) {      // Halbperioden -> Folge [Pegel, Dauer] wie am PLL-Ausgang
+  const runs = [];
+  for (const t of dur) {
+    const lv = t >= TAPE_GAP ? -1 : (t < TAPE_SPLIT ? 0 : 1);
+    if (runs.length && runs[runs.length - 1][0] === lv) runs[runs.length - 1][1] += t;
+    else runs.push([lv, t]);
+  }
+  return runs;
+}
+function tapeDecode(dur) {      // findet alle Sätze auf dem Band
+  const runs = tapeLevels(dur);
+  const bits = [];
+  for (let i = 0; i + 1 < runs.length; i++) {
+    if (runs[i][0] === 0 && runs[i + 1][0] === 1) { bits.push(runs[i + 1][1] >= runs[i][1] ? 1 : 0); i++; }
+    else if (runs[i][0] === -1) bits.push(-1);
+  }
+  const recs = [];
+  const byteAt = p => { let v = 0; for (let i = 0; i < 8; i++) { const b = bits[p + i]; if (b === undefined || b < 0) return -1; v |= b << i; } return v; };
+  let p = 0;
+  while (p < bits.length - 8) {
+    if (byteAt(p) !== 0x16) { p++; continue; }
+    let q = p, n = 0;
+    while (byteAt(q) === 0x16) { q += 8; n++; }
+    if (n < 10 || byteAt(q) !== 0x2A) { p = q + 1; continue; }
+    q += 8;
+    const chars = [];
+    while (q < bits.length - 8) { const c = byteAt(q); if (c < 0) break; chars.push(c); q += 8; if (c === 4) break; }
+    const s = String.fromCharCode(...chars);
+    const m = s.match(/^([0-9A-F]{2})([0-9A-F]{2})([0-9A-F]{2})((?:[0-9A-F]{2})*)\/([0-9A-F]{2})([0-9A-F]{2})/);
+    if (m) {
+      const h = x => parseInt(x, 16);
+      const sa = h(m[2]) | (h(m[3]) << 8);
+      const data = (m[4].match(/../g) || []).map(h);
+      let sum = h(m[2]) + h(m[3]); for (const b of data) sum += b;
+      recs.push({ id: h(m[1]), sa, data, ok: (sum & 0xFFFF) === (h(m[5]) | (h(m[6]) << 8)) });
+    }
+    p = q;
+  }
+  return recs;
+}
+function tapeToWav(dur, rate = 44100) {
+  let total = 0; for (const t of dur) total += t;
+  const n = Math.ceil(total * rate / 1e6) + 1;
+  const buf = new ArrayBuffer(44 + n), dv = new DataView(buf);
+  const str = (o, s) => { for (let i = 0; i < s.length; i++) dv.setUint8(o + i, s.charCodeAt(i)); };
+  str(0, 'RIFF'); dv.setUint32(4, 36 + n, true); str(8, 'WAVE'); str(12, 'fmt ');
+  dv.setUint32(16, 16, true); dv.setUint16(20, 1, true); dv.setUint16(22, 1, true);
+  dv.setUint32(24, rate, true); dv.setUint32(28, rate, true); dv.setUint16(32, 1, true); dv.setUint16(34, 8, true);
+  str(36, 'data'); dv.setUint32(40, n, true);
+  let t = 0, lv = 1, i = 44;
+  for (const d of dur) {
+    const end = Math.round((t + d) * rate / 1e6);
+    const v = d >= TAPE_GAP ? 128 : (lv ? 208 : 48);
+    while (i - 44 < end && i < 44 + n) dv.setUint8(i++, v);
+    t += d; if (d < TAPE_GAP) lv ^= 1;
+  }
+  while (i < 44 + n) dv.setUint8(i++, 128);
+  return new Uint8Array(buf);
+}
+function samplesToTape(x, rate) {   // Nulldurchgänge mit Hysterese -> Halbperioden
+  let peak = 0, avg = 0; const a = 2 / (rate * 0.004);
+  const y = new Float32Array(x.length);
+  for (let i = 0; i < x.length; i++) { avg += (x[i] - avg) * a; y[i] = x[i] - avg; peak = Math.max(peak, Math.abs(y[i])); }
+  const th = peak * 0.3, us = 1e6 / rate, dur = [];
+  let lv = y[0] > 0 ? 1 : 0, last = 0;
+  for (let i = 1; i < y.length; i++) {
+    if ((lv && y[i] < -th) || (!lv && y[i] > th)) { dur.push((i - last) * us); last = i; lv ^= 1; }
+  }
+  dur.push((y.length - last) * us);
+  // Gleichlauf ausgleichen: Halbperioden in zwei Gruppen (HF/LF) teilen und auf 139/208 µs normieren
+  const sig = dur.filter(t => t > 40 && t < 600);   // Gruppen um 139/208 µs
+  if (sig.length > 50) {
+    let c1 = 110, c2 = 220;
+    for (let it = 0; it < 20; it++) {
+      let s1 = 0, n1 = 0, s2 = 0, n2 = 0; const m = (c1 + c2) / 2;
+      for (const t of sig) { if (t < m) { s1 += t; n1++; } else { s2 += t; n2++; } }
+      if (!n1 || !n2) break;
+      c1 = s1 / n1; c2 = s2 / n2;
+    }
+    const k = (TAPE_HF + TAPE_LF) / (c1 + c2);
+    if (c2 / c1 > 1.25 && c2 / c1 < 2.2) for (let i = 0; i < dur.length; i++) if (dur[i] < 600) dur[i] *= k;
+  }
+  return dur;
+}
+function parseWav(buf) {
+  const dv = new DataView(buf);
+  const tag = o => String.fromCharCode(dv.getUint8(o), dv.getUint8(o + 1), dv.getUint8(o + 2), dv.getUint8(o + 3));
+  if (tag(0) !== 'RIFF' || tag(8) !== 'WAVE') return null;
+  let o = 12, fmt = null;
+  while (o + 8 <= dv.byteLength) {
+    const id = tag(o), len = dv.getUint32(o + 4, true);
+    if (id === 'fmt ') fmt = { tagc: dv.getUint16(o + 8, true), ch: dv.getUint16(o + 10, true), rate: dv.getUint32(o + 12, true), bits: dv.getUint16(o + 22, true) };
+    if (id === 'data' && fmt) {
+      const bps = fmt.bits / 8, frames = Math.floor(Math.min(len, dv.byteLength - o - 8) / (bps * fmt.ch));
+      const x = new Float32Array(frames);
+      for (let i = 0; i < frames; i++) {
+        const p = o + 8 + i * bps * fmt.ch;
+        x[i] = fmt.tagc === 3 ? dv.getFloat32(p, true) : bps === 1 ? (dv.getUint8(p) - 128) / 128 : bps === 2 ? dv.getInt16(p, true) / 32768 :
+               bps === 3 ? ((dv.getUint8(p) | (dv.getUint8(p + 1) << 8) | (dv.getInt8(p + 2) << 16)) / 8388608) : dv.getInt32(p, true) / 2147483648;
+      }
+      return { x, rate: fmt.rate };
+    }
+    o += 8 + len + (len & 1);
+  }
+  return null;
+}
+
+const KEY_MIN_HOLD = 45000;          // kurzer Mausklick hält die Taste mindestens 45 ms (Emulationszeit)
+const KEYNAMES = ['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F','AD','DA','+','GO','PC'];
+
+class Junior {
+  constructor(rom) {
+    this.rom = new Uint8Array(1024); this.rom.set(rom || ORIG_ROM);
+    this.ram = new Uint8Array(0x400);
+    this.ext = new Uint8Array(0x1400); this.extRam = false;
+    this.riot = new RIOT6532();
+    this.riot.paIn = () => this.keyboardColumns();
+    this.riot.pbIn = () => this.tapeIn();
+    this.riot.onPort = () => { this.updateDisplayState(); this.portWatch(); };
+    // Interface-Platine
+    this.iface = true;
+    this.iram = new Uint8Array(0x400);
+    this.tm = new Uint8Array(0x800).fill(0xFF); this.tm.set(TM_ROM);
+    this.pm = new Uint8Array(0x800); this.setPmVersion(true);
+    // STEP-Sperre: NMI-Blockade über SYNC. 0 = nur K7 (Grundausstattung), 1 = K4/K5 + K7 (Umbau Buch 3, Kap. 10, für PM-Einzelschritt),
+    // 2 = K4-K7 (zusätzlich K6, beim dezimalen Rechnen mit Hilfsprogramm im PIA-RAM)
+    this.stepLock = 1;
+    this.bus = { mode: 0, vecFF: true, blocks: new Array(16).fill(null) };
+    // Port-Stecker (Buch 2): 8 Schalter an PA, 4x4-Klaviatur an PA, Lautsprecher mit BC516 an PB0
+    this.port = { sw: false, swVal: 0, piano: false, keys: new Set(), spk: false };
+    this.spkEdges = []; this.spkFrom = 0; this.spkLevel = 1; this.spkLevel0 = 1;
+    this.via = new VIA6522();
+    this.tape = { d: [], pos: 0, frac: 0, mode: 'stop', time: 0, lastEdge: 0, lastLevel: 1, onEnd: null };
+    this.relays = true;   // Rekordermotor über Re1/Re2 (Fernbedienungsbuchse); false = Handbetrieb
+    this.baud = 1200; this.rxQ = []; this.rxFrame = null; this.rxStart = 0; this.rxNext = 0;
+    this.txLevel = 1; this.txLast = 0; this.txActive = false; this.txBits = 0; this.txVal = 0; this.txNext = 0; this.onSerial = null; this.onRxStart = null; this.rxBreakUntil = 0;
+    this.cpu = new CPU6502(a => this.read(a), (a, v) => this.write(a, v));
+    this.keysDown = new Set(); this.keyUntil = new Map(); this.keyHeld = new Set();
+    this.stepSwitch = false; this.displaySwitch = true; this.autoVectors = true;
+    this.segAcc = new Float64Array(42); this.digit = -1; this.segs = 0;
+    this.cycles = 0; this.speed = 1000000;
+    this.paused = false; this.pauseReason = '';
+    this.breakpoints = new Set(); this.bpSkip = false; this.tempBp = null; this.outDepth = null;
+    this.onPause = null;
+    this.powerOn();
+  }
+
+  setPmVersion(n) { this.pmN = !!n; this.pm.fill(0xFF); this.pm.set(n ? PM_ROM : PM_ROM.subarray(0, PM_PLAIN_LEN)); }
+  powerOn() { this.ram.fill(0); this.ext.fill(0); this.iram.fill(0); this.riot.ram.fill(0); this.cpu.SP = 0xFF; this.reset(); }
+  setVectors() { const r = this.riot.ram; r[0x7A] = 0x00; r[0x7B] = 0x1C; r[0x7E] = 0x00; r[0x7F] = 0x1C; }
+  reset() {
+    this.riot.reset();
+    this.via.reset();
+    if (this.autoVectors) this.setVectors();
+    this.cpu.reset();
+    this.cpu.irqLine = false;
+    this.tempBp = null; this.outDepth = null;
+  }
+
+  // ---- Bus-Erweiterung (Etappe 5) ----
+  // mode 0: unvollständige Decodierung (A13-A15 offen, 8 K gespiegelt)
+  // mode 1: vollständig über Interface- und Buskarte, EX = A13+A14+A15; vecFF: IC17-Eingang E an +5 V (Brücke R-S) -> Vektoren aus Seite FF,
+  //         sonst (R-T, ohne Busspeicher) liefert das Basis-EPROM die Vektoren
+  // mode 2: eine RAM/EPROM-Karte direkt an der Basiskarte (Anhang 1): EX nur bei bestückten 4-K-Blöcken, sonst Spiegelung wie bisher
+  busBlock(a) {   // bestückter 4-K-Block der Busspeicherkarte(n) oder null
+    const b = this.bus.blocks[a >> 12];
+    if (!b) return null;
+    if (this.bus.mode === 1 && !this.bus.vecFF && a >= 0xFFFA) return null;
+    return b;
+  }
+  onBase(a) {     // wird Adresse a von Basis-/Interfacekarte bedient (true) oder vom Bus (false)?
+    if (a < 0x2000 || this.bus.mode === 0) return true;
+    if (this.bus.mode === 1) return !this.bus.vecFF && a >= 0xFFFA;    // R-T: Vektoren aus dem Basis-EPROM
+    return !this.bus.blocks[a >> 12];
+  }
+  busRead(a) { const b = this.busBlock(a); return b ? b.data[a & 0xFFF] : 0xFF; }
+  setBusBlock(i, type, data) {
+    if (i < 2 || i > 15) return;
+    if (!type) { this.bus.blocks[i] = null; return; }
+    const d = new Uint8Array(0x1000).fill(type === 'ram' ? 0 : 0xFF);
+    if (data) d.set(data.subarray ? data.subarray(0, 0x1000) : data.slice(0, 0x1000));
+    this.bus.blocks[i] = { type, data: d };
+  }
+  vectorEprom() {   // EPROM für Seite FF mit den Vektoren aus Buch 3 (FFFA: 2F 1F 1D 1C 32 1F)
+    const d = new Uint8Array(0x1000).fill(0xFF);
+    d.set([0x2F, 0x1F, 0x1D, 0x1C, 0x32, 0x1F], 0xFFA);
+    return d;
+  }
+
+  // ---- Speicher ----
+  read(addr) {
+    addr &= 0xFFFF;
+    if (!this.onBase(addr)) return this.busRead(addr);
+    addr &= 0x1FFF;
+    const k = addr >> 10;
+    if (k === 0) return this.ram[addr];
+    if (k < 6) {
+      if (this.iface) {                                               // Interface-Platine
+        if (k === 1) return this.iram[addr & 0x3FF];                 // $0400-$07FF RAM (2 × 2114)
+        if (k < 4) return this.tm[addr & 0x7FF];                      // $0800-$0FFF TM-EPROM
+        return this.pm[addr & 0x7FF];                                 // $1000-$17FF PM-EPROM
+      }
+      return this.extRam ? this.ext[addr - 0x400] : 0xFF;            // offener Bus
+    }
+    if (k === 6) {
+      if (!(addr & 0x200)) return this.iface ? this.via.read(addr & 15) : 0xFF;   // $1800-$19FF: 6522
+      if (!(addr & 0x80)) return this.riot.ram[addr & 0x7F];          // $1A00-$1A7F
+      return this.riot.read(addr & 0x1F);                             // $1A80-$1AFF
+    }
+    return this.rom[addr & 0x3FF];
+  }
+  write(addr, v) {
+    addr &= 0xFFFF; v &= 0xFF;
+    if (!this.onBase(addr)) { const b = this.busBlock(addr); if (b && b.type === 'ram') b.data[addr & 0xFFF] = v; return; }
+    addr &= 0x1FFF;
+    const k = addr >> 10;
+    if (k === 0) { this.ram[addr] = v; return; }
+    if (k < 6) {
+      if (this.iface) { if (k === 1) this.iram[addr & 0x3FF] = v; return; }
+      if (this.extRam) this.ext[addr - 0x400] = v; return;
+    }
+    if (k === 6) {
+      if (!(addr & 0x200)) { if (this.iface) this.via.write(addr & 15, v); return; }
+      if (!(addr & 0x80)) { this.riot.ram[addr & 0x7F] = v; return; }
+      this.riot.write(addr & 0x1F, v); return;
+    }
+  }
+  peek(addr) {   // für Debugger: null bei I/O mit Seiteneffekten
+    addr &= 0xFFFF;
+    if (!this.onBase(addr)) return this.busRead(addr);
+    addr &= 0x1FFF;
+    if (addr >> 10 === 6 && (addr & 0x200) && (addr & 0x80)) return null;
+    if (addr >> 10 === 6 && !(addr & 0x200)) return this.iface ? null : 0xFF;
+    return this.read(addr);
+  }
+  poke(addr, v) {   // Debugger schreibt auch ins ROM-Abbild nicht – nur RAM/RIOT-RAM
+    this.write(addr, v);
+  }
+
+  // ---- Tastatur ----
+  decoder() { return (this.riot.pbPins() >> 1) & 0x0F; }
+  keyboardColumns() {
+    const row = this.decoder();
+    let v = this.iface ? (0x7F | (this.rxLevel() << 7)) : 0xFF;   // PA7: RS-232-Empfang der Interface-Platine
+    if (row <= 2 && this.keysDown.size) {
+      for (let b = 0; b < 7; b++) if (this.keysDown.has(row * 7 + 6 - b)) v &= ~(1 << b);
+    }
+    const P = this.port;
+    if (P.sw) v &= ~P.swVal & 0xFF;                     // geschlossener Schalter zieht die Leitung auf 0
+    if (P.piano && P.keys.size) {                        // Klaviatur: Taste k verbindet Zeile PA(4+k/4) mit Spalte PA(k%4)
+      const drv = (this.riot.pa | ~this.riot.ddra) & 0xFF;   // Ausgänge treiben ihren Wert, Eingänge liegen über Pull-up auf 1
+      for (const k of P.keys) {
+        const a = 4 + (k >> 2), b = k & 3;
+        if (!((drv >> a) & 1)) v &= ~(1 << b);
+        if (!((drv >> b) & 1)) v &= ~(1 << a);
+      }
+    }
+    return v;
+  }
+  keyDown(name) {
+    if (name === 'ST') { this.cpu.triggerNMI(); return; }
+    if (name === 'RST') { this.reset(); return; }
+    const code = KEYNAMES.indexOf(name);
+    if (code < 0) return;
+    this.keysDown.add(code); this.keyHeld.add(code);
+    this.keyUntil.set(code, this.cycles + KEY_MIN_HOLD);
+  }
+  keyUp(name) {
+    const code = KEYNAMES.indexOf(name);
+    if (code < 0) return;
+    this.keyHeld.delete(code);
+    if (this.cycles >= (this.keyUntil.get(code) || 0)) { this.keysDown.delete(code); this.keyUntil.delete(code); }
+  }
+  tap(name) { this.keyDown(name); this.keyUp(name); }
+
+  // ---- Kassette ----
+  relayOut() { const r = this.riot; return (r.ddrb & 0x20) && !(r.pb & 0x20); }   // Re2: PB5 = 0
+  relayIn() { const r = this.riot; return (r.ddrb & 0x40) && !(r.pb & 0x40); }    // Re1: PB6 = 0
+  motorOn() {
+    if (!this.relays) return true;
+    return this.tape.mode === 'rec' ? this.relayOut() : this.relayIn();
+  }
+  tapeIn() {   // PB-Eingänge: PB7 = PLL-Ausgang (HF -> 0, LF/Stille -> 1), über N38 nur bei PB5 = 1
+    const t = this.tape;
+    if (!this.iface || t.mode !== 'play' || t.pos >= t.d.length || !this.motorOn()) return 0xFF;
+    if ((this.riot.ddrb & 0x20) && !(this.riot.pb & 0x20)) return 0xFF;
+    const d = t.d[t.pos];
+    return (d < TAPE_SPLIT) ? 0x7F : 0xFF;
+  }
+  tapeRecord() { const t = this.tape; t.d.length = t.pos; t.frac = 0; t.mode = 'rec'; t.lastEdge = t.time; t.lastLevel = (this.riot.pbPins() >> 7) & 1; }
+  tapePlay() { const t = this.tape; if (t.pos >= t.d.length) t.pos = 0; t.frac = 0; t.mode = 'play'; }
+  tapeStop() {
+    const t = this.tape;
+    if (t.mode === 'rec') { const gap = t.time - t.lastEdge; if (gap > 0) { t.d.push(Math.max(gap, TAPE_GAP)); t.pos = t.d.length; } }
+    t.mode = 'stop';
+  }
+  tapeRewind() { this.tape.pos = 0; this.tape.frac = 0; }
+  tapeLoad(d) { this.tapeStop(); this.tape.d = Array.from(d); this.tape.pos = 0; this.tape.frac = 0; }
+  // Spieldauer bis Index 'upto' in s
+  tapeTime(upto) { let s = 0; const d = this.tape.d; const n = upto === undefined ? d.length : upto; for (let i = 0; i < n; i++) s += d[i]; return s / 1e6; }
+
+  // ---- Port-Beobachtung: Bandaufnahme (PB7) und RS-232-Senden (PB0) ----
+  portWatch() {
+    const pb = this.riot.pbPins(), t = this.tape;
+    const lv0 = pb & 1;                                  // Lautsprecher am Port-Stecker: PB0 (Ton, solange PB0 = 0)
+    if (lv0 !== this.spkLevel) {
+      this.spkLevel = lv0;
+      if (this.port.spk && this.spkEdges.length < 100000) this.spkEdges.push(this.cycles);
+    }
+    if (!this.iface) return;
+    if (t.mode === 'rec' && (this.riot.ddrb & 0x80) && this.motorOn()) {
+      const lv = (pb >> 7) & 1;
+      if (lv !== t.lastLevel) {
+        const dur = t.time - t.lastEdge;
+        if (dur > 0) { t.d.push(dur > TAPE_GAP ? Math.max(dur, TAPE_GAP) : dur); t.pos = t.d.length; }
+        t.lastEdge = t.time; t.lastLevel = lv;
+      }
+    }
+    const tx = this.port.spk ? 1 : pb & 1;             // steckt der Lautsprecher an PB0, bleibt das Terminal stumm
+    if (tx !== this.txLevel) {
+      this.txLevel = tx; this.txLast = this.cycles;
+      if (!tx && !this.txActive) {          // Startbit
+        const bit = 1e6 / this.baud;
+        this.txActive = true; this.txBits = 0; this.txVal = 0; this.txNext = this.cycles + bit * 1.5;
+      }
+    }
+  }
+  txSample() {
+    const bit = 1e6 / this.baud;
+    while (this.txActive && this.cycles >= this.txNext) {
+      if (this.txBits < 8) { this.txVal |= this.txLevel << this.txBits; this.txBits++; this.txNext += bit; }
+      else {
+        this.txActive = false;
+        if (this.onSerial) this.onSerial(this.txVal & 0x7F);
+        if (!this.txLevel) { this.txActive = true; this.txBits = 0; this.txVal = 0; this.txNext = this.cycles + bit * 1.5; }
+      }
+    }
+  }
+  serialSend(bytes) { for (const b of bytes) this.rxQ.push(b & 0xFF); }
+  serialBreak(ms = 150) { this.rxBreakUntil = this.cycles + ms * 1000; this.rxQ.length = 0; this.rxFrame = null; }
+  rxLevel() {   // aktueller Pegel der Empfangsleitung (8N2, Abstand zwischen Zeichen für den Software-UART)
+    const bit = 1e6 / this.baud;
+    if (this.cycles < this.rxBreakUntil) return 0;   // BREAK: Leitung auf Space
+    if (this.rxFrame) {
+      const i = Math.floor((this.cycles - this.rxStart) / bit);
+      if (i < this.rxFrame.length) return this.rxFrame[i];
+      this.rxFrame = null; this.rxNext = this.cycles + bit * 20;
+    }
+    // nächstes Zeichen erst, wenn der Junior gerade nichts sendet – der PM wertet Empfang während
+    // seiner Ausgabe als Abbruch (wie beim Original, wenn man in die Ausgabe hineintippt)
+    if (this.rxQ.length && this.cycles >= this.rxNext && !this.txActive && this.cycles - this.txLast > bit * 25) {
+      const c = this.rxQ.shift();
+      if (this.onRxStart) this.onRxStart(c);
+      this.rxFrame = [0]; for (let i = 0; i < 8; i++) this.rxFrame.push((c >> i) & 1); this.rxFrame.push(1, 1);
+      this.rxStart = this.cycles;
+      return 0;
+    }
+    return 1;
+  }
+
+  // ---- Anzeige: Multiplex-Zustand und Leuchtdauer je Segment ----
+  updateDisplayState() {
+    const n = this.decoder();
+    if (n >= 4 && n <= 9) { this.digit = n - 4; this.segs = ~this.riot.paPins() & 0x7F; }
+    else { this.digit = -1; this.segs = 0; }
+  }
+
+  tick(c) {
+    this.cycles += c;
+    this.riot.tick(c);
+    if (this.iface) {
+      this.via.tick(c);
+      this.cpu.irqLine = this.riot.irq || this.via.irq;
+      const t = this.tape;
+      if (t.mode !== 'stop' && this.motorOn()) t.time += c;
+      if (t.mode === 'play' && this.motorOn()) {
+        t.frac += c;
+        while (t.pos < t.d.length && t.frac >= t.d[t.pos]) { t.frac -= t.d[t.pos]; t.pos++; }
+        if (t.pos >= t.d.length) { t.mode = 'stop'; if (t.onEnd) t.onEnd(); }
+      }
+      if (this.txActive) this.txSample();
+    } else this.cpu.irqLine = this.riot.irq;
+    if (this.digit >= 0 && this.segs) {
+      const base = this.digit * 7, s = this.segs;
+      for (let b = 0; b < 7; b++) if (s & (1 << b)) this.segAcc[base + b] += c;
+    }
+    if (this.keyUntil.size) {
+      for (const [code, until] of this.keyUntil) {
+        if (this.cycles >= until && !this.keyHeld.has(code)) { this.keysDown.delete(code); this.keyUntil.delete(code); }
+      }
+    }
+  }
+
+  // ---- Ausführung ----
+  stepOne() {   // genau ein CPU-Schritt inkl. STEP-Schalter-Logik
+    const cpu = this.cpu;
+    const fetch = cpu.PC;
+    const intr = cpu.interruptPending();
+    const c = cpu.step();
+    this.tick(c);
+    // S24 STEP: SYNC und die K-Leitungen der Aufsteckplatine (N5) – ein Befehl außerhalb der gesperrten Blöcke löst einen NMI aus
+    if (this.stepSwitch && !intr && !cpu.halted && !this.stepBlocked(fetch)) cpu.triggerNMI();
+    return c;
+  }
+  stepBlocked(a) {
+    if (!this.onBase(a & 0xFFFF)) return false;        // Busspeicher: EX = 1, keine K-Leitung aktiv
+    const k = (a & 0x1FFF) >> 10;
+    return k === 7 || (this.stepLock >= 1 && (k === 4 || k === 5)) || (this.stepLock >= 2 && k === 6);
+  }
+  pause(reason) { this.paused = true; this.pauseReason = reason; this.tempBp = null; this.outDepth = null; if (this.onPause) this.onPause(reason); }
+  resume() { this.paused = false; this.bpSkip = true; this.pauseReason = ''; }
+
+  runCycles(budget) {
+    let done = 0;
+    const cpu = this.cpu;
+    while (done < budget && !this.paused) {
+      const pc = cpu.PC;
+      if (!this.bpSkip) {
+        if (this.breakpoints.size && this.breakpoints.has(pc) && !cpu.interruptPending()) { this.pause('Breakpoint $' + hex4(pc)); break; }
+        if (this.tempBp !== null && pc === this.tempBp && !cpu.interruptPending()) { this.pause('Schritt über'); break; }
+      }
+      this.bpSkip = false;
+      if (this.outDepth !== null && !cpu.interruptPending()) {
+        const op = this.read(pc);
+        if ((op === 0x60 || op === 0x40) && cpu.SP >= this.outDepth) {
+          done += this.stepOne(); this.pause('Rücksprung'); break;
+        }
+      }
+      done += this.stepOne();
+      if (cpu.halted) { this.pause('JAM bei $' + hex4(cpu.PC)); break; }
+    }
+    return done;
+  }
+  stepOver() {
+    const op = this.read(this.cpu.PC);
+    if (op === 0x20) { this.tempBp = (this.cpu.PC + 3) & 0xFFFF; this.resume(); }
+    else { this.stepOne(); }
+  }
+  stepOut() { this.outDepth = this.cpu.SP; this.resume(); }
+
+  // Leuchtstärke je Segment (0..1) nach einem Zeitabschnitt mit 'cycles' Takten
+  takeSpeaker() {   // PB0-Flanken seit dem letzten Aufruf, für die WebAudio-Ausgabe
+    const r = { from: this.spkFrom, to: this.cycles, level0: this.spkLevel0, edges: this.spkEdges };
+    this.spkEdges = []; this.spkFrom = this.cycles; this.spkLevel0 = this.spkLevel;
+    return r;
+  }
+  takeBrightness(cycles) {
+    const out = new Float32Array(42);
+    if (cycles > 0) {
+      const full = cycles * 0.11;  // Monitor-Tastverhältnis je Ziffer ~ 1/7
+      for (let i = 0; i < 42; i++) out[i] = this.displaySwitch ? Math.min(1, this.segAcc[i] / full) : 0;
+    }
+    this.segAcc.fill(0);
+    return out;
+  }
+}
+
+// ============================================================
+// Disassembler
+// ============================================================
+const OPLEN = { imp:1, acc:1, imm:2, zp:2, zpx:2, zpy:2, izx:2, izy:2, rel:2, abs:3, abx:3, aby:3, ind:3 };
+let symOnBus = null;   // vom UI gesetzt: true, wenn eine Adresse auf einer Busspeicherkarte liegt (dann keine Monitor-Symbole)
+function symFor(a, zp) {
+  if (zp && ZSYMS[a] !== undefined) return ZSYMS[a];
+  if (symOnBus && symOnBus(a)) return undefined;
+  const m = a & 0x1FFF;
+  return SYMS[m] || (a < 0x100 ? ZSYMS[a] : undefined);
+}
+function disasm(rd, addr) {
+  const op = rd(addr) ?? 0;
+  const e = OPTAB[op];
+  if (!e) return { len: 1, bytes: [op], text: '.byte $' + hex2(op), target: null, sym: '' };
+  const [mn, mode] = e;
+  const len = OPLEN[mode];
+  const b = [op];
+  for (let i = 1; i < len; i++) b.push(rd((addr + i) & 0xFFFF) ?? 0);
+  const w = len === 3 ? b[1] | (b[2] << 8) : b[1];
+  let arg = '', target = null, sym;
+  switch (mode) {
+    case 'acc': arg = 'A'; break;
+    case 'imm': arg = '#$' + hex2(w); break;
+    case 'zp':  arg = '$' + hex2(w); sym = ZSYMS[w]; break;
+    case 'zpx': arg = '$' + hex2(w) + ',X'; sym = ZSYMS[w]; break;
+    case 'zpy': arg = '$' + hex2(w) + ',Y'; sym = ZSYMS[w]; break;
+    case 'izx': arg = '($' + hex2(w) + ',X)'; sym = ZSYMS[w]; break;
+    case 'izy': arg = '($' + hex2(w) + '),Y'; sym = ZSYMS[w]; break;
+    case 'rel': { let o = w; if (o & 0x80) o -= 256; target = (addr + 2 + o) & 0xFFFF; arg = '$' + hex4(target); sym = symFor(target); break; }
+    case 'abs': arg = '$' + hex4(w); sym = symFor(w); if (mn === 'JMP' || mn === 'JSR') target = w; break;
+    case 'abx': arg = '$' + hex4(w) + ',X'; sym = symFor(w); break;
+    case 'aby': arg = '$' + hex4(w) + ',Y'; sym = symFor(w); break;
+    case 'ind': arg = '($' + hex4(w) + ')'; sym = symFor(w); break;
+  }
+  return { len, bytes: b, text: mn + (arg ? ' ' + arg : ''), target, sym: sym || '' };
+}
+
+// ============================================================
+// Dateiformate: Intel-HEX, KIM-Papertape, Hexdump-Text
+// ============================================================
+function parseIntelHex(text) {
+  const blocks = []; let errors = 0, base = 0;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line.startsWith(':')) continue;
+    const h = i => parseInt(line.substr(i, 2), 16);
+    const len = h(1), addr = (h(3) << 8) | h(5), type = h(7);
+    let sum = 0;
+    for (let i = 1; i < 11 + 2 * len; i += 2) sum += h(i);
+    if ((sum & 0xFF) !== 0) errors++;
+    if (type === 0) { const d = []; for (let i = 0; i < len; i++) d.push(h(9 + 2 * i)); blocks.push({ addr: (base + addr) & 0xFFFF, data: d }); }
+    else if (type === 1) break;
+    else if (type === 2) base = ((h(9) << 8) | h(11)) << 4;
+    else if (type === 4) base = ((h(9) << 8) | h(11)) << 16;
+  }
+  return { blocks, errors };
+}
+function parsePTP(text) {
+  const blocks = []; let errors = 0;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line.startsWith(';')) continue;
+    const h = i => parseInt(line.substr(i, 2), 16);
+    const len = h(1);
+    if (!len) break;
+    const addr = (h(3) << 8) | h(5);
+    let sum = len + h(3) + h(5); const d = [];
+    for (let i = 0; i < len; i++) { const b = h(7 + 2 * i); d.push(b); sum += b; }
+    if ((sum & 0xFFFF) !== parseInt(line.substr(7 + 2 * len, 4), 16)) errors++;
+    blocks.push({ addr, data: d });
+  }
+  return { blocks, errors };
+}
+function parseHexDump(text) {   // "0200: A9 01 85 10" bzw. "0200 A9 01 …"
+  const blocks = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const m = raw.match(/^\s*\$?([0-9A-Fa-f]{4})\s*[:\-]?\s+((?:[0-9A-Fa-f]{2}\s*)+)/);
+    if (!m) continue;
+    blocks.push({ addr: parseInt(m[1], 16), data: m[2].trim().split(/\s+/).map(x => parseInt(x, 16)) });
+  }
+  return { blocks, errors: 0 };
+}
+function toIntelHex(read, from, to) {
+  const lines = [];
+  for (let a = from; a <= to; a += 16) {
+    const n = Math.min(16, to - a + 1);
+    let sum = n + (a >> 8) + (a & 0xFF);
+    let s = ':' + hex2(n) + hex4(a) + '00';
+    for (let i = 0; i < n; i++) { const v = read(a + i); sum += v; s += hex2(v); }
+    lines.push(s + hex2((-sum) & 0xFF));
+  }
+  lines.push(':00000001FF');
+  return lines.join('\r\n') + '\r\n';
+}
+function toHexDump(read, from, to) {
+  const lines = [];
+  for (let a = from; a <= to; a += 16) {
+    const n = Math.min(16, to - a + 1); const b = [];
+    for (let i = 0; i < n; i++) b.push(hex2(read(a + i)));
+    lines.push(hex4(a) + ': ' + b.join(' '));
+  }
+  return lines.join('\n') + '\n';
+}
+// ============================================================
+// Zeichenfläche für Terminal und Drucker: CR = Wagenrücklauf, LF = Zeilenvorschub (getrennt wie bei Fernschreiber,
+// Elekterminal und Drucker). overstrike: der Drucker schlägt beim Überschreiben zusätzlich an, statt zu ersetzen.
+// ============================================================
+class Paper {
+  constructor(opts = {}) { this.overstrike = !!opts.overstrike; this.maxLines = opts.maxLines || 2000; this.clear(); }
+  clear() { this.lines = [[]]; this.row = 0; this.col = 0; this.dirty = true; }
+  put(c, width) {
+    this.dirty = true;
+    if (c === 13) { this.col = 0; return; }
+    if (c === 10) { this.newline(); return; }
+    if (c === 8) { if (this.col > 0) this.col--; return; }
+    if (c < 32 || c > 126) return;               // BEL, DEL usw. hinterlassen nichts
+    if (width && this.col >= width) { this.col = 0; this.newline(); }
+    const ln = this.lines[this.row];
+    while (ln.length < this.col) ln.push(' ');
+    const ch = String.fromCharCode(c), old = ln[this.col];
+    ln[this.col] = this.overstrike && old && old !== ' ' && ch !== ' ' && !old.includes(ch) ? old + ch : (this.overstrike && ch === ' ' && old ? old : ch);
+    this.col++;
+  }
+  newline() {
+    this.row++;
+    if (this.row >= this.lines.length) this.lines.push([]);
+    if (this.lines.length > this.maxLines) { const n = this.lines.length - this.maxLines; this.lines.splice(0, n); this.row -= n; }
+  }
+  lineText(i) { return (this.lines[i] || []).map(x => x.slice(-1)).join(''); }   // bei Überschlag zählt der letzte Anschlag
+  text() { return this.lines.map((_, i) => this.lineText(i).replace(/\s+$/, '')).join('\n').replace(/\n+$/, '') + '\n'; }
+}
+// ==CORE-END==
+
+// ============================================================
+// Oberfläche
+// ============================================================
+const jr = new Junior();
+const $ = id => document.getElementById(id);
+let romName = 'Nachtmann 1980 (Original)';
+
+// ---- 7-Segment-Anzeige als SVG ----
+const SEG_POLY = [
+  '9,4 37,4 33,10 13,10',      // a
+  '38,6 41,9 38,34 33,31 35,11',// b
+  '38,40 33,43 31,63 34,68 36,66', // c
+  '6,70 32,70 28,64 9,64',     // d
+  '7,40 12,43 10,63 4,68 4,66',// e
+  '9,6 14,11 12,31 7,34 6,32', // f
+  '10,37 14,34 33,34 36,37 32,40 13,40', // g
+];
+const segEls = []; let lastBright = new Float32Array(42).fill(-1);
+(function buildDisplay() {
+  const d = $('disp');
+  for (let i = 0; i < 6; i++) {
+    if (i === 4) { const g = document.createElement('div'); g.className = 'gap'; d.appendChild(g); }
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('viewBox', '0 0 46 74');
+    const list = [];
+    for (const p of SEG_POLY) {
+      const poly = document.createElementNS(ns, 'polygon');
+      poly.setAttribute('points', p);
+      poly.setAttribute('transform', 'skewX(-6) translate(4 0)');
+      poly.style.opacity = '0.07';
+      svg.appendChild(poly); list.push(poly);
+    }
+    const dp = document.createElementNS(ns, 'circle');
+    dp.setAttribute('cx', '40'); dp.setAttribute('cy', '68'); dp.setAttribute('r', '2.6');
+    dp.setAttribute('class', 'dp'); dp.style.opacity = '0.07';   // DP ist beim Junior nicht beschaltet
+    svg.appendChild(dp);
+    d.appendChild(svg); segEls.push(list);
+  }
+})();
+function renderDisplay(bright) {
+  for (let i = 0; i < 42; i++) {
+    const v = Math.round(bright[i] * 20) / 20;
+    if (v === lastBright[i]) continue;
+    lastBright[i] = v;
+    const el = segEls[Math.floor(i / 7)][i % 7];
+    el.style.opacity = (0.07 + 0.93 * v).toFixed(2);
+    el.style.filter = v > 0.4 ? 'drop-shadow(0 0 3px rgba(255,50,20,.85))' : 'none';
+  }
+}
+
+// ---- Tastenfeld ----
+const PAD = [
+  ['GO','fn'], ['ST','red'], ['RST','red'], null,
+  ['AD','fn'], ['DA','fn'], ['PC','fn'], ['+','fn'],
+  ['C'], ['D'], ['E'], ['F'],
+  ['8'], ['9'], ['A'], ['B'],
+  ['4'], ['5'], ['6'], ['7'],
+  ['0'], ['1'], ['2'], ['3'],
+];
+const keyEls = {};
+(function buildPad() {
+  const pad = $('keypad');
+  for (const k of PAD) {
+    if (!k) { const s = document.createElement('div'); s.className = 'keyspacer'; pad.appendChild(s); continue; }
+    const [name, cls] = k;
+    const b = document.createElement('button');
+    b.className = 'key' + (cls ? ' ' + cls : '');
+    b.textContent = name;
+    if (name === 'GO') { const l = document.createElement('span'); l.className = 'kled'; l.id = 'go-led'; b.appendChild(l);
+      const s = document.createElement('span'); s.className = 'sub'; s.textContent = 'STEP'; b.appendChild(s); }
+    const down = e => { e.preventDefault(); b.classList.add('down'); jr.keyDown(name); b.setPointerCapture?.(e.pointerId); };
+    const up = () => { if (!b.classList.contains('down')) return; b.classList.remove('down'); jr.keyUp(name); };
+    b.addEventListener('pointerdown', down);
+    b.addEventListener('pointerup', up);
+    b.addEventListener('pointercancel', up);
+    b.addEventListener('lostpointercapture', up);
+    pad.appendChild(b); keyEls[name] = b;
+  }
+})();
+
+const KEYMAP = { 'Enter':'GO', 'G':'GO', 'Escape':'ST', 'Backspace':'RST', '.':'AD', 'Insert':'AD', ',':'DA', 'Delete':'DA',
+  '+':'+', 'ArrowDown':'+', 'P':'PC' };
+function pcKey(e) {
+  const k = e.key.length === 1 ? e.key.toUpperCase() : e.key;
+  if (/^[0-9A-F]$/.test(k)) return k;
+  if (e.code === 'NumpadAdd') return '+';
+  if (e.code === 'NumpadEnter') return 'GO';
+  return KEYMAP[k] || null;
+}
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  const tag = e.target && e.target.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || (e.target && (e.target.id === 'term' || e.target.id === 'piano'))) return;
+  if (e.key === 'F10') { e.preventDefault(); doStep(); return; }
+  if (e.key === 'F11') { e.preventDefault(); doOver(); return; }
+  if (e.key.toUpperCase() === 'S' && !e.repeat) { toggleStep(); e.preventDefault(); return; }
+  const name = pcKey(e);
+  if (!name) return;
+  e.preventDefault();
+  if (e.repeat) return;
+  keyEls[name]?.classList.add('down');
+  jr.keyDown(name);
+});
+document.addEventListener('keyup', e => {
+  if (e.target && (e.target.id === 'term' || e.target.id === 'piano')) return;
+  const name = pcKey(e);
+  if (!name) return;
+  keyEls[name]?.classList.remove('down');
+  jr.keyUp(name);
+});
+
+// ---- Schalter ----
+function toggleStep() { jr.stepSwitch = !jr.stepSwitch; $('sw-step').classList.toggle('on', jr.stepSwitch); $('go-led').classList.toggle('on', jr.stepSwitch); }
+$('sw-step').onclick = toggleStep;
+$('sw-disp').onclick = () => { jr.displaySwitch = !jr.displaySwitch; $('sw-disp').classList.toggle('on', jr.displaySwitch); };
+
+// ---- Taktschleife ----
+let lastT = performance.now(), uiTick = 0, frameBright = null;
+function frame() {
+  const now = performance.now();
+  const dt = Math.min(0.1, (now - lastT) / 1000);
+  lastT = now;
+  if (!jr.paused) {
+    const done = jr.runCycles(jr.speed * dt);
+    frameBright = jr.takeBrightness(done);
+    renderDisplay(frameBright);
+    speakerFrame();
+  }
+  if (jr.paused || ++uiTick % 6 === 0) updateDebugger();
+  renderTerm();
+  if (uiTick % 3 === 0) updateDeck();
+  requestAnimationFrame(frame);
+}
+
+// ============================================================
+// Debugger-Oberfläche
+// ============================================================
+const FLAGS = ['N','V','-','B','D','I','Z','C'];
+(function buildFlags() {
+  const f = $('flags');
+  FLAGS.forEach((n, i) => {
+    if (n === '-' || n === 'B') return;
+    const b = document.createElement('button');
+    b.className = 'flag'; b.textContent = n; b.dataset.bit = 7 - i;
+    b.onclick = () => { if (!jr.paused) return; const c = jr.cpu; c.setP(c.getP() ^ (1 << (7 - i))); updateDebugger(true); };
+    f.appendChild(b);
+  });
+})();
+for (const r of ['PC','A','X','Y','SP']) {
+  const el = $('r-' + r);
+  el.addEventListener('change', () => {
+    const v = parseInt(el.value, 16);
+    if (!isNaN(v)) jr.cpu[r] = r === 'PC' ? v & 0xFFFF : v & 0xFF;
+    updateDebugger(true);
+  });
+}
+
+let disStart = null;
+function disasmWindow(center) {
+  // Startpunkt suchen, der über mehrere Befehle sauber bei 'center' ankommt
+  const rd = a => jr.read(a);
+  for (let back = 12; back >= 0; back--) {
+    let a = (center - back) & 0xFFFF, lines = [];
+    while (a !== center && lines.length < 12) {
+      const d = disasm(rd, a); lines.push(a); a = (a + d.len) & 0xFFFF;
+      if (((a - center) & 0xFFFF) < 0x8000 && a !== center) break;
+    }
+    if (a === center && lines.length >= Math.min(4, back)) return lines.length > 4 ? lines[lines.length - 4] : lines[0];
+  }
+  return center;
+}
+function renderDis() {
+  const pc = jr.cpu.PC;
+  let start;
+  if ($('dis-follow').checked) {
+    if (disStart === null || ((pc - disStart) & 0xFFFF) > 40) disStart = disasmWindow(pc);
+    start = disStart;
+  } else {
+    const t = $('dis-addr').value.trim().toUpperCase();
+    start = t === 'PC' || t === '' ? pc : parseInt(t, 16) & 0xFFFF;
+  }
+  const rd = a => jr.read(a);
+  let a = start, html = '';
+  let sawPc = false;
+  for (let i = 0; i < 18; i++) {
+    const d = disasm(rd, a);
+    const lab = SYMS[a & 0x1FFF] && (a & 0x1FFF) >= 0x1C00 ? SYMS[a & 0x1FFF] : '';
+    if (a === pc) sawPc = true;
+    html += `<div class="dl${a === pc ? ' cur' : ''}"><span class="bp${jr.breakpoints.has(a) ? ' set' : ''}" data-a="${a}">●</span>` +
+      `<span>${hex4(a)}</span><span class="cm">${d.bytes.map(hex2).join(' ')}</span>` +
+      `<span>${lab ? '<span class="lab">' + lab + ':</span> ' : ''}${d.text}${d.sym ? ' <span class="sym">' + d.sym + '</span>' : ''}</span></div>`;
+    a = (a + d.len) & 0xFFFF;
+  }
+  if ($('dis-follow').checked && !sawPc) { disStart = disasmWindow(pc); return renderDis(); }
+  $('dis').innerHTML = html;
+}
+$('dis').addEventListener('click', e => {
+  const t = e.target.closest('.bp'); if (!t) return;
+  const a = +t.dataset.a;
+  if (jr.breakpoints.has(a)) jr.breakpoints.delete(a); else jr.breakpoints.add(a);
+  updateDebugger(true);
+});
+$('dis-addr').addEventListener('change', () => { $('dis-follow').checked = false; updateDebugger(true); });
+$('dis-follow').addEventListener('change', () => { disStart = null; updateDebugger(true); });
+
+function renderBps() {
+  const l = $('bplist');
+  if (!jr.breakpoints.size) { l.textContent = 'keine'; return; }
+  l.innerHTML = [...jr.breakpoints].sort((a, b) => a - b)
+    .map(a => `<span>$${hex4(a)}<button data-a="${a}" title="entfernen">×</button></span>`).join('');
+}
+$('bplist').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; jr.breakpoints.delete(+b.dataset.a); updateDebugger(true); });
+$('bp-add').onclick = () => { const v = parseInt($('bp-addr').value, 16); if (!isNaN(v)) jr.breakpoints.add(v & 0xFFFF); updateDebugger(true); };
+$('bp-clear').onclick = () => { jr.breakpoints.clear(); updateDebugger(true); };
+
+function amask() { return jr.bus.mode ? 0xFFFF : 0x1FFF; }   // mit Bus-Erweiterung ist der ganze 64-K-Raum eindeutig
+symOnBus = a => !jr.onBase(a & 0xFFFF);
+function renderMem() {
+  let base = parseInt($('mem-addr').value, 16);
+  if (isNaN(base)) base = 0x200;
+  const M = amask();
+  base &= M & 0xFFF0;
+  const point = jr.ram[0xFA] | (jr.ram[0xFB] << 8), pc = jr.cpu.PC & M;
+  let s = '';
+  for (let r = 0; r < 12; r++) {
+    const a0 = (base + r * 16) & M;
+    let line = `<span class="ad">${hex4(a0)}</span>  `, asc = '';
+    for (let i = 0; i < 16; i++) {
+      const a = a0 + i, v = jr.peek(a);
+      let t = v === null ? '--' : hex2(v);
+      if (a === (point & M)) t = `<span class="hl">${t}</span>`;
+      else if (a === pc) t = `<span class="pc">${t}</span>`;
+      line += t + (i === 7 ? '  ' : ' ');
+      asc += v !== null && v >= 0x20 && v < 0x7F ? String.fromCharCode(v).replace(/[<&>]/, '.') : '.';
+    }
+    s += line + ' <span class="as">' + asc + '</span>\n';
+  }
+  $('mem').innerHTML = s;
+}
+$('mem-addr').addEventListener('change', () => updateDebugger(true));
+document.querySelectorAll('[data-m]').forEach(b => b.onclick = () => { $('mem-addr').value = b.dataset.m; updateDebugger(true); });
+$('poke-go').onclick = () => {
+  const r = parseHexDump($('poke').value);
+  if (!r.blocks.length) { showInfo('Format: <code>0200: A9 01 85 10</code>'); return; }
+  let n = 0;
+  for (const b of r.blocks) b.data.forEach((v, i) => { jr.write(b.addr + i, v); n++; });
+  showInfo(`${n} Byte(s) ab $${hex4(r.blocks[0].addr)} eingetragen.`);
+  updateDebugger(true);
+};
+
+function renderState() {
+  const z = jr.ram, c = jr.cpu;
+  const mode = z[0xFF] ? 'AD' : 'DA';
+  $('monstate').innerHTML =
+    `POINT <b>${hex2(z[0xFB])}${hex2(z[0xFA])}</b> INH <b>${hex2(z[0xF9])}</b> BYTES <b>${z[0xF6]}</b> MODE <b>${mode}</b><br>` +
+    `gerettet: PC <b>${hex2(z[0xF0])}${hex2(z[0xEF])}</b> P <b>${hex2(z[0xF1])}</b> SP <b>${hex2(z[0xF2])}</b> ` +
+    `A <b>${hex2(z[0xF3])}</b> Y <b>${hex2(z[0xF4])}</b> X <b>${hex2(z[0xF5])}</b><br>` +
+    `NMI-Vektor <b>${hex2(jr.riot.ram[0x7B])}${hex2(jr.riot.ram[0x7A])}</b> IRQ-Vektor <b>${hex2(jr.riot.ram[0x7F])}${hex2(jr.riot.ram[0x7E])}</b>`;
+  const R = jr.riot;
+  $('riotstate').innerHTML =
+    `PA <b>${hex2(R.paPins())}</b> DDRA <b>${hex2(R.ddra)}</b> PB <b>${hex2(R.pbPins())}</b> DDRB <b>${hex2(R.ddrb)}</b> 74145 <b>${jr.decoder()}</b><br>` +
+    `Timer <b>${hex2(R.count)}</b> ÷${R.div}${R.expired ? ' (abgelaufen)' : ''} IRQ ${R.tIrq ? 'frei' : 'gesperrt'} Flag <b>${R.tflag ? 1 : 0}</b> · IRQ-Leitung <b>${R.irq ? 'aktiv' : 'ruhig'}</b>` +
+    (jr.iface ? `<br>6522: ORA <b>${hex2(jr.via.peek(1))}</b> ORB <b>${hex2(jr.via.peek(0))}</b> T1 <b>${hex4(jr.via.t1c)}</b> T2 <b>${hex4(jr.via.t2c)}</b> IFR <b>${hex2(jr.via.ifrValue())}</b> IER <b>${hex2(jr.via.ier)}</b>` : '');
+  $('cyc').textContent = (jr.cycles / 1e6).toFixed(3) + ' Mio. Takte';
+  void c;
+}
+
+function updateDebugger(force) {
+  const c = jr.cpu;
+  const st = $('status');
+  if (jr.paused) { st.textContent = 'HALT – ' + (jr.pauseReason || 'Debugger'); st.className = c.halted ? 'halt' : 'paused'; }
+  else { st.textContent = jr.stepSwitch ? 'RUN (STEP)' : 'RUN'; st.className = ''; }
+  const editable = jr.paused;
+  for (const r of ['PC','A','X','Y','SP']) {
+    const el = $('r-' + r);
+    el.disabled = !editable;
+    if (document.activeElement !== el) el.value = r === 'PC' ? hex4(c.PC) : hex2(c[r]);
+  }
+  const p = c.getP();
+  document.querySelectorAll('.flag').forEach(b => b.classList.toggle('on', !!(p & (1 << b.dataset.bit))));
+  renderDis(); renderMem(); renderBps(); renderState();
+  void force;
+}
+
+// ---- Steuerknöpfe ----
+function doStep() { if (!jr.paused) jr.pause('Debugger'); jr.stepOne(); jr.segAcc.fill(0); if (jr.cpu.halted) jr.pauseReason = 'JAM'; updateDebugger(true); }
+function doOver() { if (!jr.paused) jr.pause('Debugger'); jr.stepOver(); updateDebugger(true); }
+$('b-run').onclick = () => { if (jr.cpu.halted) return; jr.resume(); updateDebugger(true); };
+$('b-pause').onclick = () => { if (!jr.paused) jr.pause('Debugger'); updateDebugger(true); };
+$('b-step').onclick = doStep;
+$('b-over').onclick = doOver;
+$('b-out').onclick = () => { if (!jr.paused) jr.pause('Debugger'); jr.stepOut(); updateDebugger(true); };
+$('speed').onchange = () => { jr.speed = +$('speed').value; };
+jr.onPause = () => updateDebugger(true);
+
+// ============================================================
+// Programme & Dateien
+// ============================================================
+function showInfo(html) { const i = $('info'); i.style.display = 'block'; i.innerHTML = html; }
+function pointMonitorTo(a) { jr.ram[0xFA] = a & 0xFF; jr.ram[0xFB] = (a >> 8) & 0xFF; jr.ram[0xFF] = 3; jr.ram[0xF6] = 3; }
+
+(function buildDemos() {
+  const s = $('demo');
+  const groups = {};
+  for (const [k, d] of Object.entries(DEMOS)) {
+    const g = d.group || 'Beispiele';
+    if (!groups[g]) { groups[g] = document.createElement('optgroup'); groups[g].label = g; s.appendChild(groups[g]); }
+    const o = document.createElement('option'); o.value = k; o.textContent = d.name; groups[g].appendChild(o);
+  }
+})();
+// Beispielmelodie für REPEAT, falls noch nichts mit INPUT aufgenommen wurde: „Alle meine Entchen“ (Tastenwert, Länge in 16,3 ms)
+const MELODY = [0,10, 2,10, 4,10, 5,10, 7,24, 7,24, 9,10, 9,10, 9,10, 9,10, 7,50, 9,10, 9,10, 9,10, 9,10, 7,50,
+  5,10, 5,10, 5,10, 5,10, 4,24, 4,24, 2,10, 2,10, 2,10, 2,10, 0,50, 0x77];
+function noteBufferValid() {
+  for (let a = 0x100; a < 0x1D8; a += 2) {
+    const n = jr.ram[a];
+    if (n === 0x77) return a > 0x100;
+    if (n > 0x0F) return false;
+  }
+  return false;
+}
+const NEEDS = { switches: ['ps-sw', 'sw'], piano: ['ps-piano', 'piano'], speaker: ['ps-spk', 'spk'] };
+$('demo-load').onclick = () => {
+  const key = $('demo').value, d = DEMOS[key]; if (!d) return;
+  d.code.forEach((v, i) => jr.write(d.addr + i, v));
+  const parts = [`$${hex4(d.addr)}–$${hex4(d.addr + d.code.length - 1)}`];
+  for (const b of d.extra || []) { b.code.forEach((v, i) => jr.write(b.addr + i, v)); parts.push(`$${hex4(b.addr)}–$${hex4(b.addr + b.code.length - 1)}`); }
+  let extraNote = '';
+  if (key === 'b2repeat' && !noteBufferValid()) {
+    MELODY.forEach((v, i) => jr.write(0x100 + i, v));
+    extraNote = '<br>Der Notenpuffer ab $0100 war leer – dort steht jetzt „Alle meine Entchen“.';
+  }
+  const start = d.start ?? d.addr;
+  pointMonitorTo(start);
+  $('mem-addr').value = hex4(d.addr);
+  const plugged = [];
+  let pmNote = '';
+  for (const n of d.needs || []) {
+    if (n === 'pm') {
+      if (!jr.iface) { $('opt-iface').checked = true; $('opt-iface').onchange(); }
+      if (!jr.pmN && key.endsWith('src')) { $('opt-pm').value = '1'; $('opt-pm').onchange(); }
+      pmNote = '<br>Läuft unter dem Printer-Monitor: „PM starten“ im Terminal der Interface-Platine.'; continue;
+    }
+    const [id] = NEEDS[n]; if (!$(id).checked) { $(id).checked = true; $(id).onchange(); } plugged.push(n);
+  }
+  if (plugged.length) $('portcard').open = true;
+  showInfo(`<b>${d.name}</b> liegt bei ${parts.join(', ')}. ` +
+    (pmNote ? '' : `Display zeigt jetzt ${hex4(start)} – mit <b>GO</b> starten (vorher ggf. <b>ST</b>, falls noch ein Programm läuft).`) + `<br>${d.desc}` +
+    pmNote + (plugged.length ? '<br>Am Port-Stecker eingesteckt: ' + plugged.map(n => ({ switches: '8 Schalter', piano: 'Klaviatur', speaker: 'Lautsprecher' })[n]).join(', ') + '.' : '') + extraNote);
+  updateDebugger(true);
+};
+
+// ============================================================
+// Port-Stecker: Schalter, Klaviatur, Lautsprecher
+// ============================================================
+(function buildSwitches() {
+  const box = $('ps-switches');
+  for (let b = 7; b >= 0; b--) {
+    const el = document.createElement('button'); el.className = 'sw'; el.type = 'button';
+    el.innerHTML = `<div class="slot"><div class="lever"></div></div>PA${b}`;
+    el.title = 'Schalter an PA' + b + ' – oben = geschlossen (0)';
+    el.onclick = () => { jr.port.swVal ^= 1 << b; el.classList.toggle('on', !!(jr.port.swVal & (1 << b))); showSw(); };
+    box.appendChild(el);
+  }
+})();
+function showSw() {
+  const v = jr.port.swVal;
+  $('ps-swval').textContent = jr.port.sw ? `PA liest $${hex2(~v)} · N = ${v} (= $${hex2(v)})` : '';
+}
+$('ps-sw').onchange = () => { jr.port.sw = $('ps-sw').checked; $('ps-switches').style.opacity = jr.port.sw ? 1 : .45; showSw(); };
+$('ps-piano').onchange = () => { jr.port.piano = $('ps-piano').checked; $('piano').style.opacity = jr.port.piano ? 1 : .45; if (!jr.port.piano) releaseAllPiano(); };
+// Taste k: Ton aus der Tabelle DEL – 0 = c (130,8 Hz) … 9 = a (220 Hz) … F = dis'
+const NOTE = ['c', 'cis', 'd', 'dis', 'e', 'f', 'fis', 'g', 'gis', 'a', 'ais', 'h', "c'", "cis'", "d'", "dis'"];
+const WHITE = [0, 2, 4, 5, 7, 9, 0xB, 0xC, 0xE], BLACK_AFTER = { 1: 0, 3: 1, 6: 3, 8: 4, 0xA: 5, 0xD: 7, 0xF: 8 };
+const PIANO_CODES = { KeyA: 0, KeyW: 1, KeyS: 2, KeyE: 3, KeyD: 4, KeyF: 5, KeyT: 6, KeyG: 7, KeyY: 8, KeyH: 9, KeyU: 10, KeyJ: 11, KeyK: 12, KeyO: 13, KeyL: 14, KeyP: 15 };
+const pianoEls = [];
+(function buildPiano() {
+  const pn = $('piano'), w = 100 / (WHITE.length + 0.32);   // Platz rechts für dis'
+  WHITE.forEach((k, i) => {
+    const el = document.createElement('div'); el.className = 'wk';
+    el.style.left = `calc(6px + ${i * w}% - ${i * 12 / WHITE.length}px)`; el.style.width = `calc(${w}% - ${12 / WHITE.length}px - 2px)`;
+    el.innerHTML = `${NOTE[k]}<small>${k.toString(16).toUpperCase()}</small>`; pianoEls[k] = el; pn.appendChild(el);
+  });
+  for (const [k, i] of Object.entries(BLACK_AFTER)) {
+    const el = document.createElement('div'); el.className = 'bk';
+    el.style.left = `calc(6px + ${(+i + 1) * w - w * 0.3}% - ${(+i + 1) * 12 / WHITE.length}px)`; el.style.width = `${w * 0.6}%`;
+    el.innerHTML = `<small>${(+k).toString(16).toUpperCase()}</small>`; pianoEls[+k] = el; pn.appendChild(el);
+  }
+  pianoEls.forEach((el, k) => {
+    el.addEventListener('pointerdown', e => { e.preventDefault(); el.setPointerCapture(e.pointerId); pianoDown(k); });
+    el.addEventListener('pointerup', () => pianoUp(k));
+    el.addEventListener('pointercancel', () => pianoUp(k));
+  });
+  pn.addEventListener('keydown', e => {
+    const k = PIANO_CODES[e.code]; if (k === undefined || e.ctrlKey || e.altKey || e.metaKey) return;
+    e.preventDefault(); e.stopPropagation(); if (!e.repeat) pianoDown(k);
+  });
+  pn.addEventListener('keyup', e => { const k = PIANO_CODES[e.code]; if (k === undefined) return; e.stopPropagation(); pianoUp(k); });
+  pn.addEventListener('blur', releaseAllPiano);
+})();
+function pianoDown(k) { if (!jr.port.piano) { $('ps-piano').checked = true; $('ps-piano').onchange(); } jr.port.keys.add(k); pianoEls[k].classList.add('down'); audioInit(); }
+function pianoUp(k) { jr.port.keys.delete(k); pianoEls[k].classList.remove('down'); }
+function releaseAllPiano() { for (const k of [...jr.port.keys]) pianoUp(k); }
+
+// Lautsprecher: PB0-Flanken der letzten Bildperiode als Rechtecksignal über WebAudio
+let actx = null, aTime = 0, hpX = 0, hpY = 0, spkLed = 0;
+function audioInit() {
+  if (actx || !jr.port.spk) return;
+  const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+  try { actx = new AC(); } catch (e) { actx = null; }
+}
+$('ps-spk').onchange = () => { jr.port.spk = $('ps-spk').checked; jr.takeSpeaker(); if (jr.port.spk) audioInit(); };
+function speakerFrame() {
+  const r = jr.takeSpeaker();
+  const busy = r.edges.length > 0;
+  spkLed = busy ? 4 : Math.max(0, spkLed - 1);
+  $('ps-spkled').classList.toggle('on', jr.port.spk && spkLed > 0);
+  if (!actx || !jr.port.spk || r.to <= r.from) return;
+  if (actx.state === 'suspended') actx.resume();
+  const rate = actx.sampleRate, n = Math.round((r.to - r.from) / jr.speed * rate);
+  if (n <= 0 || n > rate) return;
+  const vol = $('ps-vol').value / 100 * 0.5;
+  const buf = actx.createBuffer(1, n, rate), x = buf.getChannelData(0);
+  const cpp = (r.to - r.from) / n;   // Takte pro Abtastwert
+  let lv = r.level0, e = 0;
+  const a = 1 - 1 / (rate * 0.02);  // Hochpass ~8 Hz gegen Gleichanteil
+  for (let i = 0; i < n; i++) {
+    const t = r.from + i * cpp;
+    while (e < r.edges.length && r.edges[e] <= t) { lv ^= 1; e++; }
+    const v = lv ? 0 : vol;            // Strom durch den Lautsprecher bei PB0 = 0
+    hpY = a * (hpY + v - hpX); hpX = v;
+    x[i] = hpY;
+  }
+  const now = actx.currentTime;
+  if (aTime < now + 0.02 || aTime > now + 0.3) aTime = now + 0.05;
+  const src = actx.createBufferSource(); src.buffer = buf; src.connect(actx.destination); src.start(aTime);
+  aTime += n / rate;
+}
+
+// ============================================================
+// Bus-Erweiterung (Etappe 5)
+// ============================================================
+let busFileBlock = 2;
+function buildBusGrid() {
+  const g = $('busgrid'); g.innerHTML = '';
+  for (let i = 2; i < 16; i++) {
+    const b = jr.bus.blocks[i], el = document.createElement('div');
+    const h = i.toString(16).toUpperCase();
+    const disabled = jr.bus.mode === 0 || (jr.bus.mode === 1 && false);
+    el.className = 'bblk' + (b ? ' ' + b.type : '') + (disabled ? ' off' : '');
+    el.innerHTML = `<b>$${h}000–$${h}FFF</b><select ${disabled ? 'disabled' : ''}>
+      <option value="">– frei –</option><option value="ram" title="8 × 2114">RAM 4 K</option><option value="eprom" title="2 × 2716">EPROM 4 K</option></select>
+      <div class="bb">${b && b.type === 'eprom' ? `<button class="b" data-load="${i}">laden …</button>` : ''}${i === 15 && b && b.type === 'eprom' ? '<button class="b" data-vec="15">Vektoren</button>' : ''}</div>`;
+    const sel = el.querySelector('select'); sel.value = b ? b.type : '';
+    sel.onchange = () => { jr.setBusBlock(i, sel.value, sel.value === 'eprom' && i === 15 ? jr.vectorEprom() : null); buildBusGrid(); };
+    g.appendChild(el);
+  }
+  g.querySelectorAll('[data-load]').forEach(bt => bt.onclick = () => { busFileBlock = +bt.dataset.load; $('bus-file').click(); });
+  g.querySelectorAll('[data-vec]').forEach(bt => bt.onclick = () => { jr.bus.blocks[15].data.set(jr.vectorEprom().subarray(0xFFA), 0xFFA); busStatus(); updateDebugger(true); });
+  busStatus();
+}
+function busStatus() {
+  const m = jr.bus.mode, bl = jr.bus.blocks;
+  $('bus-vecrow').style.display = m === 1 ? '' : 'none';
+  const ram = bl.filter(b => b && b.type === 'ram').length, ep = bl.filter(b => b && b.type === 'eprom').length;
+  const cards = Math.max(Math.ceil(ram / 2), Math.ceil(ep / 2));
+  let t = '';
+  if (m === 0) t = 'Grundausstattung: $2000–$FFFF spiegeln die ersten 8 K, die CPU liest die Vektoren bei $FFFA–$FFFF aus Seite 1F des Monitor-EPROMs.';
+  else {
+    t = `Busspeicher: ${ram * 4} K RAM, ${ep * 4} K EPROM` + (cards ? ` – mindestens ${cards} RAM/EPROM-Karte${cards > 1 ? 'n' : ''} (je 8 K RAM, 4 × 2716).` : '.');
+    const v = [jr.read(0xFFFA), jr.read(0xFFFB), jr.read(0xFFFC), jr.read(0xFFFD), jr.read(0xFFFE), jr.read(0xFFFF)];
+    t += ` Vektoren: NMI $${hex2(v[1])}${hex2(v[0])}, RES $${hex2(v[3])}${hex2(v[2])}, IRQ $${hex2(v[5])}${hex2(v[4])}.`;
+    if (m === 1 && jr.bus.vecFF && !(bl[15] && bl[15].type === 'eprom')) t += ' <span class="warn">Seite FF ist nicht mit einem EPROM belegt – nach RST bleibt das Display dunkel (Buch 3, S. 67).</span>';
+    else if (v[2] !== 0x1D || v[3] !== 0x1C) t += ' <span class="warn">Der Reset-Vektor zeigt nicht auf $1C1D.</span>';
+    if (m === 1 && !jr.bus.vecFF && ram + ep) t += ' <span class="warn">Brücke R-T gehört zur Ausbaustufe ohne Busspeicher; mit Busspeicherkarten muss R-S gesteckt sein.</span>';
+    if (m === 2) {
+      t += ' Unbestückte Blöcke bleiben Doppelgänger der Basiskarte; Block F darf nur belegt werden, wenn er die Vektoren enthält.';
+      if (ram > 2 || ep > 2) t += ' <span class="warn">Direkt an der Basiskarte ist nur eine Karte möglich (max. 8 K RAM, 4 × 2716).</span>';
+    }
+    if (!jr.iface && m === 1) t += ' <span class="warn">Die Buskarte hängt an der Interface-Platine – die ist gerade gezogen.</span>';
+  }
+  $('bus-msg').innerHTML = t;
+}
+$('bus-mode').onchange = () => { jr.bus.mode = +$('bus-mode').value; buildBusGrid(); updateDebugger(true);
+  showInfo('Decodierung geändert – mit <b>RST</b> holt die CPU die Vektoren neu.'); };
+$('bus-vec').onchange = () => { jr.bus.vecFF = $('bus-vec').value === '1'; busStatus(); };
+$('bus-preset').onclick = () => {
+  if (jr.bus.mode === 0) { jr.bus.mode = 1; $('bus-mode').value = '1'; }
+  jr.bus.vecFF = true; $('bus-vec').value = '1';
+  jr.setBusBlock(2, 'ram'); jr.setBusBlock(3, 'ram'); jr.setBusBlock(15, 'eprom', jr.vectorEprom());
+  buildBusGrid(); jr.reset(); updateDebugger(true);
+  showInfo('Ausbau wie im Buch empfohlen: RAM ab $2000 aufwärts, EPROM ab $FFFF abwärts, Seite FF mit den Vektoren 2F 1F 1D 1C 32 1F. RST ausgeführt.');
+};
+$('bus-clear').onclick = () => { for (let i = 2; i < 16; i++) jr.setBusBlock(i, ''); buildBusGrid(); updateDebugger(true); };
+$('bus-file').addEventListener('change', e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  f.arrayBuffer().then(buf => {
+    let data = new Uint8Array(buf), note = '';
+    const txt = new TextDecoder().decode(data.subarray(0, 200));
+    if (/^:[0-9A-Fa-f]{10}/.test(txt)) {   // Intel-HEX: Adressen relativ zum Blockanfang
+      const p = parseIntelHex(new TextDecoder().decode(data)); const d = new Uint8Array(0x1000).fill(0xFF);
+      for (const b of p.blocks) b.data.forEach((v, i) => { const a = (b.addr + i) & 0xFFF; d[a] = v; });
+      data = d; note = ' (Intel-HEX)';
+    }
+    if (data.length > 0x1000) note += `, nur die ersten 4 K von ${data.length} Bytes`;
+    jr.setBusBlock(busFileBlock, 'eprom', data);
+    buildBusGrid(); updateDebugger(true);
+    showInfo(`EPROM-Block $${busFileBlock.toString(16).toUpperCase()}000: <b>${f.name}</b> geladen${note}.`);
+  });
+});
+buildBusGrid();
+
+// PM-EPROM und STEP-Sperre
+$('opt-pm').onchange = () => {
+  jr.setPmVersion($('opt-pm').value === '1');
+  showInfo(jr.pmN ? 'PM-EPROM ESS507N: PM + PM-Editor PME ($14F8–$17FD) + BINAR/PMBINA ($17F6/$17FA).' : 'PM-EPROM ESS507: nur der Printer-Monitor, $14F4–$17FF ist leer (FF).');
+  updateDebugger(true);
+};
+$('opt-steplock').onchange = () => { jr.stepLock = +$('opt-steplock').value; };
+$('ps-sw').onchange(); $('ps-piano').onchange();
+
+function loadBlocks(name, format, parsed) {
+  if (!parsed.blocks.length) { showInfo(`<b>${name}</b>: keine Daten gefunden.`); return; }
+  let lo = 0xFFFF, hi = 0, n = 0, lost = 0;
+  for (const b of parsed.blocks) b.data.forEach((v, i) => {
+    const a = (b.addr + i) & amask();
+    const before = jr.read(a);
+    jr.write(a, v);
+    if (jr.read(a) === v || (a >> 10 === 6 && (a & 0x280) === 0x280)) { n++; lo = Math.min(lo, a); hi = Math.max(hi, a); }
+    else { lost++; void before; }
+  });
+  const start = parsed.blocks[0].addr & amask();
+  pointMonitorTo(start);
+  $('mem-addr').value = hex4(start);
+  let msg = `<b>${name}</b> (${format}): ${n} Bytes geladen, $${hex4(lo)}–$${hex4(hi)}. Display zeigt ${hex4(start)} – mit GO starten.`;
+  if (lost) msg += `<br>${lost} Bytes lagen außerhalb des beschreibbaren Speichers (ROM oder freier Adressraum).`;
+  if (parsed.errors) msg += `<br>Achtung: ${parsed.errors} Prüfsummenfehler.`;
+  if (lo <= 0x01FF && hi >= 0x00E1) msg += '<br>Achtung: Monitor-Variablen ($E1–$FF) oder Stack wurden überschrieben.';
+  showInfo(msg);
+  updateDebugger(true);
+}
+$('file').addEventListener('change', e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  f.arrayBuffer().then(buf => {
+    const bytes = new Uint8Array(buf);
+    const head = new TextDecoder('latin1').decode(bytes.slice(0, 200)).trimStart();
+    const txt = () => new TextDecoder('latin1').decode(bytes);
+    if (head.startsWith(':')) return loadBlocks(f.name, 'Intel-HEX', parseIntelHex(txt()));
+    if (head.startsWith(';')) return loadBlocks(f.name, 'KIM-Papertape', parsePTP(txt()));
+    if (/^\$?[0-9A-Fa-f]{4}\s*[:\-]?\s+[0-9A-Fa-f]{2}(\s|$)/.test(head)) return loadBlocks(f.name, 'Hexdump', parseHexDump(txt()));
+    const a = parseInt($('load-addr').value, 16);
+    if (isNaN(a)) { showInfo('Ungültige Ladeadresse.'); return; }
+    loadBlocks(f.name, 'Binär', { blocks: [{ addr: a, data: Array.from(bytes) }], errors: 0 });
+  });
+});
+
+function range() {
+  const a = parseInt($('sv-from').value, 16), b = parseInt($('sv-to').value, 16);
+  if (isNaN(a) || isNaN(b) || b < a || a > 0xFFFF || b > 0xFFFF) { showInfo('Ungültiger Bereich.'); return null; }
+  return [a, b];
+}
+function download(name, data, type) {
+  const url = URL.createObjectURL(new Blob([data], { type }));
+  const el = document.createElement('a'); el.href = url; el.download = name;
+  document.body.appendChild(el); el.click(); el.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+const rdSafe = a => { const v = jr.peek(a); return v === null ? 0xFF : v; };
+$('sv-bin').onclick = () => { const r = range(); if (!r) return;
+  const d = new Uint8Array(r[1] - r[0] + 1); for (let i = 0; i < d.length; i++) d[i] = rdSafe(r[0] + i);
+  download(`junior_${hex4(r[0])}-${hex4(r[1])}.bin`, d, 'application/octet-stream'); };
+$('sv-hex').onclick = () => { const r = range(); if (!r) return;
+  download(`junior_${hex4(r[0])}-${hex4(r[1])}.hex`, toIntelHex(rdSafe, r[0], r[1]), 'text/plain'); };
+$('sv-txt').onclick = () => { const r = range(); if (!r) return;
+  download(`junior_${hex4(r[0])}-${hex4(r[1])}.txt`, toHexDump(rdSafe, r[0], r[1]), 'text/plain'); };
+
+$('opt-vec').onchange = () => { jr.autoVectors = $('opt-vec').checked; };
+$('opt-ext').onchange = () => { jr.extRam = $('opt-ext').checked; updateDebugger(true); };
+$('opt-ext').disabled = true;
+$('opt-iface').onchange = () => {
+  jr.iface = $('opt-iface').checked; $('opt-ext').disabled = jr.iface;
+  if (!jr.iface) jr.tapeStop();
+  showInfo(jr.iface ? 'Interface-Platine eingesteckt: RAM $0400–$07FF, TM $0800, PM $1000, 6522 $1800.' :
+    'Interface-Platine gezogen. K1–K5 sind wieder frei (wahlweise als RAM).');
+  updateDebugger(true);
+};
+
+// ============================================================
+// Kassettenrekorder
+// ============================================================
+function fmtT(s) { return s.toFixed(1).padStart(5, '0') + ' s'; }
+function updateDeck() {
+  const t = jr.tape, deck = $('deck');
+  deck.classList.toggle('play', t.mode === 'play'); deck.classList.toggle('rec', t.mode === 'rec');
+  const pos = t.mode === 'rec' ? jr.tapeTime() + (t.time - t.lastEdge) / 1e6 : jr.tapeTime(t.pos) + (t.mode === 'play' ? t.frac / 1e6 : 0);
+  $('tape-count').textContent = `${fmtT(pos)} / ${fmtT(jr.tapeTime())}`;
+  $('tape-led').classList.toggle('on', ((jr.riot.pbPins() >> 7) & 1) === 1 && t.mode !== 'stop' && jr.motorOn());
+  $('led-out').classList.toggle('on', jr.iface && !!jr.relayOut()); $('led-in').classList.toggle('on', jr.iface && !!jr.relayIn());
+  deck.classList.toggle('idle', t.mode !== 'stop' && !jr.motorOn());
+  $('t-rec').classList.toggle('on', t.mode === 'rec'); $('t-play').classList.toggle('on', t.mode === 'play');
+}
+jr.tape.onEnd = () => { showInfo('Bandende erreicht.'); };
+$('t-rec').onclick = () => { if (!jr.iface) return; jr.tapeRecord(); updateDeck(); };
+$('t-play').onclick = () => { if (!jr.iface) return; if (!jr.tape.d.length) { showInfo('Das Band ist leer.'); return; } jr.tapePlay(); updateDeck(); };
+$('t-stop').onclick = () => { jr.tapeStop(); updateDeck(); };
+$('t-rew').onclick = () => { jr.tapeStop(); jr.tapeRewind(); updateDeck(); };
+$('t-clear').onclick = () => { jr.tapeLoad([]); updateDeck(); showInfo('Band gelöscht.'); };
+$('t-wav').onclick = () => {
+  jr.tapeStop();
+  if (!jr.tape.d.length) { showInfo('Das Band ist leer.'); return; }
+  download('junior_band.wav', tapeToWav(jr.tape.d), 'audio/wav');
+};
+$('t-wavfile').addEventListener('change', e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  f.arrayBuffer().then(async buf => {
+    let w = parseWav(buf);
+    if (!w) {
+      try {
+        const ac = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(1, 44100, 44100);
+        const ab = await ac.decodeAudioData(buf.slice(0));
+        w = { x: ab.getChannelData(0), rate: ab.sampleRate };
+      } catch (err) { showInfo(`<b>${f.name}</b>: Format nicht lesbar.`); return; }
+    }
+    jr.tapeLoad(samplesToTape(w.x, w.rate)); updateDeck();
+    const recs = tapeDecode(jr.tape.d);
+    showInfo(`<b>${f.name}</b> eingelegt (${jr.tapeTime().toFixed(1)} s). ` +
+      (recs.length ? `Gefunden: ${recs.map(r => `ID ${hex2(r.id)} $${hex4(r.sa)}–$${hex4(r.sa + r.data.length)}${r.ok ? '' : ' (Prüfsumme falsch)'}`).join(', ')}.` :
+        'Kein TM-Satz erkannt – vielleicht ein anderes Format.'));
+  });
+});
+function tapeReport() {
+  const recs = tapeDecode(jr.tape.d);
+  if (!recs.length) { showInfo('Auf dem Band ist kein lesbarer TM-Satz.'); return recs; }
+  showInfo('Sätze auf dem Band: ' + recs.map(r => `ID <b>${hex2(r.id)}</b> $${hex4(r.sa)}–$${hex4(r.sa + r.data.length)} (${r.data.length} Bytes${r.ok ? '' : ', Prüfsumme falsch'})`).join('; '));
+  return recs;
+}
+$('t-scan').onclick = () => { jr.tapeStop(); tapeReport(); };
+$('t-enc').onclick = () => {
+  const id = parseInt($('t-id').value, 16), a = parseInt($('t-from').value, 16), b = parseInt($('t-to').value, 16);
+  if ([id, a, b].some(isNaN) || b <= a || b > 0x10000) { showInfo('ID, von und bis prüfen (bis ist exklusiv).'); return; }
+  const data = []; for (let x = a; x < b; x++) data.push(rdSafe(x));
+  jr.tapeStop();
+  const d = jr.tape.d; d.length = jr.tape.pos; d.push(...tapeEncode(id & 0xFF, a, data)); jr.tape.pos = d.length;
+  updateDeck(); showInfo(`Satz ID ${hex2(id)} ($${hex4(a)}–$${hex4(b)}, ${data.length} Bytes) aufs Band geschrieben – Band steht am Ende.`);
+};
+$('t-dec').onclick = () => {
+  jr.tapeStop();
+  const recs = tapeDecode(jr.tape.d);
+  if (!recs.length) { showInfo('Auf dem Band ist kein lesbarer TM-Satz.'); return; }
+  for (const r of recs) r.data.forEach((v, i) => jr.write(r.sa + i, v));
+  pointMonitorTo(recs[0].sa);
+  showInfo('Direkt geladen: ' + recs.map(r => `ID ${hex2(r.id)} $${hex4(r.sa)}–$${hex4(r.sa + r.data.length)}${r.ok ? '' : ' (Prüfsumme falsch!)'}`).join(', '));
+  updateDebugger(true);
+};
+
+// ============================================================
+// Terminal
+// ============================================================
+const term = new Paper({ maxLines: 3000 });
+const printer = new Paper({ overstrike: true, maxLines: 5000 });
+let termLook = 'modern', termDirty = true, prnDirty = false;
+const ELEK_COLS = 64, ELEK_ROWS = 16;
+function termWidth() { return termLook === 'elek' ? ELEK_COLS : 0; }
+function termPut(c) {
+  term.put(c, termWidth()); termDirty = true;
+  if ($('prn-on').checked) { printer.put(c, 80); prnDirty = true; }
+}
+const escHtml = t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+function cellHtml(cell, look) {
+  let ch = cell.slice(-1);
+  if (look === 'elek') { const k = ch.charCodeAt(0); if (k >= 0x60 && k < 0x7F) ch = String.fromCharCode(k - 0x20); }   // nur Großbuchstaben im Zeichengenerator
+  return escHtml(ch);
+}
+function renderTerm() {
+  if (prnDirty) renderPaper();
+  if (!termDirty) return; termDirty = false;
+  const el = $('term'), elek = termLook === 'elek';
+  const first = elek ? Math.max(0, term.lines.length - ELEK_ROWS) : 0;
+  let h = '';
+  for (let r = first; r < (elek ? first + ELEK_ROWS : term.lines.length); r++) {
+    const ln = term.lines[r] || [];
+    let t = '';
+    const n = Math.max(ln.length, r === term.row ? term.col + 1 : 0);
+    for (let c = 0; c < n; c++) {
+      const cell = cellHtml(ln[c] || ' ', termLook);
+      t += (r === term.row && c === term.col) ? `<span class="cur">${cell}</span>` : cell;
+    }
+    h += `<div class="ln">${t}</div>`;
+  }
+  el.innerHTML = h;
+  if (!elek) el.scrollTop = el.scrollHeight;
+}
+function fitElek() {   // 64 Zeichen müssen in die Breite passen
+  const el = $('term');
+  if (termLook !== 'elek') { el.style.fontSize = ''; return; }
+  const w = $('termwrap').clientWidth - 36 - 44;
+  el.style.fontSize = Math.max(6, Math.min(15, w / (ELEK_COLS * 0.64))) + 'px';
+}
+window.addEventListener('resize', fitElek);
+$('term-look').onchange = () => {
+  termLook = $('term-look').value;
+  $('termwrap').classList.toggle('elek', termLook === 'elek');
+  fitElek(); termDirty = true; renderTerm();
+};
+function renderPaper() {
+  prnDirty = false;
+  const el = $('paper'); let h = '';
+  for (const ln of printer.lines) {
+    let t = '';
+    for (const cell of ln) { t += escHtml(cell[0]); for (const x of cell.slice(1)) t += `<span class="ov">${escHtml(x)}</span>`; }
+    h += t + '\n';
+  }
+  el.innerHTML = h; el.scrollTop = el.scrollHeight;
+  $('prn-info').textContent = `${printer.lines.length} Zeilen`;
+}
+$('prn-on').onchange = () => {
+  const on = $('prn-on').checked;
+  $('paper').style.display = on ? '' : 'none'; $('prn-tools').style.display = on ? '' : 'none';
+  if (on) renderPaper();
+};
+$('prn-tear').onclick = () => { printer.clear(); renderPaper(); };
+$('prn-save').onclick = () => download('junior_drucker.txt', printer.text(), 'text/plain');
+$('term-save').onclick = () => download('junior_terminal.txt', term.text(), 'text/plain');
+jr.onSerial = c => termPut(c);
+jr.onRxStart = c => { if ($('echo').checked && c !== 0x7F && c !== 27) termPut(c); };   // Hardware-Echo, sobald das Zeichen über die Leitung geht
+$('baud').onchange = () => { jr.baud = +$('baud').value; };
+$('opt-relay').onchange = () => { jr.relays = $('opt-relay').checked; };
+$('term-brk').onclick = () => { jr.serialBreak(); $('term').focus(); };
+$('term-clr').onclick = () => { term.clear(); termDirty = true; renderTerm(); };
+$('term-del').onclick = () => { jr.serialSend([0x7F]); $('term').focus(); };
+$('term-pm').onclick = () => {
+  if (!jr.iface) { showInfo('Dafür muss die Interface-Platine eingesteckt sein.'); return; }
+  jr.reset(); jr.resume();
+  pointMonitorTo(0x1000);
+  jr.cpu.PC = 0x1000;
+  jr.serialSend([0x7F]);
+  $('term').focus(); updateDebugger(true);
+};
+$('term').addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key.length === 1 && /[a-z]/i.test(e.key)) { jr.serialSend([e.key.toUpperCase().charCodeAt(0) - 64]); e.preventDefault(); return; }
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+  let c = null;
+  if (e.key === 'Enter') c = 13; else if (e.key === 'Backspace' || e.key === 'Delete') c = 0x7F;
+  else if (e.key === 'Escape') c = 27; else if (e.key.length === 1) c = e.key.toUpperCase().charCodeAt(0);
+  if (c === null || c > 127) return;
+  e.preventDefault(); e.stopPropagation();
+  jr.serialSend([c]);
+});
+$('term').addEventListener('paste', e => {
+  e.preventDefault();
+  const txt = (e.clipboardData || window.clipboardData).getData('text').toUpperCase().replace(/\r?\n/g, '\r');
+  jr.serialSend([...txt].map(ch => ch.charCodeAt(0)).filter(x => x < 128));
+});
+
+function setRomInfo() {
+  let sum = 0; for (const b of jr.rom) sum = (sum + b) & 0xFFFF;
+  $('rom-info').textContent = `${romName} · Summe ${hex4(sum)} · RESET→${hex2(jr.rom[0x3FD])}${hex2(jr.rom[0x3FC])}`;
+}
+$('romfile').addEventListener('change', e => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  f.arrayBuffer().then(buf => {
+    let b = new Uint8Array(buf);
+    const head = new TextDecoder('latin1').decode(b.slice(0, 4));
+    if (head.startsWith(':')) {   // Intel-HEX-ROM
+      const img = new Uint8Array(1024).fill(0xFF);
+      for (const bl of parseIntelHex(new TextDecoder('latin1').decode(b)).blocks) bl.data.forEach((v, i) => { img[(bl.addr + i) & 0x3FF] = v; });
+      b = img;
+    }
+    if (b.length < 1024) { showInfo(`<b>${f.name}</b>: ${b.length} Bytes – ein 2708-Abbild hat 1024 Bytes.`); return; }
+    jr.rom.set(b.slice(b.length - 1024));   // bei größeren Abbildern die letzten 1 KB (Vektoren)
+    romName = f.name; setRomInfo(); jr.reset();
+    showInfo(`Monitor-ROM <b>${f.name}</b> eingesetzt und RST ausgelöst.`);
+  });
+});
+$('rom-orig').onclick = () => { jr.rom.set(ORIG_ROM); romName = 'Nachtmann 1980 (Original)'; setRomInfo(); jr.reset(); showInfo('Original-Monitor eingesetzt, RST ausgelöst.'); };
+
+setRomInfo();
+updateDebugger(true);
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
