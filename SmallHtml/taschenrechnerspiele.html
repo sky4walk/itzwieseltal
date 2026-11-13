@@ -1,0 +1,1589 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spiel und Spaß mit dem Taschenrechner – 60 Spiele</title>
+<style>
+:root{--paper:#f4ead2;--paper2:#ebdcb8;--ink:#2b2118;--brown:#7a4a23;--orange:#d9692a;--red:#c0392b;--green:#2e7d4f;--line:#c9b48a}
+*{box-sizing:border-box}
+body{margin:0;font-family:Georgia,"Times New Roman",serif;color:var(--ink);background:var(--paper) radial-gradient(circle at 20% 10%,#fbf4e2 0,transparent 60%);}
+header{background:var(--brown);color:#fff6e0;padding:14px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap;border-bottom:4px solid var(--orange)}
+header h1{margin:0;font-size:1.45rem;letter-spacing:.5px}
+header .sub{font-size:.85rem;opacity:.85}
+header a{color:#ffd9a8}
+.wrap{display:grid;grid-template-columns:250px minmax(0,1fr) 340px;gap:18px;padding:16px;align-items:start}
+#nav{position:sticky;top:10px;max-height:calc(100vh - 20px);overflow:auto;font-size:.9rem;background:var(--paper2);border:1px solid var(--line);border-radius:8px;padding:8px}
+#nav a{display:block;padding:3px 6px;color:var(--ink);text-decoration:none;border-radius:4px}
+#nav a:hover{background:#fff6e0}#nav a.on{background:var(--orange);color:#fff}
+#nav .nn{display:inline-block;width:1.7em;text-align:right;color:var(--brown);font-weight:bold}#nav a.on .nn{color:#fff}
+.ngroup{margin:10px 0 3px;font-size:.75rem;text-transform:uppercase;letter-spacing:.06em;color:var(--brown);font-weight:bold}
+#main{min-width:0}
+#dock{position:sticky;top:10px}
+h2{margin:.2em 0;font-size:1.7rem}h3{color:var(--brown);margin:1.2em 0 .4em}
+.gnum{font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--brown)}
+.who{font-style:italic;margin-bottom:6px}
+.goal{background:#fff6e0;border-left:4px solid var(--orange);padding:8px 12px;border-radius:4px}
+.rules ul{margin:.4em 0 .4em 1.2em;padding:0}.rules li{margin:.25em 0}
+.tip{background:#eef3e6;padding:6px 10px;border-radius:4px}
+.panel{background:#fffaf0;border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin:10px 0}
+.panel h4{margin:0 0 8px;font-size:.95rem;color:var(--brown)}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:6px 0}
+.btn{font:inherit;font-size:.9rem;background:var(--orange);color:#fff;border:0;border-radius:6px;padding:6px 11px;cursor:pointer;text-decoration:none;display:inline-block;box-shadow:0 2px 0 #9b4518}
+.btn:hover{filter:brightness(1.08)}.btn:active{transform:translateY(1px);box-shadow:none}
+.btn.used{background:#c9b48a;box-shadow:none;cursor:default}.btn.sel{background:var(--red)}
+.num,.opsel{font:inherit;font-size:.95rem;padding:5px 7px;border:1px solid var(--line);border-radius:6px;background:#fff}
+.big{font-size:1.25rem;margin:6px 0}.mono{font-family:"Courier New",monospace}.small{font-size:.83rem;color:#5d4a36}
+.note{border-top:1px dashed var(--line);padding-top:6px}
+.log{max-height:240px;overflow:auto;font-size:.88rem;background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:10px 0}
+.log:empty{display:none}.log div{padding:2px 0;border-bottom:1px dotted #eadcbc}
+.ok{color:var(--green);font-weight:bold}.warn{color:var(--red)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.die{font-size:2.6rem;line-height:1;margin-right:4px;color:var(--ink)}
+.dice{display:flex;align-items:center;gap:4px;min-height:10px}
+.card{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:40px;height:56px;border:1px solid #8a7656;border-radius:5px;background:#fff;margin:2px;font-family:Arial,sans-serif;cursor:pointer;box-shadow:1px 1px 0 #d8c8a5;user-select:none}
+.card b{font-size:1.05rem}.card i{font-style:normal;font-size:.95rem}.card.red{color:#b3261e}
+.card.back{background:repeating-linear-gradient(45deg,#7a4a23 0 5px,#9b6a3a 5px 10px)}.card.empty{background:transparent;border-style:dashed}
+.card.sel{outline:3px solid var(--orange);transform:translateY(-4px)}
+.band{display:flex;flex-wrap:wrap;gap:0}
+.piles{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin:6px 0}.pile{display:flex;flex-direction:column;align-items:center}.gap{width:12px}
+.keypad{display:grid;grid-template-columns:repeat(3,80px);gap:8px;margin:10px 0}
+.kcell{border:2px solid var(--line);border-radius:8px;padding:4px;text-align:center;background:#fff}.kcell.cur{border-color:var(--orange);background:#fff1dc}.kcell.done{opacity:.55}
+.kcell:last-child{grid-column:2}.klabel{font-size:.8rem;color:var(--brown)}
+.board svg{width:100%;max-width:560px;background:#fffaf0;border:1px solid var(--line);border-radius:8px}
+.board .el{font-size:10px;text-anchor:middle;fill:#3c2b1a;font-family:Arial}.board .el.a{fill:var(--red)}.board .el.sm{font-size:8px}
+.board .nl{font-size:11px;text-anchor:middle;font-weight:bold;fill:var(--brown)}.board .nd{cursor:pointer}
+.heaps{display:flex;gap:16px;flex-wrap:wrap}.heap{background:#fff;border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.sticks{font-family:monospace;color:var(--brown);letter-spacing:2px;max-width:220px;word-break:break-all;font-weight:bold}
+.alpha{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:"Courier New",monospace;font-size:.9rem}
+.cities{margin:0;padding-left:1.4em}
+table.score{border-collapse:collapse;margin:6px 0}table.score td,table.score th{border:1px solid var(--line);padding:3px 8px;text-align:left}
+table.score th{background:var(--paper2)}tr.out{opacity:.45;text-decoration:line-through}
+.hidden{cursor:pointer;color:var(--orange)}
+.rgrid{display:grid;grid-template-columns:repeat(8,1fr);border:2px solid var(--ink);max-width:600px;background:#fff}
+.rc{position:relative;border:1px solid #9c8a6b;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif}
+.rc b{font-size:1.25rem}.rc .o1{position:absolute;top:2px;left:3px;font-size:.62rem}.rc .o2{position:absolute;bottom:2px;right:3px;font-size:.62rem}
+.rc.goal{border:3px solid var(--ink);background:#fff1dc}.rc.tgt{background:#d9f0d9;cursor:pointer;outline:2px solid var(--green)}
+.rc .tok{position:absolute;bottom:2px;left:3px;font-style:normal;background:var(--red);color:#fff;border-radius:10px;padding:0 5px;font-size:.7rem;font-weight:bold}
+.ring{display:grid;grid-template-columns:repeat(8,40px);grid-template-rows:repeat(8,40px);gap:2px;margin:10px 0}
+.rf{border:1px solid var(--ink);background:#fff;display:flex;align-items:center;justify-content:center;font:bold 1.2rem Arial}
+.rf.me{background:var(--red);color:#fff}.rf.cp{background:#2f5fa7;color:#fff}.rmid{grid-row:3/7;grid-column:3/7;display:flex;align-items:center;justify-content:center;text-align:center;font-size:.8rem;color:#5d4a36}
+.hwgrid{display:grid;grid-template-columns:repeat(26,1fr);max-width:620px;font:12px "Courier New",monospace;background:#fff;border:1px solid var(--line)}
+.hwgrid span{text-align:center;padding:2px 0}.hh{background:var(--paper2);font-weight:bold;font-size:10px}.hc{cursor:pointer}.hc:hover{background:#fff1dc}.hc.on{background:var(--orange);color:#fff}
+.segbox svg{height:44px}.segbox{background:#1b0d0a;display:inline-block;padding:6px 10px;border-radius:6px}.segbox.rot{transform:rotate(180deg)}
+/* Rechner */
+.tabs{display:flex;gap:4px;margin-bottom:6px}.tab{font:inherit;font-size:.85rem;border:1px solid var(--line);background:var(--paper2);border-radius:6px 6px 0 0;padding:4px 10px;cursor:pointer}.tab.on{background:var(--brown);color:#fff}
+.cbody{border-radius:14px;padding:14px 14px 16px;box-shadow:0 6px 14px rgba(0,0,0,.25),inset 0 1px 0 rgba(255,255,255,.2)}
+.cbody.led{background:linear-gradient(#3b3b3d,#232325)}.cbody.hp65{background:linear-gradient(#4d4a46,#2f2c29)}.cbody.hp41{background:linear-gradient(#3a332c,#1f1a16)}
+.brand{font:bold .62rem Arial;letter-spacing:.2em;color:#c9b8a0;margin-bottom:8px;text-align:center}.cbody.hp65 .brand,.cbody.hp41 .brand{color:#e2b062}
+.cdisp{position:relative;background:#140806;border-radius:6px;padding:8px 8px 4px;min-height:58px;display:flex;align-items:center;justify-content:flex-end;box-shadow:inset 0 2px 6px #000;overflow:hidden}
+.cdisp svg.seg{width:100%;height:46px}.cdisp.rot svg,.cdisp.rot .lcd,.cdisp.rot .ledtxt{transform:rotate(180deg)}
+.cdisp.hp41{background:#b9bfae;box-shadow:inset 0 2px 5px #555}
+.lcd{font:600 1.75rem "Courier New",monospace;color:#1d201b;letter-spacing:2px}.ledtxt{font:1.4rem "Courier New",monospace;color:#ff3b1f}
+.cdisp.covered::after{content:"Klebefilm";position:absolute;inset:0;background:repeating-linear-gradient(-30deg,#e8dfc7 0 10px,#ddd2b5 10px 20px);color:#8a7656;display:flex;align-items:center;justify-content:center;font:italic .9rem Georgia}
+.mflag{position:absolute;left:8px;top:4px;color:#ff3b1f;font:bold .7rem Arial}
+.stack{color:#c9b8a0;font-size:.7rem;margin-top:5px;text-align:right}
+.cpad{display:grid;gap:7px;margin-top:12px}
+.ckey{font:bold 1rem Arial;padding:10px 0;border:0;border-radius:6px;cursor:pointer;color:#fff;background:#57575a;box-shadow:0 3px 0 #111}
+.ckey:active{transform:translateY(2px);box-shadow:0 1px 0 #111}
+.ckey.dig{background:#e9e4da;color:#222}.ckey.op{background:#d9692a}.ckey.clr{background:#b3261e}.ckey.fn{font-size:.78rem}
+.cpad.hp65 .ckey.dig{background:#c8c2b6}.cpad.hp65 .ckey.op{background:#3f3c39}.cpad.hp65 .ckey.fn{background:#232120;color:#e2b062}
+.cpad.hp41 .ckey.dig{background:#8a7f72;color:#fff}.cpad.hp41 .ckey.op{background:#2c2622}.cpad.hp41 .ckey.fn{background:#2c2622;color:#f0c35a}
+.cpad.blind .ckey{color:transparent!important}
+.opts{display:flex;gap:10px;flex-wrap:wrap;font-size:.85rem;margin:6px 0}
+.tape{background:#fff;border:1px solid var(--line);border-radius:6px;min-height:28px;max-height:60px;overflow:auto;padding:4px 6px;font-size:.8rem}
+footer{padding:16px;text-align:center;font-size:.85rem;color:#5d4a36}
+footer a{color:var(--brown)}
+@media (max-width:1100px){.wrap{grid-template-columns:200px minmax(0,1fr)}#dock{grid-column:1/-1;position:static;max-width:380px}}
+@media (max-width:720px){.wrap{grid-template-columns:1fr}#nav{position:static;max-height:220px}}
+</style>
+</head>
+<body>
+<header><div><h1>🧮 Spiel und Spaß mit dem Taschenrechner</h1><div class="sub">Die 60 Spiele aus dem Ullstein-Ratgeber (Schlossberg/Brockman, dt. Ausgabe Hermann Athen, 1978/1980) – mit den passenden Taschenrechnern zum Mitspielen</div></div>
+<div style="flex:1"></div><div class="sub"><a href="https://itzwieseltal.wordpress.com/" target="_blank">itzwieseltal.wordpress.com</a> · <a href="https://zwieselbrau.wordpress.com/" target="_blank">zwieselbrau.wordpress.com</a></div></header>
+<div class="wrap"><nav id="nav"></nav><main id="main"></main><aside id="dock"></aside></div>
+<footer>Ein Projekt der <a href="https://itzwieseltal.wordpress.com/" target="_blank">Interessengemeinschaft Informationstechnik Zwieseltal</a> · Regeln in eigenen Worten nach dem Buch · HP-Rechner: <a href="https://itzwieseltal.wordpress.com/2026/07/06/hp-65/" target="_blank">HP-65</a>, <a href="https://itzwieseltal.wordpress.com/2026/10/26/hp-41c-cv-und-cx-der-taschenrechner-der-ein-computer-sein-wollte/" target="_blank">HP-41C/CV/CX</a> · Prost aus der <a href="https://zwieselbrau.wordpress.com/" target="_blank">Zwieselbrau</a></footer>
+<script>
+
+// ===== Taschenrechner-Engines =====
+// Zahl auf N Stellen abschneiden (wie billige Rechner der 70er: abschneiden, nicht runden)
+function truncN(x, N) {
+  if (!isFinite(x)) return NaN;
+  if (x === 0) return 0;
+  const neg = x < 0; let a = Math.abs(x);
+  let s = a.toPrecision(15);
+  if (s.includes('e')) { s = a.toFixed(20); }
+  let [ip, fp = ''] = s.split('.');
+  ip = ip.replace(/^0+(?=\d)/, '');
+  if (ip.length > N) return NaN; // Überlauf
+  let dec = N - (ip === '0' ? 1 : ip.length);
+  fp = fp.slice(0, Math.max(0, dec));
+  let v = parseFloat(ip + '.' + (fp || '0'));
+  return neg ? -v : v;
+}
+function fmtN(x, N) {
+  if (isNaN(x)) return 'E';
+  if (x === 0) return '0.';
+  let s = Math.abs(x).toPrecision(15);
+  if (s.includes('e')) s = Math.abs(x).toFixed(20);
+  let [ip, fp = ''] = s.split('.');
+  ip = ip.replace(/^0+(?=\d)/, '');
+  const dec = N - (ip === '0' ? 1 : ip.length);
+  fp = fp.slice(0, Math.max(0, dec)).replace(/0+$/, '');
+  return (x < 0 ? '-' : '') + ip + '.' + fp;
+}
+
+// --- Algebraischer Buch-Rechner (Kettenrechnung, Konstantenautomatik, saldierender Speicher) ---
+class AlgCalc {
+  constructor(N = 8) { this.N = N; this.mem = 0; this.clearAll(); }
+  clearAll() { this.x = 0; this.entry = ''; this.entering = false; this.acc = null; this.op = null; this.k = null; this.err = false; }
+  get value() { return this.entering ? parseFloat(this.entry || '0') : this.x; }
+  display() {
+    if (this.err) return 'E';
+    if (this.entering) { let e = this.entry || '0'; if (e.startsWith('.')) e = '0' + e; if (e.startsWith('-.')) e = '-0' + e.slice(1); return e.includes('.') ? e : e + '.'; }
+    return fmtN(this.x, this.N);
+  }
+  digitCount(e) { return e.replace(/[-.]/g, '').replace(/^0+(?=\d)/, '').length; }
+  setX(v) { const t = truncN(v, this.N); if (isNaN(t)) { this.err = true; this.x = 0; } else this.x = t; this.entering = false; }
+  calc(a, op, b) { switch (op) { case '+': return a + b; case '-': return a - b; case '*': return a * b; case '/': return b === 0 ? NaN : a / b; } }
+  key(k) {
+    if (this.err && k !== 'C') return;
+    if (/^\d$/.test(k) || k === '.') {
+      if (!this.entering) { this.entry = ''; this.entering = true; if (!this.op) this.k = this.k; }
+      if (k === '.' && this.entry.includes('.')) return;
+      if (k !== '.' && this.digitCount(this.entry + k) > this.N) return;
+      if (this.entry === '0' && k !== '.') this.entry = '';
+      this.entry += k; return;
+    }
+    switch (k) {
+      case 'C': this.clearAll(); return;
+      case 'CE': this.entry = ''; this.entering = true; return;
+      case '+': case '-': case '*': case '/': {
+        if (this.op && this.entering) { this.setX(this.calc(this.acc, this.op, this.value)); }
+        else if (this.entering) this.setX(this.value);
+        this.acc = this.x; this.op = k; this.entering = false; this.lastWasOp = true; return;
+      }
+      case '=': {
+        if (this.op) {
+          const b = this.entering ? this.value : this.acc;
+          const a = this.acc, op = this.op;
+          this.setX(this.calc(a, op, b));
+          this.k = op === '*' ? { op, v: a } : { op, v: b };
+          this.op = null; this.acc = null;
+        } else if (this.k) {
+          const v = this.value;
+          this.setX(this.k.op === '*' ? v * this.k.v : this.calc(v, this.k.op, this.k.v));
+        } else this.setX(this.value);
+        return;
+      }
+      case '%': {
+        const b = this.value;
+        if (this.op) { const a = this.acc; let r; if (this.op === '*') r = a * b / 100; else if (this.op === '/') r = a / b * 100; else if (this.op === '+') r = a + a * b / 100; else r = a - a * b / 100; this.op = null; this.acc = null; this.setX(r); }
+        else this.setX(b / 100);
+        return;
+      }
+      case 'sqrt': { const v = this.value; if (v < 0) { this.err = true; return; } this.setX(Math.sqrt(v)); return; }
+      case 'inv': this.setX(1 / this.value); return;
+      case 'sq': this.setX(this.value * this.value); return;
+      case 'chs': if (this.entering) { this.entry = this.entry.startsWith('-') ? this.entry.slice(1) : '-' + this.entry; } else this.x = -this.x; return;
+      case 'M+': case 'M-': {
+        if (this.op && this.entering) this.key('=');
+        const v = this.value; this.setX(v);
+        this.mem = truncN(this.mem + (k === 'M+' ? v : -v), this.N) || 0; return;
+      }
+      case 'MR': this.x = this.mem; this.entering = false; return;
+      case 'MC': this.mem = 0; return;
+    }
+  }
+}
+
+// --- UPN-Rechner (HP-65 / HP-41C), vereinfachter Funktionsumfang ---
+class RpnCalc {
+  constructor(N = 10) { this.N = N; this.reg = Array(10).fill(0); this.clearAll(); }
+  clearAll() { this.s = [0, 0, 0, 0]; this.entry = ''; this.entering = false; this.lift = true; this.lastx = 0; this.err = false; this.pend = null; }
+  get x() { return this.entering ? parseFloat(this.entry || '0') : this.s[0]; }
+  display() {
+    if (this.err) return 'Error';
+    if (this.pend) return this.pend + ' _';
+    if (this.entering) { let e = this.entry || '0'; if (e.startsWith('.')) e = '0' + e; return e.includes('.') ? e : e + '.'; }
+    return fmtN(this.s[0], this.N);
+  }
+  push(v) { this.s = [v, this.s[0], this.s[1], this.s[2]]; }
+  finish() { if (this.entering) { this.s[0] = parseFloat(this.entry || '0'); this.entering = false; } }
+  setX(v) { const t = truncN(v, this.N); if (isNaN(t)) { this.err = true; return; } this.s[0] = t; }
+  key(k) {
+    if (this.err) { if (k === 'CLx' || k === 'C') { this.err = false; this.s[0] = 0; this.lift = false; } return; }
+    if (this.pend) { if (/^\d$/.test(k)) { this.finish(); const n = +k; if (this.pend === 'STO') this.reg[n] = this.s[0]; else { if (this.lift) this.push(this.reg[n]); else this.s[0] = this.reg[n]; this.lift = true; } } this.pend = null; return; }
+    if (/^\d$/.test(k) || k === '.') {
+      if (!this.entering) { if (this.lift) this.push(this.s[0]); this.entry = ''; this.entering = true; }
+      if (k === '.' && this.entry.includes('.')) return;
+      if (k !== '.' && this.entry.replace(/[-.]/g, '').length >= this.N) return;
+      this.entry += k; return;
+    }
+    if (k === 'chs' && this.entering) { this.entry = this.entry.startsWith('-') ? this.entry.slice(1) : '-' + this.entry; return; }
+    if (k === 'CLx' || k === 'CE') { if (this.entering) { this.entry = ''; return; } this.s[0] = 0; this.lift = false; return; }
+    this.finish();
+    const [X, Y] = this.s;
+    const bin = (r) => { this.lastx = X; this.s = [0, this.s[2], this.s[3], this.s[3]]; this.setX(r); this.lift = true; };
+    const un = (r) => { this.lastx = X; this.setX(r); this.lift = true; };
+    switch (k) {
+      case 'ENTER': this.push(this.s[0]); this.lift = false; return;
+      case 'C': this.clearAll(); return;
+      case '+': bin(Y + X); return; case '-': bin(Y - X); return; case '*': bin(Y * X); return;
+      case '/': if (X === 0) { this.err = true; return; } bin(Y / X); return;
+      case '%': un(Y * X / 100); return;
+      case 'sqrt': if (X < 0) { this.err = true; return; } un(Math.sqrt(X)); return;
+      case 'sq': un(X * X); return;
+      case 'inv': if (X === 0) { this.err = true; return; } un(1 / X); return;
+      case 'chs': this.s[0] = -X; return;
+      case 'swap': this.s = [Y, X, this.s[2], this.s[3]]; this.lift = true; return;
+      case 'rdn': this.s = [this.s[1], this.s[2], this.s[3], this.s[0]]; this.lift = true; return;
+      case 'lastx': if (this.lift) this.push(this.lastx); else this.s[0] = this.lastx; this.lift = true; return;
+      case 'int': un(Math.trunc(X)); return;
+      case 'STO': case 'RCL': this.pend = k; return;
+    }
+  }
+}
+
+// --- 7-Segment-Anzeige als SVG ---
+const SEG = { '0': 'abcdef', '1': 'bc', '2': 'abged', '3': 'abgcd', '4': 'fgbc', '5': 'afgcd', '6': 'afgedc', '7': 'abc', '8': 'abcdefg', '9': 'abcdfg', '-': 'g', 'E': 'afged', 'r': 'eg', 'o': 'cdeg', ' ': '', '_': 'd' };
+function sevenSeg(text, cells, color) {
+  // text: z.B. "-123.45"; liefert SVG-String
+  const chars = []; for (const ch of text) { if (ch === '.') { if (chars.length) chars[chars.length - 1].dp = true; else chars.push({ c: ' ', dp: true }); } else chars.push({ c: ch, dp: false }); }
+  while (chars.length < cells) chars.unshift({ c: ' ', dp: false });
+  const w = 22, h = 36; let out = `<svg viewBox="0 0 ${cells * w + 6} ${h + 8}" class="seg" xmlns="http://www.w3.org/2000/svg">`;
+  const segs = { a: [4, 2, 14, 3], b: [16, 4, 3, 13], c: [16, 20, 3, 13], d: [4, 32, 14, 3], e: [1, 20, 3, 13], f: [1, 4, 3, 13], g: [4, 17, 14, 3] };
+  chars.slice(-cells).forEach((o, i) => {
+    const on = SEG[o.c] || ''; const x0 = 4 + i * w, y0 = 4;
+    for (const s in segs) { const [x, y, ww, hh] = segs[s]; out += `<rect x="${x0 + x + (s === 'f' || s === 'e' ? 0 : 0)}" y="${y0 + y}" width="${ww}" height="${hh}" rx="1.3" transform="skewX(-6)" transform-origin="${x0 + 10} ${y0 + 18}" fill="${on.includes(s) ? color : 'rgba(255,255,255,0.05)'}"/>`; }
+    out += `<circle cx="${x0 + 20}" cy="${y0 + 34}" r="1.8" fill="${o.dp ? color : 'rgba(255,255,255,0.05)'}"/>`;
+  });
+  return out + '</svg>';
+}
+
+// ===== Spielbretter und Tabellen (aus dem Buch nachgezeichnet) =====
+const DATA = {};
+
+// Wegepatience für einen (S. 21/22): Knoten und Kanten mit Meßzahl
+DATA.wege1 = {
+  nodes: { S1:[40,150], Z1:[360,150], S2:[200,10], Z2:[200,290], TL:[110,80], TR:[290,80], BL:[110,220], BR:[290,220], T:[200,80], B:[200,220], L:[110,150], R:[290,150], C:[200,150] },
+  labels: { S1:'Start I', Z1:'Ziel I', S2:'Start II', Z2:'Ziel II' },
+  edges: [
+    ['S2','TL',1],['S2','TR',2],['S2','T',1.1],['TL','T',1.1],['T','TR',2],
+    ['S1','TL',4.5],['TL','L',0.47],['TL','C',2],['T','C',2],['C','TR',1.2],['TR','R',1.4],['TR','Z1',1.6],
+    ['S1','L',2],['L','C',0.95],['C','R',1.4],['R','Z1',1.16],
+    ['S1','BL',1],['L','BL',3],['BL','C',2.15],['C','BR',1.2],['R','BR',1.2],['BR','Z1',1.4],
+    ['C','B',2],['BL','B',3.81],['B','BR',0.56],['BL','Z2',2],['B','Z2',1.91],['BR','Z2',1.7]
+  ]
+};
+// Wegepatience für zwei (S. 86): [a,b,Wert B (frei), Wert A (umrandet)]
+DATA.wege2 = {
+  nodes: DATA.wege1.nodes,
+  labels: { S1:'Start 1', Z1:'Ziel 1', S2:'Start 2', Z2:'Ziel 2' },
+  edges: [
+    ['S2','TL',1.82,2.2],['S2','TR',1.9,2],['S2','T',1.1,1.1],['TL','T',1.82,2],['T','TR',1.9,2.2],
+    ['S1','TL',1.2,1.3],['TL','L',1.1,0.8],['TL','C',1.8,2],['T','C',1.1,1.2],['C','TR',1.9,2.2],['TR','R',0.8,1.1],['TR','Z1',1.3,1.2],
+    ['S1','L',1.2,1.2],['L','C',1.71,1.8],['C','R',2,2],['R','Z1',1.2,1.2],
+    ['S1','BL',1.2,1.3],['L','BL',1.02,1.1],['BL','C',1.54,1.85],['C','BR',1.9,1.9],['R','BR',1.1,1.1],['BR','Z1',1.3,1.2],
+    ['C','B',1.5,1.4],['BL','B',1.23,1.1],['B','BR',2.75,2.75],['BL','Z2',1.15,1.2],['B','Z2',0.9,1.1],['BR','Z2',2.8,2.8]
+  ]
+};
+// Würfel-Labyrinth (S. 88): 4x4 Zellen mit Diagonalkreuz
+DATA.wlab = {
+  h: [[1.2,1.35,1.1,0.45],[0.6,2,1.1,0.4],[1.25,2,0.3125,1.3],[0.625,2.5,0.25,2.5],[0.976,7,0.11,1]], // h[zeile][spalte]
+  v: [[1.6,1,1.4,1.5,0.85],[0.4,0.25,4,0.67,1.6],[2.7,4,2,2,2.5],[0.19,0.44,1.25,2,0.625]],      // v[zeile][linie]
+  d: [ // je Zelle [TL,TR,BL,BR] (Ecke -> Mitte)
+    [[1,1.25,0.5,1.25],[2,1.25,0.91,0.75],[0.5,0.75,1.3,2],[0.44,0.54,1.2,1]],
+    [[1.75,3.2,0.25,5],[1.33,1.2,1.6,0.8],[1.3,1.625,1.25,0.894],[1.57,2.1,0.35,0.88]],
+    [[0.01,1.625,0.35,2.1],[0.7,0.5,0.7,3],[1.25,0.625,0.2,2.5],[2.2,5,0.2,1.22]],
+    [[0.95,0.2,1.7,2],[0.7,0.3125,1.25,0.2],[0.6,1.05,8,0.2],[1.1,1.25,0.5,1.2]]
+  ]
+};
+// Duorinth (S. 90): [Operation1, große Zahl, Operation2]
+DATA.duo = {
+  start: { A:[2,0], B:[0,2] }, goal:[4,4],
+  grid: [
+    [['*2',4,'-1'],['/2',6,'*2/3'],['*2.5',2,'*3'],['+1',5,'-1'],['-2',80,'*0.9375'],['/0.9375',90,'/1.8'],['/1.625',78,'*23/26'],['-1',69,'*22/23']],
+    [['*2',3,'*3'],['+33',9,'-1'],['*7',6,'*1.5'],['+15',75,'*1.12'],['/1.28',96,'-4'],['*18/13',65,'/0.8125'],['*1.125',72,'*13/12'],['+2',63,'*23/21']],
+    [['*3',1,'*7'],['*6',7,'*2'],['/2',42,'/3'],['+4',84,'*22/21'],['*21/23',92,'+7'],['-3',81,'/9'],['+7',49,'*9/7'],['*12/11',66,'-10']],
+    [['*1.5',8,'/2'],['-6',14,'/2'],['-1',21,'/7'],['+3',21,'/3'],['*1.125',88,'*0.75'],['*9/11',99,'/0.99'],['/0.875',56,'*7/8'],['/0.85',51,'*22/17']],
+    [['+3',19,'+6'],['/2',18,'+1'],['+1',24,'*0.75'],['*1.25',20,'/5'],null,['/1.36',68,'*0.75'],['+4',64,'*0.875'],['*4/3',48,'*7/6']],
+    [['/2',22,'+8'],['-8',30,'/3'],['*0.72',25,'*1.2'],['/2.75',55,'+11'],['*3/4',44,'*1.25'],['+18',26,'+10'],['*1.2',50,'*0.52'],['*0.8',60,'/1.5']],
+    [['+4',12,'/2'],['+2',28,'/2'],['+17',11,'*3'],['+1',33,'+2'],['-9',35,'/0.7'],['-1',52,'/2'],['-2',54,'-4'],['-6',17,'+1']],
+    [['+2',16,'*1.3125'],['*1.5',10,'*2'],['*1.8',15,'-4'],['*5/3',27,'*4/3'],['+8',36,'+4'],['*1.3',40,'*0.375'],['-11',45,'*1.2'],['+2',34,'/2']]
+  ], goalValue:100
+};
+// Polyrinth (S. 150)
+DATA.poly = {
+  start: { A:[0,0], B:[2,0], C:[4,0], D:[6,0] }, goal:[3,7], goalValue:98,
+  grid: [
+    [['+4',1,'*10'],['*2.2',10,'*2.4'],['*2',22,'+5'],['+3',11,'-2'],['*7',9,'+2'],['-11',25,'*1.16'],['/10.75',86,'+4'],['*43/37',74,'*32/37']],
+    [['*4.6',5,'*4'],['*1.1',20,'*1.2'],['/2',24,'*2'],['*12/11',44,'*15/11'],['+11',14,'-3'],['+1',63,'/9'],['*2',29,'/3.625'],['-1',75,'/3']],
+    [['*12.5',2,'*3'],['*5.5',6,'*2'],['-10',33,'/0.75'],['/9',81,'/2.025'],['/1.8',72,'/2.88'],['*0.875',64,'*1.125'],['/7.25',58,'*31/29'],['*7/6',84,'/1.12']],
+    [['*1.2',25,'*1.08'],['*0.4',30,'*1.1'],['*2',12,'*4'],['/1.08',54,'*1.5'],['*6',8,'*8.5'],['+2',68,'-4'],['/3.6',90,'/1.2'],null],
+    [['*5',3,'*13'],['*1.8',15,'*1.2'],['-5',27,'/0.675'],['*1.25',40,'*0.9'],['/1.725',69,'*24/23'],['*31/28',56,'*0.875'],['*28/31',62,'*1.5'],['+19',65,'-3']],
+    [['/1.5',39,'*11/13'],['+1',26,'*9/13'],['-2',18,'*2'],['/1.5',60,'*0.9'],['/1.15',46,'*1.5'],['/7',49,'/0.7'],['-5',93,'/1.86'],['/9.5',76,'*21/19']],
+    [['*7',4,'*8'],['-9',32,'/2'],['+10',23,'/0.575'],['/0.96',48,'*1.25'],['/0.175',7,'*3'],['/11',88,'*0.875'],['*9/7',70,'*11/14'],['+2',66,'*38/33']],
+    [['*0.75',28,'*11/14'],['+2',21,'/1.3125'],['+2',16,'*2.25'],['/0.9',36,'/0.72'],['/2',50,'*0.92'],['/0.9625',77,'/1.4'],['*1.2',55,'/6.875'],['*0.8125',80,'*1.125']]
+  ]
+};
+// Höchst-Wert (S. 116): 25x25 Buchstabenfeld, Zeile 1..25, Spalte 1..25
+DATA.hw = [
+ 'AXYMNFGOUWXKLDEBCZASTLMEF','BWZLOEHIAVYJMCFADYERUKNDG','CVAKPDIEBUZINBGZEXIQVJOCH','DUEJQCJACTAHOAHYFWOPWIPBI','ETIIRBKZDSEGPUIXGVUOXHQAJ',
+ 'FSOHSALYERIFQOJWHUANYGRUK','GRUGTUMXFQOERIKVITBMZFSOL','HQAFUONWGPUDSELUJSCLAETIM','IPBEVIOVHOACTAMTKRDKBDUEN','JOCDWEPUINBBUZNSLQEJCCVAO',
+ 'KNDCXAQTJMCAVYORMPFIDBWZP','LMEBYZRSKLDUWXPQNOGHEAXYQ','MLFAZYSRLKEOXWQPONHGFUYXR','NKHUAXTQMJFIYVROPMIFGOZWS','OJIOBWUPNIGEZUSNQLJEHIAVT',
+ 'PIJICVVOOHHAATTMRKKDIEBUU','QHKEDUWNPGIZBSULSJLCJACTV','RGLAETXMQFJYCRVKTIMBKZDSW','SFMZFSYLREKXDQWJUHNALYERX','TENYGRZKSDLWEPXIVGOZMXFQY',
+ 'UDOXHQAJTCMVFOYHWFPYNWGPZ','VCPWIPBIUBNUGNZGXEQXOVHOA','WBQVJOCHVAOTHMAFYDRWPUINE','XARUKNDGWZPSILBEZCSVQTJMI','YZSTLMEFXYQRJKCDABTURSKLO'
+];
+// Zahlenalphabet / BOSS (S. 19, 82)
+DATA.alphabet = {A:[15,31],B:[13],C:[1],D:[6,35],E:[14,29],F:[25],G:[12],H:[2,32],I:[8,33],J:[24],K:[16],L:[7],M:[3],N:[11],O:[23,34],P:[17],Q:[9],R:[4],S:[20,30],T:[21,27],U:[18,28],V:[10],W:[5],X:[19],Y:[22],Z:[26]};
+// Wortspiele (S. 17): Ziffer -> Buchstabe (auf dem Kopf gelesen)
+DATA.upside = {'0':'O','1':'I','2':'Z','3':'E','4':'h','5':'S','7':'L','8':'B','9':'G'};
+// Reise-Schlüssel (Ziffer -> Stadt)
+DATA.reise = {
+  11: ['St. Louis/Missouri','Los Angeles/Kalifornien','Bismarck/Nord-Dakota','Brownsville/Texas','Minneapolis/Minnesota','Portland/Oregon','Denver/Colorado','Jacksonville/Florida','Pittsburgh/Pennsylvania','Chattanooga/Tennessee'],
+  43: ['Oklahoma City/Oklahoma','San Francisco/Kalifornien','Billings/Montana','Omaha/Nebraska','Phoenix/Arizona','Indianapolis/Indiana','Cleveland/Ohio','Duluth/Minnesota','Mobile/Alabama','Charleston/South Carolina'],
+  44: ['Indianapolis/Indiana','San Francisco/Kalifornien','Phoenix/Arizona','Billings/Montana','Omaha/Nebraska','Duluth/Minnesota','Oklahoma City/Oklahoma','Mobile/Alabama','Charleston/South Carolina','Cleveland/Ohio']
+};
+
+// ===== Die 60 Spiele – Regeln mit eigenen Worten zusammengefasst =====
+const GROUPS = { 1: 'Ein-Personen-Spiele (Patiencen)', 2: 'Monte-Carlo-Methode (Simulationen)', 3: 'Zwei-Personen-Spiele', 4: 'Drei- und Mehr-Personen-Spiele' };
+const GAMES = [
+{ n:1, t:'Vier zu Null', g:1, who:'1 Spieler · 1 Rechner', goal:'Eine sechsstellige Zahl in genau vier Schritten auf 0 bringen.',
+  rules:['Eine sechsstellige Zahl mit sechs verschiedenen Ziffern steht im Rechner.','Jeder Schritt: eine Grundrechenart und eine zweistellige Zahl (10–99).','Runden ist verboten – entstehen Nachkommastellen, bleiben sie stehen.'],
+  tip:'Erst die Zahl „teilbar machen“ (z. B. so addieren/subtrahieren, dass eine glatte Division folgt), dann kräftig teilen. Der letzte Schritt ist fast immer „minus sich selbst“, also muss nach Schritt 3 eine Zahl zwischen 10 und 99 stehen.', w:'vierzunull' },
+{ n:2, t:'1001 (Patience)', g:1, who:'1 oder mehr Spieler · je 1 Rechner · 2 Würfel', goal:'So schnell wie möglich genau 1001 erreichen.',
+  rules:['Jeder Wurf mit zwei Würfeln: Ein Würfel liefert die Zahl, die eingetippt wird, der andere die Rechenart für den nächsten Zug.','Rechenart-Tabelle: 1 = +, 2 = ×, 3 = −, 4 = ÷, 5 = ×, 6 = +.','Man entscheidet selbst, welcher Würfel Zahl und welcher Rechenart ist.','Mehrspieler: Bei n Spielern werden n+1 Würfel geworfen; reihum nimmt sich jeder zwei Würfel und legt einen weg.'],
+  tip:'Langsam anpirschen – wer zu früh groß wird, kommt mit kleinen Augenzahlen nicht mehr genau auf 1001.', w:'p1001' },
+{ n:3, t:'Wortspiele mit dem Taschenrechner', g:1, who:'1 oder mehr Spieler · je 1 Rechner', goal:'Zahlen, die auf dem Kopf gelesen Wörter ergeben, und Rechnungen, die Wörter ineinander verwandeln.',
+  rules:['Auf dem Kopf stehend liest sich 0 = O, 1 = I, 2 = Z, 3 = E, 4 = h, 5 = S, 7 = L, 8 = B, 9 = G.','Die Zahl wird von hinten nach vorne eingetippt, weil sich beim Drehen auch die Reihenfolge umkehrt (513 → „EIS“).','Aufgabe: eigene Wort-Zahlen finden und Rechnungen bauen, bei denen aus einem Wort ein anderes wird.'],
+  tip:'Im Rechner rechts gibt es den Knopf „Umdrehen“ – damit sieht man die LED-Anzeige wie den gedrehten Rechner.', w:'wortspiel' },
+{ n:4, t:'Zahlenalphabet', g:1, who:'1 Spieler · 1 Rechner · Papier', goal:'Eine zufällige Ziffernfolge mit einer Buchstabentabelle in ein sinnvolles Wort verwandeln.',
+  rules:['Zwei verschiedene fünfstellige Zahlen werden durcheinander geteilt; die Nachkommaziffern sind die Ausgangszahl.','Man darf die Folge abbrechen, muss dann aber die letzte behaltene Ziffer um 1 erhöhen.','Jede Ziffer darf als Ergebnis einer Rechnung mit zwei Ziffern aufgefasst werden (2 = 5 − 3 → „53“ oder „35“). Divisionen müssen aufgehen.','Die entstehenden ein- oder zweistelligen Zahlen werden über die Tabelle zu Buchstaben. Alle Ziffern müssen verbraucht werden.','Schwerer: nur + und × erlaubt.'],
+  tip:'Vokale sind oft zweistellig (E = 14 oder 29) – also Ziffern suchen, die sich als 1+4 bzw. 2·… zerlegen lassen.', w:'zahlenalphabet' },
+{ n:5, t:'Wegepatience für einen', g:1, who:'1 Spieler · 1 Rechner', goal:'Den Weg durch das Wegenetz finden, dessen Meßzahlen das kleinste Endergebnis liefern.',
+  rules:['An jeder Teilstrecke steht eine Meßzahl. Der Weg muss lückenlos sein, keine Strecke darf zweimal benutzt werden.','Grundregel: alle Meßzahlen des Weges multiplizieren (Start I → Ziel I). Unter 5,0 ist gut, unter 3,0 ausgezeichnet.','Varianten: Start II → Ziel II; nur addieren; abwechselnd × und +; alle vier Grundrechenarten der Reihe nach.'],
+  tip:'Faktoren unter 1 sind Gold wert – lohnt sich ein Umweg über eine 0,47 oder 0,56?', w:'wege1' },
+{ n:6, t:'6-5-4-3-2-1', g:1, who:'1 Spieler · 1 Rechner (mit Speicher) · 2 Würfel', goal:'Genau 654321 in möglichst wenigen Zügen erreichen.',
+  rules:['Jeder Zug: zwei zweistellige Zahlen mit einer Grundrechenart verknüpfen.','Dann zwei Würfel: getrennt verwenden, addieren, multiplizieren oder zu einer zweistelligen Zahl zusammensetzen.','Mit dem Würfelwert das Zwischenergebnis multiplizieren oder teilen (Nachkommastellen fallen weg).','Das Zugergebnis wird zur Gesamtsumme addiert oder davon abgezogen – am besten im Speicher (M+ / M−).','10 Züge: sehr gut, 5 Züge: ausgezeichnet.'],
+  tip:'Schnell einen großen Grundstock aufbauen, dann mit kleinen Zügen ins Ziel feilen.', w:'z654321' },
+{ n:7, t:'Zauberzahlen', g:1, who:'1 oder mehr Spieler · 1 Rechner', goal:'Regelmäßige Zahlenmuster fortsetzen und prüfen, wie weit sie halten.',
+  rules:['Zahlenreihen mit einem Muster werden nachgerechnet und fortgesetzt.','Wie weit funktioniert das Muster? Wo bricht es, und warum?','Bonus: eigene Zauberzahlen erfinden.'],
+  tip:'Ein Muster mit 1111…² hält genau bis zur neunten Stelle – danach entstehen Überträge.', w:'zauber' },
+{ n:8, t:'Entweder-Oder', g:1, who:'1 Spieler · 1 Rechner · Kartenspiel (As–10)', goal:'In zehn Zügen eine möglichst hohe Punktzahl erreichen – sicher per Taste oder riskant per Karte.',
+  rules:['Zehn verdeckte Karten liegen wie die Zifferntasten des Rechners.','Gespielt wird von Taste 9 abwärts bis 0 (die 0 zählt als 1). Bei jedem Zug: Tastenwert nehmen oder die Karte an dieser Stelle aufdecken und deren Wert nehmen.','Steht im Rechner eine gerade Zahl, wird der Wert „verdoppelt geschrieben“ addiert (8 → 88, 10 → 1010); bei ungerader Anzeige wird mit dem einfachen Wert multipliziert. Zu Beginn steht 0.','Ergebnisse bis 7669 zählen nicht. 5 Stellen befriedigend, 6 gut, 7 sehr gut, 8 ausgezeichnet.'],
+  tip:'Gerade/ungerade entscheidet alles: Eine ungerade Zahl vor einem großen Multiplikator ist die halbe Miete.', w:'entwederoder' },
+{ n:9, t:'TR-Solitaire', g:1, who:'1 Spieler · 1 Rechner · Kartenspiel (As–10)', goal:'Drei verdeckte Stapel mit je sieben Karten vollständig abräumen.',
+  rules:['Drei Stapel à 7 Karten, Rest ist der Talon. Die obersten Stapelkarten werden aufgedeckt und multipliziert.','Zwei Talonkarten aufdecken: Ist das Produkt durch beide Werte ohne Rest teilbar, werden alle fünf Karten abgelegt.','Sonst zwei neue Talonkarten darüberlegen und erneut prüfen. Ist der Talon leer, werden die beiden Ablagestapel ungemischt zum neuen Talon.','Varianten: 8er- oder 6er-Stapel; strengere Regel: Produkt muss durch das Produkt der beiden Talonkarten teilbar sein.'],
+  tip:'Reines Glücksspiel mit Rechenkontrolle – gut zum Kopfrechnen-Üben.', w:'trsolitaire' },
+{ n:10, t:'Kartenjagd', g:1, who:'1–2 Spieler · Rechner · Kartenspiel (52 Blatt)', goal:'Ein offen ausgelegtes Kartenband durch Rechnungen ganz auflösen.',
+  rules:['Alle Karten liegen offen nebeneinander. Benachbarte Karten dürfen weg, wenn sie eine richtige Gleichung bilden (z. B. 3 + 6 = 9, 10 − 7 = 3).','Werte: Zahl in der Ecke; As 1 oder 11, Bube 2 oder 12, Dame 3 oder 13, König 4 oder 14. Einstellige Karten dürfen auch als „Zahl mit nächster Ziffer“ zählen (3 → 34, 7 → 78), die 9 als 9 oder 100.','Es dürfen auch mehrere Karten auf beiden Seiten des Gleichheitszeichens stehen (8 × 3 + … = …).','Nach dem Entfernen rücken die Nachbarn zusammen. Zu zweit: abwechselnd, wer mehr Karten erobert, gewinnt.'],
+  tip:'Nie so wegnehmen, dass nur ein oder zwei ungleiche Karten übrig bleiben.', w:'kartenjagd' },
+{ n:11, t:'Reisepatience', g:1, who:'1 Spieler · 1 Rechner · Streckenkarte USA (im Buch S. 36/37)', goal:'Als Handelsvertreter eine vorgegebene Städteliste auf der kürzesten und schnellsten Route abfahren.',
+  rules:['Zwei verschiedene fünfstellige Zahlen teilen – die Nachkommaziffern bestimmen über einen Schlüssel die Pflichtstädte.','Doppelte Ziffern: nicht benachbart = Stadt mehrfach besuchen; direkt nebeneinander = nur einmal.','Die Reihenfolge ist frei. Erst die kürzeste Strecke (Meilen) suchen, dann prüfen, ob sie auch zeitlich die beste ist (Minuten addieren, am Ende ÷ 60).'],
+  tip:'Bonus gibt es, wenn kürzeste und schnellste Route zusammenfallen.', w:'reise11' },
+{ n:12, t:'Elektronischer „Münzenwurf“', g:2, who:'1–2 Spieler · je 1 Rechner', goal:'Mit dem Rechner eine faire Münze nachbilden.',
+  rules:['A tippt „1,“ und dann abwechselnd von beiden Spielern genannte Ziffern, bis die Anzeige voll ist.','Dann × = = drücken (die Zahl hoch drei). Die vorletzte Ziffer entscheidet: gerade = Wappen, ungerade = Zahl.','Mehrere Münzen: mehrere Ziffern von hinten lesen. Jedes weitere = = liefert eine neue Zufallszahl.'],
+  tip:'Wer zu viele Nullen oder gleiche Ziffern ansagt, schadet sich meist selbst.', w:'muenze' },
+{ n:13, t:'Elektronisches „Würfeln“', g:2, who:'2 Spieler · 2 Rechner', goal:'Würfel mit dem Rechner nachahmen – die höhere Augenzahl gewinnt.',
+  rules:['Jeder tippt „1,“ und eine Ziffer; dann ruft man sich abwechselnd Ziffern zu – jeder tippt die Ziffern des anderen.','× = = drücken. Die letzte Ziffer ist die Augenzahl, sofern sie zwischen 1 und 6 liegt – sonst die vorletzte usw.','Nochmal würfeln: wieder = = drücken. Mehrere Würfel: mehrere gültige Ziffern von hinten nehmen.','Alternative: zwei vierstellige Zahlen kreuzweise teilen (A÷B bzw. B÷A), weitere Würfe mit × = und =.'],
+  tip:'', w:'wuerfeln' },
+{ n:14, t:'Craps (Knobeln)', g:2, who:'3 oder mehr Spieler · Rechner · Spielmarken', goal:'Das amerikanische Würfelspiel mit „elektronischen Würfeln“.',
+  rules:['Der Würfler (Shooter) erzeugt eine Zufallszahl wie beim Münzenwurf; die letzten beiden Würfelziffern (1–6) ergeben den Wurf.','7 oder 11 („natural“): Shooter gewinnt alle Einsätze. 2, 3 oder 12 („craps“): Mitspieler bekommen ihren doppelten Einsatz.','4, 5, 6, 8, 9, 10: das ist der „point“. Mit = = weiterwürfeln, bis der point (Shooter gewinnt) oder eine 7 (Shooter verliert) fällt.'],
+  tip:'Nur um Spielmarken spielen – Glücksspiel um Geld ist öffentlich verboten.', w:'craps' },
+{ n:15, t:'NIM', g:2, who:'2 Spieler · 1 Rechner', goal:'Wer das letzte Hölzchen nimmt, gewinnt.',
+  rules:['Drei (oder vier) Haufen werden als zweistellige Blöcke in eine Zahl gepackt: 120921 = Haufen 12, 9 und 21.','Abwechselnd von einem Haufen beliebig viele Hölzchen nehmen: beim ersten Haufen mit vier angehängten Nullen subtrahieren, beim zweiten mit zwei, beim dritten ohne.','Wer die Anzeige auf 0 bringt, hat gewonnen.'],
+  tip:'Es gibt eine perfekte Strategie (Stichwort: binäre XOR-Summe der Haufen). Der Rechner hier spielt sie auf „schwer“.', w:'nim' },
+{ n:16, t:'Gerade oder Ungerade', g:3, who:'2 Spieler · 1–2 Rechner · Papier', goal:'Am Ende soll eine gerade (bzw. ungerade) Zahl stehen.',
+  rules:['Die Ziffern 0–9 dürfen je einmal benutzt werden.','Der erste Spieler tippt eine Ziffer, danach jeweils abwechselnd Rechenart + Ziffer.','Entstehen Nachkommastellen, wird kaufmännisch gerundet und die runde Zahl weitergerechnet.','Sind alle zehn Ziffern verbraucht, entscheidet die Endzahl.'],
+  tip:'Die letzten Ziffern sind entscheidend – heb dir eine 1 oder 0 auf.', w:'geradeungerade' },
+{ n:17, t:'Nimm und Gib', g:3, who:'2 Spieler · 2 Rechner', goal:'Als Erster über 999999 kommen.',
+  rules:['Jeder startet mit einer sechsstelligen Zahl aus verschiedenen Ziffern.','Abwechselnd fordert man eine Ziffer (nicht 0) beim Gegner an. Hat er sie, nennt er sie mit Stellenwert (z. B. 5000); er zieht sie ab, man selbst addiert sie.','Kommt die Ziffer mehrfach vor, wird nur die niedrigste Stelle abgegeben. Hat er sie nicht, ist er dran.'],
+  tip:'Mit 5… oder 6… beginnen. Ziffern, die man selbst ungern hergibt, kann man zum Bluff selbst anfordern.', w:'nimmgib' },
+{ n:18, t:'Blindekuh', g:3, who:'2 Spieler · 2 Rechner · Papier', goal:'Die geheime dreistellige Zahl des Gegners in möglichst wenigen Zügen erreichen.',
+  rules:['B notiert heimlich eine dreistellige Zahl. A nennt eine Ziffer; beide tippen sie ein.','Danach sagt B jeweils nur eine Rechenart an, A nennt die Ziffer dazu. Nachkommastellen fallen weg.','B lotst A so zum Ziel und meldet, wenn es erreicht ist. Gezählt werden die Züge.','Schwer: fünfstellige Zielzahl, zweistellige Zahlen.'],
+  tip:'', w:'blindekuh' },
+{ n:19, t:'Flinke Zahlen', g:3, who:'2 oder mehr Spieler · je 1 Rechner · Papier', goal:'In zehn Runden die meisten Punkte sammeln.',
+  rules:['Wer dran ist, teilt eine eigene vierstellige Zahl durch eine vom Nachbarn genannte (keine Nullen vorne/hinten).','Die vier Ziffern vor der letzten Stelle sind die „flinken Zahlen“.','Wertung: entweder zwei zweistellige Zahlen bilden und addieren – oder alle vier einzeln multiplizieren.','Schwerer: nur gerade → nur addieren; nur ungerade → nur multiplizieren; gleiche Ziffern erlauben Sonderkombinationen.'],
+  tip:'Die Wertungshilfe zeigt alle Möglichkeiten mit dem besten Ergebnis.', w:'flinke' },
+{ n:20, t:'Schatzsuche', g:3, who:'2 Spieler · 2 Rechner · Papier', goal:'Die sechsstellige Zahl des Gegners mit möglichst wenigen Fragen aufdecken.',
+  rules:['A tippt eine geheime sechsstellige Zahl. B nennt eine sechsstellige Zahl.','A meldet alle Ziffern, die an derselben Stelle übereinstimmen.','Nach einem Treffer darf A alle noch nicht entdeckten Ziffern austauschen; ohne Treffer bleibt seine Zahl gleich.','Jede Frage kostet einen Punkt. Nach 6 Runden (Rollentausch) gewinnt die kleinste Punktzahl.'],
+  tip:'', w:'schatzsuche' },
+{ n:21, t:'Tauziehen', g:3, who:'2 Spieler · 2 Rechner', goal:'Durch Ziffernklau eine höhere Quersumme als der Gegner aufbauen.',
+  rules:['Beide starten mit einer sechsstelligen Zahl aus den Ziffern 1–6 mit Quersumme 21.','Will man eine eigene Ziffer verbessern, bestimmt ihr Wert, welche Stelle (von rechts) man beim Gegner abfragt.','Der Gegner zieht den Wert (mit Stellenwert) ab; man selbst addiert die erhaltene Ziffer an der Stelle, die man verbessern wollte (Überträge inklusive!).','0 und Ziffern über 6 kann man nicht mehr selbst verbessern. Wer will, beendet die Runde: Quersummendifferenz = Punkte. 50 Punkte gewinnen.'],
+  tip:'Lieber mit einer 6 oder 7 zufrieden sein – der Übertrag zur 0 ist tödlich.', w:'tauziehen' },
+{ n:22, t:'Blindrechnen', g:3, who:'2 Spieler · 2 Rechner', goal:'Den Rechner fehlerfrei bedienen, ohne die Tasten zu sehen.',
+  rules:['A versteckt seinen Rechner (Tasche, Tuch). B tippt sichtbar: dreistellige Zahl, Rechenart, zweistellige Zahl, Rechenart, einstellige Zahl, =.','A tippt blind dasselbe. Die Differenz der Ergebnisse sind Minuspunkte für A. Dann Rollentausch.','Wer zuerst die vereinbarte Minuspunktzahl (z. B. 10000) erreicht, verliert.'],
+  tip:'Hier: Aufgabe erzeugen, im Rechner „Tasten blind“ einschalten und tippen.', w:'blindrechnen' },
+{ n:23, t:'Gedankenübertragung von Zahlen', g:3, who:'2 Spieler · 1 Rechner', goal:'Als „Hellseher“ eine gedachte Zahl erraten – dank Mathematik.',
+  rules:['Die Versuchsperson tippt eine geheime Zahl und folgt den Rechenanweisungen des Hellsehers.','Am Ende kann der Hellseher die Zahl aus dem Ergebnis ablesen – oder sie erscheint gleich doppelt in der Anzeige.','Erst selbst üben, dann vorführen. Und: Warum klappt es?'],
+  tip:'Grundidee: 7 · 11 · 13 = 1001, und abc · 1001 = abcabc.', w:'gedanken' },
+{ n:24, t:'Quer und Mehr', g:3, who:'2 Spieler · 2 Rechner', goal:'Eine sechsstellige Zahl mit höherer Quersumme als der Gegner bauen.',
+  rules:['Beide tippen eine einstellige Startzahl.','Abwechselnd nennt einer eine Ziffer; der andere bildet den Unterschied zu seiner letzten Ziffer und hängt ihn an seine Zahl an.','Haben beide sechs Stellen, gewinnt die höhere Quersumme. Turnier: zuerst 350 Punkte.'],
+  tip:'Du bestimmst die Ziffern des Gegners – nenne ihm Zahlen nahe an seiner letzten Ziffer.', w:'querundmehr' },
+{ n:25, t:'Unter-Eins', g:3, who:'2 Spieler · 2 Rechner', goal:'Die Summe der Kehrwerte darf nicht durch die eigene Ansage über 1 steigen.',
+  rules:['Abwechselnd nennen beide eine ganze Zahl von 2 bis 999; sie muss kleiner sein als die vorige Ansage.','1 ÷ Ansage wird zur laufenden Summe addiert.','Nach einer 2 beginnt eine neue Kette mit beliebiger Zahl.','Wer die Summe über 1 treibt, verliert.'],
+  tip:'Kleine Zahlen sind gefährlich – und ab etwa 0,999 überschreitet jede erlaubte Ansage die 1.', w:'untereins' },
+{ n:26, t:'Telepathie', g:3, who:'2 Spieler · 2 Rechner · Papier', goal:'Ohne Absprache dafür sorgen, dass beide Rechner dieselbe Zahl zeigen.',
+  rules:['Jeder tippt verdeckt eine vierstellige Zahl. Gesprochen werden darf nur in festen Formeln:','„Deine Zahl ist größer – ziehe … ab, ich addiere …“ bzw. umgekehrt (ganze Zahlen).','„Deine Zahl ist viel größer – teile durch …, ich multipliziere mit …“ bzw. umgekehrt (höchstens eine Nachkommastelle).','„Ich glaube, wir stimmen überein.“ – dann wird verglichen; die Differenz sind Punkte (wenige = gut). Ergebnisse immer abrunden, Zahlen bleiben vierstellig.'],
+  tip:'Zum Eingewöhnen nur Plus/Minus erlauben. Am Rechner zwei Geräte (A, B) öffnen und „Abdecken“ benutzen.', w:'telepathie' },
+{ n:27, t:'Tausend', g:3, who:'2 Spieler · 2 Rechner · Papier', goal:'Als Erster genau auf 1000 kommen.',
+  rules:['Jeder tippt eine zweistellige Startzahl und notiert verdeckt eine weitere Zahl.','Dann bestimmt jeder für den anderen die Rechenart, mit der dieser seine notierte Zahl verrechnet. Nachkommastellen fallen weg.','Wer genau 1000 trifft, gewinnt die Partie; der Verlierer rechnet mit seinem Stand weiter.'],
+  tip:'', w:'tausend' },
+{ n:28, t:'Geheimzahlen', g:3, who:'2 oder mehr Spieler · je 1 Rechner · Papier', goal:'Die eigene geheime fünfstellige Zahl erreichen – während alle dieselben Rechenschritte ausführen.',
+  rules:['Jeder notiert eine geheime fünfstellige Zahl und nennt eine Startzahl von 1 bis 10.','Reihum sagt ein Spieler eine Rechenart mit einer zwei- oder dreistelligen Zahl an – alle müssen sie ausführen.','Kommazahlen werden auf den nächsten Zehner aufgerundet.','Gewinner: wer seine Zahl trifft – oder als Einziger unter 999999 bleibt.'],
+  tip:'Bluffen! Jede Ansage verrät, wohin man will.', w:'geheimzahlen' },
+{ n:29, t:'UFO', g:3, who:'2 Spieler · 2 Rechner', goal:'Den vierstelligen UFO-Verband des Gegners vollständig identifizieren.',
+  rules:['Der Verband entsteht aus einer Division zweier vierstelliger Zahlen (vier Nachkommaziffern, beliebig geordnet).','Abwechselnd nennt man eine vierstellige Ratezahl. Stimmen Ziffern an gleicher Stelle, meldet der Gegner „UFO in Sicht!“.','Gilt aber nur, wenn die Quersumme der Ratezahl mindestens so groß ist wie die des Verbands – sonst „optische Täuschung“.','Identifizierte Ziffern stehen fest, alle anderen dürfen beide Spieler zwischen den Zügen umbauen.'],
+  tip:'Hohe Quersummen beim Raten lohnen sich.', w:'ufo' },
+{ n:30, t:'Zweier-Patience', g:3, who:'2 Spieler · 1 Rechner · Papier und Klebefilm', goal:'Gemeinsam und blind einen vereinbarten Zielbereich treffen.',
+  rules:['Die Anzeige ist abgeklebt. Startzahl 1–9, Zielbereich zwischen zwei fünfstelligen Zahlen.','Abwechselnd tippt jeder eine Grundrechenart und eine ein- bis dreistellige Zahl.','Wenn beide meinen, sie seien im Ziel, wird aufgedeckt.'],
+  tip:'Anfangs ein breites Band wie 10000–15000 wählen und in kleinen Schritten gehen.', w:'zweierpatience' },
+{ n:31, t:'BOSS', g:3, who:'2 oder mehr Spieler · je 1 Rechner · Papier', goal:'Als Erster das vom Boss bestimmte Wort mit der Zahlenalphabet-Tabelle darstellen.',
+  rules:['Jeder bildet durch eine Division seine sechsstellige Ausgangszahl; die höchste ist Boss und nennt ein Wort mit sechs Buchstaben.','Der Boss bestimmt den Buchstaben. Jeder nimmt die Ziffer an der Position des Buchstabens im Wort (BZ) und würfelt elektronisch (WZ).','BZ ± WZ muss sich so zerlegen lassen, dass die Zahl des Buchstabens entsteht (E = 14: 5 = 1 + 4).','Gelingt es nicht, muss man passen. Die Runde wird immer zu Ende gespielt.'],
+  tip:'', w:'boss' },
+{ n:32, t:'Wegepatience für zwei', g:3, who:'2 Spieler · 2 Rechner', goal:'Gemeinsam den Weg finden, bei dem die Summe beider Endzahlen am kleinsten ist.',
+  rules:['Jede Strecke trägt zwei Meßzahlen: A nimmt die umrandeten, B die anderen.','Beide multiplizieren entlang desselben Weges; die beiden Endzahlen werden addiert.','Ein Ergebnis unter 12 gilt als gut. Auch die Varianten von Spiel 5 sind erlaubt.'],
+  tip:'', w:'wege2' },
+{ n:33, t:'Würfel-Labyrinth', g:3, who:'2+ Spieler · je 1 Rechner · Würfel · Stoppuhr', goal:'Einen Weg finden, dessen Produkt genau die gewürfelte Augenzahl ergibt.',
+  rules:['Jeder würfelt (oder würfelt elektronisch) seine Zielzahl.','In 3 Minuten einen Weg von Start zu Ziel suchen; alle Meßzahlen werden multipliziert, am Ende gerundet. Jede Strecke nur einmal.','Abweichung von der Augenzahl = Minuspunkte; ab 3 Minuspunkten scheidet man aus.','Varianten: andere Ecken; Richtungswechsel an jeder Kreuzung; abwechselnd × und +.'],
+  tip:'', w:'wlab' },
+{ n:34, t:'Duorinth und Monorinth', g:3, who:'2 Spieler (oder 1) · 2 Rechner · Spielfiguren', goal:'Als Erster das Zielfeld 100 erreichen.',
+  rules:['Jedes Feld hat eine große Zahl und zwei Rechenanweisungen.','Wer dran ist, wendet eine der beiden Anweisungen auf die große Zahl an und zieht auf das Feld, dessen große Zahl dem Ergebnis entspricht – egal wo es liegt.','Landet man neben dem gegnerischen Feld: ein Extrazug; direkt darauf: zwei Extrazüge.','Monorinth: allein auf möglichst wenig Züge spielen.'],
+  tip:'', w:'duorinth' },
+{ n:35, t:'Jahreszahl', g:3, who:'2 Spieler · 2 Rechner · 2 Würfel', goal:'Mit möglichst wenigen Würfen eine Jahreszahl (z. B. 1976) erreichen.',
+  rules:['Startwert ist die erste Augensumme; wer höher würfelt, beginnt.','Augensumme frei addieren oder subtrahieren.','Ausnahmen: Bei 7 muss durch 7 geteilt werden (Nachkommastellen weg), bei 11 muss mit 11 multipliziert werden.','Nach 200 Würfen gewinnt die höhere Zahl.'],
+  tip:'', w:'jahreszahl' },
+{ n:36, t:'Komplementär', g:3, who:'2 Spieler · 2 Rechner · Kartenspiel', goal:'Die Zwei-Personen-Fassung von „Entweder-Oder“: die höhere Punktzahl gewinnt.',
+  rules:['Zehn verdeckte Karten in Tastenanordnung, Züge von 9 abwärts.','Wählt einer die Taste, muss der Gegner die Karte nehmen – und umgekehrt.','Rechenregel wie in Spiel 8 (gerade Anzeige: verdoppelt geschriebenen Wert addieren, ungerade: multiplizieren).'],
+  tip:'', w:'komplementaer' },
+{ n:37, t:'Mini-Max', g:3, who:'2 Spieler · 2 Rechner · Kartenspiel (As–9)', goal:'Aus sechs Karten durch Umordnen ein möglichst viel größeres Produkt machen.',
+  rules:['Jeder bekommt sechs offene Karten; je zwei Nachbarn ergeben eine zweistellige Zahl, die drei werden multipliziert (Ausgangswert).','Dann die Karten frei umordnen, um das Produkt zu maximieren (Umordnungswert).','Punkte = Umordnungswert − Ausgangswert. Wer zuerst 1 000 000 überschreitet, gewinnt.'],
+  tip:'Die drei größten Ziffern nach vorne; zur größten Zehnerziffer die kleinste Einerziffer.', w:'minimax' },
+{ n:38, t:'Dreimal 49', g:3, who:'2 Spieler · 2 Rechner · Kartenspiel (As–10)', goal:'Zehn Karten in drei Gruppen ordnen, die jeweils 49 ergeben.',
+  rules:['B erhält 11, A 10 Karten. B legt eine ab.','Abwechselnd: abgelegte Karte oder Talonkarte nehmen, eine Karte ablegen.','Eine Gruppe mit zwei Karten geht nur mit 7 × 7; mit drei bis sechs Karten sind alle Grundrechenarten erlaubt.','Wer drei Sätze à 49 hat, deckt auf: 20 Punkte plus die Werte der Karten, die der Gegner nicht unterbringt. 100 Punkte gewinnen.'],
+  tip:'4, 7 und 10 sind vielseitig – gib sie dem Gegner nicht.', w:'dreimal49' },
+{ n:39, t:'Patience zu zweit', g:3, who:'2 Spieler · 2 Rechner · 2 Würfel', goal:'Ohne Absprache mit verschiedenen Zahlen auf dasselbe Endergebnis kommen.',
+  rules:['Jeder tippt zwei zweistellige Zahlen (verschiedene Ziffern, keine 0) und eine Augenzahl, z. B. 45,7805.','Beide sehen die Zahlen des anderen; dann verknüpft jeder seine drei Zahlen beliebig.','Erfolg haben beide gemeinsam, wenn die Endergebnisse gleich oder möglichst nah sind.'],
+  tip:'Einfache, naheliegende Rechnungen wählen – der Partner tut es vermutlich auch.', w:'patience2' },
+{ n:40, t:'Blind-Match', g:3, who:'2 Spieler · 1 Rechner · Klebefilm · Münze', goal:'Die eigene, geheim notierte Endzahl am besten treffen.',
+  rules:['Anzeige abgeklebt, jeder notiert heimlich eine Zielzahl (z. B. 50–300). Gemeinsame Startzahl.','Abwechselnd Rechenart + beliebige Zahl eintippen.','Ab Runde 3 darf man Abbruch verlangen; widerspricht der andere, entscheidet die Münze.','Wer näher (oder innerhalb der Toleranz) liegt, bekommt einen Punkt; 11 Punkte gewinnen.'],
+  tip:'', w:'blindmatch' },
+{ n:41, t:'Rundum-Schach', g:3, who:'2 Spieler · 2 Rechner · Spielfiguren', goal:'Mit der eigenen Figur auf dem Feld des Gegners landen.',
+  rules:['Ein Rundkurs aus 28 Feldern mit den Zahlen 1–7; Start in gegenüberliegenden Ecken (Feld 1), gezogen wird im Uhrzeigersinn.','Elektronischer Würfel: „1,“ + abwechselnd genannte Ziffern, × =; eine der Ziffern 3–5 des Ergebnisses ist der Wurf. Weitere Würfe mit =.','Zugweite hängt vom eigenen Feld ab (siehe Tabelle), negative Ergebnisse ziehen rückwärts.'],
+  tip:'', w:'rundum' },
+{ n:42, t:'Kreis-Halma', g:3, who:'2–5 Spieler · je 1 Rechner · je 2 Kegel', goal:'Als Erster einmal um das ringförmige Spielfeld und zurück zum Start.',
+  rules:['Zug-Zahl: Spieler tippt verdeckt eine Zahl 0,111–0,999, der Nächste nennt 11–99; Produkt abrunden, eine der Ziffern ist die Zugweite.','Abwechselnd ein Zug auf einer Reihe (nach innen/außen) und einer auf einer Kreisbahn (vor/zurück). Ein zweiter Kegel merkt, was als Nächstes dran ist.','Nicht überspringen, nicht schlagen, ein Feld – ein Kegel.'],
+  tip:'Das Brett ist im Buch abgebildet (S. 108); hier gibt es den Zug-Zahl-Generator.', w:'kreishalma' },
+{ n:43, t:'Reisepatience zu zweit', g:3, who:'2 Spieler · 2 Rechner · Streckenkarte', goal:'Gemeinsam 75 Maschinen verkaufen, bevor 32000 $ verbraucht sind.',
+  rules:['Jeder bestimmt per Division seine Pflichtstädte (eigener Schlüssel), Reihenfolge wie im Rechner.','A rechnet nach Meilen (je angefangene 100 Meilen 100 $, max. 475 Meilen/Tag), B nach Zeit (je angefangene 2 Std. 100 $, max. 9:30 Std./Tag).','Verkauf in jeder durchfahrenen Stadt: 50 Meilen bzw. 1 Std. + 50 $ und 300 $ Essen. Übernachten nur in Städten.'],
+  tip:'Nur offene Zusammenarbeit verhindert die Pleite.', w:'reise43' },
+{ n:44, t:'Top Job', g:3, who:'2 Spieler · 2 Rechner · Streckenkarte', goal:'Als Reisevertreter zuerst 175 Punkte sammeln.',
+  rules:['Pflichtstädte per Division (8 Ziffern), streng in der Reihenfolge.','A: 1 Punkt je 100 Meilen, max. 475 Meilen/Tag. B: 1 Punkt je 2 Std., max. 8:45 Std./Tag.','Geschäftsabschluss: 50 Meilen bzw. 1 Std., dafür 3 Punkte. Halbe Punkte zählen, Reste verfallen.'],
+  tip:'', w:'reise44' },
+{ n:45, t:'Höchst-Wert', g:3, who:'2–6 Spieler · je 1 Rechner · Papier', goal:'Zu einem Wort Koordinaten mit möglichst hoher Summe finden.',
+  rules:['Ein Wort (6–8 Buchstaben) wird vereinbart. Jeder Buchstabe wird im 25×25-Feld gesucht; seine Koordinaten (Spalte|Zeile) werden mit einer Rechenart verknüpft.','Die Koordinaten des nächsten Buchstabens müssen mit irgendeiner Rechenart dasselbe Ergebnis liefern – und daraus wird wiederum ein Wert für den Folgebuchstaben.','Am Ende werden alle Koordinaten addiert. Höchste Summe gewinnt. Schwerer: Zeitlimit.'],
+  tip:'', w:'hoechstwert' },
+{ n:46, t:'Teilen und Gewinnen', g:4, who:'3+ Spieler · je 1 Rechner', goal:'Nach allen Runden die kleinste Zahl im Rechner haben.',
+  rules:['Jeder tippt verdeckt eine Zahl 1–9 (nicht 5).','Reihum nennt einer eine Zahl 1–9 (nicht 5, nie 0).','Endet die eigene Anzeige vor dem Komma auf diese Ziffer, darf man teilen (alle Stellen bleiben) – sonst muss man multiplizieren.','3 Spieler: 6 Runden, 4: 8, ab 5: 10.'],
+  tip:'Eine 0 als letzte Ziffer ist das Ende aller Hoffnung.', w:'teilen' },
+{ n:47, t:'Zweifeln', g:4, who:'3+ Spieler · je 1 Rechner + 1 Zusatzrechner · Klebefilm', goal:'Als Erster alle sechs Ziffern der eigenen Zahl zu Nullen machen – ehrlich oder mit Bluff.',
+  rules:['Die abgeklebten Rechner wandern reihum, jeder tippt eine Ziffer 1–9, bis überall sechsstellige Zahlen stehen.','Eine Zufallszahl (Division) liefert der Reihe nach Ziffern. Wer dran ist, behauptet: „Ich habe die …“ (auch mehrfach).','Geglaubt: Ziffer (oder beliebige andere) auf 0 setzen. Angezweifelt: vorzeigen – wer zu Unrecht zweifelt, setzt aus; ertappte Bluffer dürfen diese Runde nichts entfernen.'],
+  tip:'Ziffern, die man selbst in fremde Rechner getippt hat, kennt man – zweifle dort sparsam.', w:'zweifeln' },
+{ n:48, t:'Einfach-Poker', g:4, who:'3+ Spieler · je 1 Rechner · Spielmarken', goal:'Die höchste dreistellige „Hand“ gewinnt den Pott.',
+  rules:['Jeder setzt eine Marke, teilt eine eigene fünfstellige Zahl durch die des linken Nachbarn.','Die ersten fünf Nachkommaziffern sind die „Karten“.','Die höchste Zahl aus den drei größten Ziffern zählt (72981 → 987).'],
+  tip:'', w:'einfachpoker' },
+{ n:49, t:'TR-Poker', g:4, who:'3+ Spieler · je 1 Rechner · Spielmarken', goal:'Poker mit fünf Ziffern als Karten – mit Nachkaufen und Bluff.',
+  rules:['Hand wie bei Einfach-Poker. Kategorien von unten nach oben: Höchstzahl, Paar, zwei Paare, Drilling, Straße (5 aufeinanderfolgende Ziffern, in Reihenfolge), Flush (alle gerade/alle ungerade), Full House, Vierling, gerader Straight Flush 02468, ungerader 13579, Fünfling.','Gleiche Kategorie: höhere Quersumme gewinnt.','Bieten, dann bis zu drei Stellen beim rechten Nachbarn abfragen und eintauschen; zweite Bietrunde, nochmal eine Stelle vom linken Nachbarn; Showdown.'],
+  tip:'', w:'trpoker' },
+{ n:50, t:'Treibjagd', g:4, who:'3 Spieler · 3 Rechner · 2 Würfel', goal:'Als Erster 1002 erreichen oder am nächsten an 1002 überschreiten.',
+  rules:['Alle würfeln und tippen die Augensumme ein.','Wer am höchsten geworfen hat, wählt zuerst eine Rechenart aus +, −, ×; der Zweite aus den beiden übrigen; der Dritte bekommt den Rest.','Die gewählte Rechenart wirkt erst mit dem Wurf der nächsten Runde. Das Vorzeichen zählt nicht.','Schwer: drei Würfel als dreistellige Zahl, Ziel 100002.'],
+  tip:'', w:'treibjagd' },
+{ n:51, t:'PSI', g:4, who:'3–6 Spieler · 1 Rechner · Klebefilm', goal:'Ohne Absprache gemeinsam genau eine dreistellige Zielzahl treffen.',
+  rules:['Anzeige abgeklebt, Startzahl z. B. 11, Ziel z. B. 111.','Der Rechner geht einmal herum; jeder tippt verdeckt + oder − (laut angesagt) und eine zweistellige Zahl.','Dann aufdecken. Daneben? Neue Runde ab Start.','Varianten: zwei Mannschaften (+111 gegen −111), Rechenart nicht ansagen, alle Rechenarten.'],
+  tip:'', w:'psi' },
+{ n:52, t:'Henry', g:4, who:'3 Spieler · 2 Rechner · Papier', goal:'Ein Rüstungs-Verhandlungsspiel: Henry sammelt Verhandlungspunkte, A und B treiben die Summe hoch.',
+  rules:['A und B tippen geheime vierstellige „Waffenkennzahlen“ ohne Nullen; C ist der Vermittler Henry.','Jeder schlägt Henry schriftlich eine Änderung vor (± dreistellig oder bis 20 %); Henry nimmt an oder macht einen Gegenvorschlag. Pressekonferenz = laut verhandeln.','„Feindseligkeiten“: Zahlen aufdecken. Differenz unter 1000 → Henry bekommt einen Punkt; der Kleinere zieht die Differenz ab, die Summe wird notiert.','A und B gewinnen, wenn die Gesamtsumme 999999 übersteigt, Henry mit 10 Punkten.'],
+  tip:'', w:'henry' },
+{ n:53, t:'Economy', g:4, who:'3+ Spieler · je 1 Rechner · 75 Bohnen + 75 Büroklammern pro Person · Würfel · Münze', goal:'Den anderen Ware und Geld abhandeln.',
+  rules:['Bohnen = Geld, Klammern = Ware. Jeder legt geheim fest, was eine Klammer kostet und wie viele Einheiten sie darstellt; Währung und Ware bekommen Namen.','Der Verkäufer wirft Würfel + Münze (Wappen = +6): so viele Klammern bietet er an. Die anderen bieten Bohnen.','Beide Handelspartner werfen nochmal Würfel + Münze; das Produkt ist der Wechselkurs in %. Der Verkäufer bekommt diesen Anteil der Bohnen auf dem Tisch (aufgerundet), über 100 % muss der Käufer nachzahlen.','Am Ende zählen Bohnen + Klammern.'],
+  tip:'', w:'economy' },
+{ n:54, t:'Fuffzich', g:4, who:'3+ Spieler · je 1 Rechner · Kartenspiel (As–10)', goal:'Mit den eigenen Karten 50 so genau wie möglich treffen, aber nie überschreiten.',
+  rules:['Jeder bekommt drei Karten (eine offen) und setzt in den Pott.','Die Karten werden mit beliebigen Grundrechenarten kombiniert.','Wer will, kauft offen Karten nach – muss sie aber verwenden.','Wer 51 oder mehr hat, scheidet aus; am nächsten an 50 gewinnt.'],
+  tip:'Nur unter 47 nachkaufen.', w:'fuffzich' },
+{ n:55, t:'Wettlauf mit Zahlen', g:4, who:'4 Spieler · 4 Rechner · Papier', goal:'Als Mannschaft das kleinere Gesamtergebnis – aber zusammen müssen beide Teams über 500 kommen.',
+  rules:['Jeder hat eine geheime Eingangszahl (zweistellig, verschiedene Ziffern, keine 0) und schreibt sichtbar eine Blattzahl.','Der linke Nachbar ergänzt die Eingangszahl um eine Ziffer zur dreistelligen Zahl; diese wird quadriert. Vorletzte Ziffer bestimmt die Mannschaft, drittletzte die Zufallszahl.','Jeder verknüpft Eingangs-, Blatt- und Zufallszahl beliebig; Teams addieren.','Kleineres Team gewinnt einen Punkt, wenn die Summe beider Teams über 500 liegt. 21 Punkte gewinnen.'],
+  tip:'', w:'wettlauf' },
+{ n:56, t:'Zielschießen', g:4, who:'4+ Spieler · je 1 Rechner · Klebefilm', goal:'Die eigene offene Zielzahl am besten treffen – obwohl die anderen mitrechnen.',
+  rules:['Jeder schreibt sichtbar eine Zielzahl und klebt die Anzeige ab.','Die Rechner wandern reihum: abwechselnd tippt der Empfänger eine zweistellige Zahl bzw. eine Rechenart.','Nach drei Umläufen bekommt jeder seinen Rechner zurück und drückt =. Einstimmig aufdecken oder weiter.','Kleinste Abweichung gewinnt.'],
+  tip:'Spannender, wenn alle einander helfen statt schaden.', w:'zielschiessen' },
+{ n:57, t:'Rohstoff-Schlacht', g:4, who:'4 Spieler · 4 Rechner · 2 Würfel · Papier', goal:'Gemeinsam vier Rohstoffe so verteilen, dass jeder 25 Einheiten von jeder Sorte hat.',
+  rules:['Jeder beginnt mit 100 Einheiten einer Sorte (Eisen, Kupfer, Mangan, Nickel).','Pro Jahr: Division zweier vierstelliger Zahlen; 3. + 4. Nachkommaziffer = Rohstoff-Austausch-Schlüssel (RAS).','RAS mit dem Vorrat verrechnen (+, −, ×, ÷, %), das Ergebnis abgeben oder behalten; abgerundet. Empfänger frei wählbar.','Nach 8 Jahren gibt jeder pro Jahr 5 Einheiten für den Umweltschutz ab. Über 50 verlorene Einheiten: alle verlieren.'],
+  tip:'Langsam und gleichmäßig verteilen.', w:'rohstoff' },
+{ n:58, t:'Polyrinth', g:4, who:'4 Spieler · 4 Rechner · Spielfiguren', goal:'Als Erster das Zielfeld 98 erreichen.',
+  rules:['Regeln wie Duorinth, aber vier Spieler mit Startfeldern A–D.','Neben einem besetzten Feld landen bringt nichts; direkt auf ein besetztes Feld ziehen bringt einen Extrazug.'],
+  tip:'', w:'polyrinth' },
+{ n:59, t:'Flitzer-Eddie', g:4, who:'4 Spieler · 4 Rechner · Streckenkarte', goal:'Innerhalb von 96 Stunden und 4285 Meilen möglichst viele Städte anfahren und ins Ziel kommen.',
+  rules:['Start/Ziel: A Norfolk → Los Angeles, B Jacksonville → San Francisco, C Pittsburgh → Seattle, D Spokane → New Orleans.','Pro Zug höchstens 16 Stunden unterwegs. Mitrechnen als Kommazahl Minuten,Meilen (5760,4285 minus 120,0094 …).','Wer 30 Städte geschafft hat, bekommt 16 Std. und 715 Meilen gutgeschrieben.','Überzieht man Zeit oder Meilen vor dem Ziel, scheidet man aus.'],
+  tip:'Der Trick mit Minuten vor und Meilen hinter dem Komma ist ein schönes Beispiel für „zwei Zahlen in einer“.', w:'reise59' },
+{ n:60, t:'Mini-Roulette', g:4, who:'5–8 Spieler · je 1 Rechner · Spielmarken', goal:'Auf Eigenschaften einer Zufallszahl (2–200) wetten.',
+  rules:['Jeder Spieler tippt eine zweistellige Zahl. Der Bankhalter tippt „1,“ und übernimmt reihum Ziffern daraus, bis die Anzeige voll ist; × = = liefert die Zahl, deren dritt- und zweitletzte Ziffer der erste Teil ist; nochmal × = = für den zweiten Teil (00 = 100).','Chancen: Über/Unter 101, Gleich (beide Teile gleiche Parität)/Ungleich – auch kombiniert.','Einfache Chance: doppelter Einsatz zurück. Doppelchance: doppelt bei zwei Treffern, einfach bei einem.','101 = Zéro: Einsätze bleiben stehen.'],
+  tip:'Rien ne va plus!', w:'roulette' }
+];
+
+// ===== UI-Helfer =====
+function h(tag, props, ...kids) {
+  const e = document.createElement(tag);
+  if (props) for (const k in props) {
+    const v = props[k];
+    if (k === 'class') e.className = v; else if (k === 'style') e.style.cssText = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'html') e.innerHTML = v; else if (v !== undefined && v !== null && v !== false) e.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c !== null && c !== undefined && c !== false) e.append(c instanceof Node ? c : document.createTextNode(String(c)));
+  return e;
+}
+const btn = (label, fn, cls) => h('button', { class: 'btn ' + (cls || ''), onclick: fn }, label);
+const rnd = (n) => Math.floor(Math.random() * n);
+const rint = (a, b) => a + rnd(b - a + 1);
+const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const FACES = ['', '⚀', '⚁', '⚂', '⚃', '⚄', '⚅'];
+const die = (n) => h('span', { class: 'die', title: n }, FACES[n]);
+const OPS = { '+': '+', '-': '−', '*': '×', '/': '÷' };
+const apply = (a, op, b) => op === '+' ? a + b : op === '-' ? a - b : op === '*' ? a * b : a / b;
+const fmt = (x, N = 8) => { const s = fmtN(truncN(x, N), N); return s.endsWith('.') ? s.slice(0, -1) : s; };
+const de = (x) => fmt(x, 10).replace('.', ',');
+const qs = (n) => String(Math.abs(Math.trunc(n))).split('').reduce((a, b) => a + +b, 0);
+function numIn(ph, w) { return h('input', { type: 'text', inputmode: 'decimal', placeholder: ph || '', class: 'num', style: w ? 'width:' + w : '' }); }
+const pnum = (inp) => parseFloat(String(inp.value).replace(',', '.'));
+function opSel(ops = '+-*/') { const s = h('select', { class: 'opsel' }); for (const o of ops) s.append(h('option', { value: o }, OPS[o])); return s; }
+function logBox() { const b = h('div', { class: 'log' }); b.add = (t, cls) => { b.prepend(h('div', { class: cls || '' }, t)); }; b.clear = () => b.innerHTML = ''; return b; }
+function row(...k) { return h('div', { class: 'row' }, ...k); }
+function panel(title, ...k) { return h('div', { class: 'panel' }, title ? h('h4', null, title) : null, ...k); }
+const SUITS = ['♠', '♥', '♦', '♣'];
+const CNAME = { 1: 'A', 11: 'B', 12: 'D', 13: 'K' };
+function deck(maxV = 10, faces = false) { const d = []; for (const s of SUITS) { for (let v = 1; v <= maxV; v++) d.push({ v, s }); if (faces) for (const v of [11, 12, 13]) d.push({ v, s }); } return shuffle(d); }
+function card(c, hidden, extra) {
+  if (hidden) return h('span', { class: 'card back' }, '');
+  return h('span', { class: 'card' + (c.s === '♥' || c.s === '♦' ? ' red' : '') + (extra ? ' ' + extra : '') }, h('b', null, CNAME[c.v] || c.v), h('i', null, c.s));
+}
+// Elektronischer Zufall nach dem Buch: "1," + Ziffern, dann × = = (hoch drei), weitere Zahlen mit = =
+class BookRand {
+  constructor(digits, N = 8) { this.c = new AlgCalc(N); for (const ch of '1.' + digits) this.c.key(ch); this.start = this.c.display(); this.c.key('*'); this.c.key('='); this.c.key('='); }
+  get value() { return this.c.display(); }
+  next() { this.c.key('='); this.c.key('='); return this.value; }
+  digits() { return this.value.replace(/[^\d]/g, ''); }
+}
+function randDigits(n, nz) { let s = ''; for (let i = 0; i < n; i++) s += nz ? rint(1, 9) : rnd(10); return s; }
+function fiveDigit() { return rint(1, 9) + randDigits(3) + rint(1, 9); }
+// Spieltisch: generischer Zufallserzeuger nach Buch
+function bookRandPanel(note) {
+  const inp = numIn('Ziffern, z.B. 0365247', '10em'); const out = h('div', { class: 'big mono' }, '–'); let br = null;
+  const show = () => { out.textContent = br.value.replace('.', ','); };
+  return panel('Elektronischer Zufall (1, + Ziffern, dann × = =)', note ? h('p', { class: 'small' }, note) : null,
+    row(inp, btn('Zufallszahl', () => { let d = inp.value.replace(/\D/g, ''); if (!d) { d = randDigits(7); inp.value = d; } br = new BookRand(d.slice(0, 7)); show(); }), btn('nächste (= =)', () => { if (br) { br.next(); show(); } }), btn('Ziffern würfeln', () => { inp.value = randDigits(7); })), out);
+}
+function diceRoller(n = 2, title = 'Würfel') {
+  const out = h('div', { class: 'dice' }); let last = [];
+  const p = panel(title, row(btn('Würfeln', () => { last = Array.from({ length: n }, () => rint(1, 6)); out.innerHTML = ''; last.forEach(v => out.append(die(v))); out.append(h('span', { class: 'small' }, ' Summe ' + last.reduce((a, b) => a + b, 0))); })), out);
+  p.get = () => last; return p;
+}
+function coin() { const o = h('div', { class: 'big' }, '–'); return panel('Münze', row(btn('Werfen', () => o.textContent = Math.random() < .5 ? 'Wappen' : 'Zahl')), o); }
+function divisionPanel(title, digitsUse) {
+  const a = numIn('fünfstellig', '7em'), b = numIn('fünfstellig', '7em'), out = h('div', { class: 'big mono' }, '–');
+  const p = panel(title || 'Division zweier fünfstelliger Zahlen', row(a, ' ÷ ', b, btn('=', () => { if (!a.value) a.value = fiveDigit(); if (!b.value || b.value === a.value) b.value = fiveDigit(); const c = new AlgCalc(8); for (const ch of a.value) c.key(ch); c.key('/'); for (const ch of b.value) c.key(ch); c.key('='); p.res = c.display(); out.textContent = p.res.replace('.', ','); if (digitsUse) digitsUse(p.res.split('.')[1] || ''); }), btn('Zufallszahlen', () => { a.value = fiveDigit(); b.value = fiveDigit(); })), out);
+  return p;
+}
+function scorePad(names) {
+  const tb = h('table', { class: 'score' });
+  const render = () => { tb.innerHTML = ''; tb.append(h('tr', null, ...names.map(n => h('th', null, n)))); tb.append(h('tr', null, ...names.map((n, i) => { const inp = numIn('0', '5em'); inp.value = 0; return h('td', null, inp); }))); };
+  render();
+  return panel('Punkteblock', tb, row(btn('+ Spieler', () => { names.push(String.fromCharCode(65 + names.length)); render(); }), btn('Zurücksetzen', render)));
+}
+function timer(sec = 180) {
+  const o = h('span', { class: 'big mono' }, fmtT(sec)); let t = null, left = sec;
+  function fmtT(s) { return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); }
+  return panel('Stoppuhr', row(o, btn('Start', () => { clearInterval(t); left = sec; o.textContent = fmtT(left); t = setInterval(() => { left--; o.textContent = fmtT(left); if (left <= 0) { clearInterval(t); o.textContent = 'Zeit!'; } }, 1000); }), btn('Stopp', () => clearInterval(t))));
+}
+
+// ===== Spieltische, Teil 1 =====
+const W = {};
+
+// 1 Vier zu Null
+W.vierzunull = (root) => {
+  let start, val, steps;
+  const num = h('div', { class: 'big mono' }), hist = logBox(), op = opSel(), inp = numIn('10–99', '5em'), sol = h('div', { class: 'small' });
+  function neu(v) { if (v) start = v; else { let d = shuffle([0,1,2,3,4,5,6,7,8,9]); if (d[0] === 0) d.push(d.shift()); start = +d.slice(0, 6).join(''); } val = start; steps = 0; num.textContent = start; hist.clear(); sol.textContent = ''; }
+  function step() {
+    const n = parseInt(inp.value); if (!(n >= 10 && n <= 99)) { hist.add('Bitte eine zweistellige Zahl (10–99).', 'warn'); return; }
+    if (steps >= 4) return; const o = op.value; val = apply(val, o, n); steps++;
+    num.textContent = de(val); hist.add(`${steps}. Schritt: ${OPS[o]} ${n} → ${de(val)}`);
+    if (Math.abs(val) < 1e-9) hist.add(`Geschafft in ${steps} Schritten! 🎉`, 'ok'); else if (steps === 4) hist.add('Vier Schritte verbraucht – leider nicht 0.', 'warn');
+    inp.value = ''; inp.focus();
+  }
+  function solve() {
+    // Suche mit ganzzahligen Zwischenergebnissen: v3 in 10..99, dann v3 - v3 = 0
+    const ok3 = (v) => Number.isInteger(v) && v >= 10 && v <= 99;
+    const next = (v) => { const r = []; for (let n = 10; n <= 99; n++) { r.push(['+', n, v + n]); r.push(['-', n, v - n]); r.push(['*', n, v * n]); if (v % n === 0) r.push(['/', n, v / n]); } return r; };
+    for (const [o1, n1, v1] of next(start)) for (const [o2, n2, v2] of next(v1)) for (const [o3, n3, v3] of next(v2)) if (ok3(v3)) {
+      sol.textContent = `Lösungsvorschlag: ${OPS[o1]}${n1} → ${v1}, ${OPS[o2]}${n2} → ${v2}, ${OPS[o3]}${n3} → ${v3}, −${v3} → 0`; return; }
+    sol.textContent = 'Keine Lösung mit ganzzahligen Zwischenschritten gefunden.';
+  }
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') step(); });
+  const own = numIn('eigene Zahl', '8em');
+  root.append(panel('Ausgangszahl', num, row(btn('Neue Zahl', () => neu()), own, btn('übernehmen', () => { const v = parseInt(own.value); if (v >= 100000 && v <= 999999) neu(v); }))),
+    panel('Dein Schritt', row(op, inp, btn('Ausführen', step), btn('Lösung suchen', solve)), sol), hist);
+  neu();
+};
+
+// 2 1001
+W.p1001 = (root) => {
+  const OPT = { 1: '+', 2: '*', 3: '-', 4: '/', 5: '*', 6: '+' };
+  let val = null, pend = null, n = 0, d = [];
+  const disp = h('div', { class: 'big mono' }, '–'), dice = h('div', { class: 'dice' }), choice = h('div', { class: 'row' }), log = logBox();
+  function roll() { if (d.length) return; d = [rint(1, 6), rint(1, 6)]; dice.innerHTML = ''; d.forEach(x => dice.append(die(x))); choice.innerHTML = '';
+    [[0, 1], [1, 0]].forEach(([a, b]) => { if (a === 1 && d[0] === d[1]) return; choice.append(btn(`Zahl ${d[a]}, nächste Rechenart ${OPS[OPT[d[b]]]}`, () => take(d[a], OPT[d[b]]))); }); }
+  function take(z, o) {
+    n++; val = val === null ? z : truncN(apply(val, pend, z), 8); pend = o; d = []; choice.innerHTML = '';
+    disp.textContent = de(val) + '  ' + OPS[o]; log.add(`${n}. Wurf: Zahl ${z} → ${de(val)}, nächste Rechenart ${OPS[o]}`);
+    if (Math.abs(val - 1001) < 1e-9) { log.add(`1001 erreicht nach ${n} Würfen! 🎉`, 'ok'); disp.textContent = '1001'; }
+  }
+  root.append(panel('Rechenart-Tabelle', h('p', { class: 'small' }, '1 = +   2 = ×   3 = −   4 = ÷   5 = ×   6 = +')),
+    panel('Spiel', disp, row(btn('Würfeln', roll), btn('Neues Spiel', () => { val = null; pend = null; n = 0; d = []; disp.textContent = '–'; dice.innerHTML = ''; choice.innerHTML = ''; log.clear(); })), dice, choice), log);
+};
+
+// 3 Wortspiele
+W.wortspiel = (root) => {
+  const M = DATA.upside, R = {}; for (const k in M) R[M[k].toUpperCase()] = k;
+  const a = numIn('Zahl', '10em'), w = h('input', { type: 'text', placeholder: 'Wort', class: 'num', style: 'width:10em' }), o1 = h('div', { class: 'big' }), o2 = h('div', { class: 'big mono' }), seg = h('div', { class: 'segbox rot' });
+  const z2w = () => { const s = a.value.replace(/[^\d.]/g, ''); o1.textContent = s.replace('.', '').split('').reverse().map(c => M[c] || '?').join(''); seg.innerHTML = sevenSeg(s.includes('.') ? s : s + '.', Math.max(8, s.length), '#ff4b2b'); };
+  const w2z = () => { const s = w.value.toUpperCase().replace(/[^A-Z]/g, ''); const r = s.split('').reverse().map(c => R[c] ?? '?').join(''); o2.textContent = r.includes('?') ? r + '  (Buchstabe nicht darstellbar)' : r; };
+  a.addEventListener('input', z2w); w.addEventListener('input', w2z);
+  const ex = [['513', 'EIS'], ['38317', 'LIEBE'], ['7138', 'BEIL'], ['7353', 'ESEL'], ['7391', 'IGEL'], ['3215', 'SIZE'], ['0.7734', 'hELLO'], ['5317', 'LIES'], ['7105', 'SOIL'], ['35009', 'GOOSE']];
+  root.append(panel('Zahl → Wort', row(a), seg, o1), panel('Wort → Zahl', h('p', { class: 'small' }, 'Erlaubt: O I Z E h S L B G'), row(w), o2),
+    panel('Beispiele', h('div', { class: 'chips' }, ...ex.map(([z, t]) => btn(z + ' = ' + t, () => { a.value = z; z2w(); })))));
+  a.value = '38317'; z2w();
+};
+
+// 4 Zahlenalphabet (auch für BOSS)
+function alphaTable() { const t = h('div', { class: 'alpha' }); for (const k in DATA.alphabet) t.append(h('span', null, h('b', null, k), ' ' + DATA.alphabet[k].join(' / '))); return t; }
+const NUM2L = {}; for (const k in DATA.alphabet) for (const v of DATA.alphabet[k]) NUM2L[v] = k;
+W.zahlenalphabet = (root) => {
+  const dg = h('div', { class: 'big mono' }, '–');
+  const div = divisionPanel('Ausgangszahl: Division (10 Stellen wie im Musterspiel – hier 8)', (d) => { dg.textContent = d; });
+  const inp = h('input', { type: 'text', class: 'num', style: 'width:100%', placeholder: 'Zahlenfolge, z.B. 11 23 10 29 3 13 29 4' }), out = h('div', { class: 'big' });
+  inp.addEventListener('input', () => { out.textContent = inp.value.trim().split(/[\s,;]+/).filter(Boolean).map(x => NUM2L[+x] || '·').join(''); });
+  root.append(div, panel('Ausgangszahl (Nachkommaziffern)', dg), panel('Tabelle', alphaTable()), panel('Übersetzer', inp, out, h('p', { class: 'small' }, 'Tipp: 0 lässt sich z. B. als 1−1, 3−3 … schreiben → 11 = N, 33 = I.')));
+};
+
+// 5/32 Wegepatience
+function wegeBoard(root, data, two) {
+  const N = data.nodes; let path = [], used = new Set();
+  const rule = h('select', { class: 'opsel' }, ...[['m', 'multiplizieren'], ['a', 'addieren'], ['ma', 'abwechselnd × und +'], ['all', '+ − × ÷ der Reihe nach']].map(([v, t]) => h('option', { value: v }, t)));
+  const route = h('select', { class: 'opsel' }, h('option', { value: 'S1-Z1' }, 'Start I → Ziel I'), h('option', { value: 'S2-Z2' }, 'Start II → Ziel II'));
+  const svg = h('div', { class: 'board' }), info = h('div', { class: 'mono' }), log = logBox();
+  const valOf = (e, k) => two ? e[2 + k] : e[2];
+  function combine(vals) { const r = rule.value; let acc = vals[0]; for (let i = 1; i < vals.length; i++) { let o = r === 'm' ? '*' : r === 'a' ? '+' : r === 'ma' ? (i % 2 ? '*' : '+') : '+-*/'[(i - 1) % 4]; acc = apply(acc, o, vals[i]); } return acc; }
+  function score(edgeIdx) { const ks = two ? [0, 1] : [0]; return ks.map(k => combine(edgeIdx.map(i => valOf(data.edges[i], k)))); }
+  function draw(best) {
+    let s = '<svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">';
+    data.edges.forEach((e, i) => { const [a, b] = [N[e[0]], N[e[1]]]; const on = used.has(i), bb = best && best.includes(i);
+      s += `<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${on ? '#c0392b' : bb ? '#2e8b57' : '#6b5a45'}" stroke-width="${on || bb ? 4 : 1.6}"/>`;
+      const mx = (a[0] + b[0]) / 2, my = (a[1] + b[1]) / 2;
+      s += `<text x="${mx}" y="${my - 3}" class="el">${String(valOf(e, 1 - (two ? 1 : 0))).replace('.', ',')}</text>`;
+      if (two) s += `<text x="${mx}" y="${my + 11}" class="el a">(${String(e[3]).replace('.', ',')})</text>`; });
+    for (const k in N) { const [x, y] = N[k]; const cur = path[path.length - 1] === k; s += `<circle data-n="${k}" cx="${x}" cy="${y}" r="${data.labels[k] ? 8 : 6}" fill="${cur ? '#c0392b' : data.labels[k] ? '#2b2118' : '#f3e6c8'}" stroke="#2b2118" class="nd"/>`;
+      if (data.labels[k]) s += `<text x="${x}" y="${y + (y < 50 ? -12 : y > 250 ? 22 : -12)}" class="nl">${data.labels[k]}</text>`; }
+    svg.innerHTML = s + '</svg>';
+    svg.querySelectorAll('.nd').forEach(c => c.addEventListener('click', () => click(c.dataset.n)));
+    const ei = edgesOf(); info.textContent = path.length ? 'Weg: ' + path.join(' – ') + (ei.length ? '   Endzahl: ' + score(ei).map(x => de(x)).join(' + ') + (two ? ' = ' + de(score(ei)[0] + score(ei)[1]) : '') : '') : 'Klicke auf den Startpunkt.';
+  }
+  let edgeSeq = [];
+  const edgesOf = () => edgeSeq;
+  function click(n) {
+    const [s, z] = route.value.split('-');
+    if (!path.length) { if (n !== s) { log.add('Bitte beim Startpunkt beginnen.', 'warn'); return; } path = [n]; draw(); return; }
+    const last = path[path.length - 1]; if (last === z) return;
+    const i = data.edges.findIndex((e, i) => !used.has(i) && ((e[0] === last && e[1] === n) || (e[1] === last && e[0] === n)));
+    if (i < 0) { log.add('Keine freie Strecke dorthin.', 'warn'); return; }
+    used.add(i); edgeSeq.push(i); path.push(n); draw();
+    if (n === z) { const sc = score(edgeSeq); const t = two ? sc[0] + sc[1] : sc[0]; log.add(`Ziel erreicht – Endzahl ${de(t)}`, 'ok'); }
+  }
+  function best() {
+    const [s, z] = route.value.split('-'); const adj = {}; data.edges.forEach((e, i) => { (adj[e[0]] = adj[e[0]] || []).push([e[1], i]); (adj[e[1]] = adj[e[1]] || []).push([e[0], i]); });
+    let bv = Infinity, bp = null; const u = new Set(), seq = [];
+    (function dfs(n) { if (n === z) { const sc = score(seq); const t = two ? sc[0] + sc[1] : sc[0]; if (t < bv) { bv = t; bp = seq.slice(); } return; }
+      for (const [m, i] of adj[n]) { if (u.has(i)) continue; u.add(i); seq.push(i); dfs(m); seq.pop(); u.delete(i); } })(s);
+    draw(bp); log.add('Bester Weg (grün): Endzahl ' + de(bv), 'ok');
+  }
+  const reset = () => { path = []; used = new Set(); edgeSeq = []; draw(); };
+  rule.onchange = reset; route.onchange = reset;
+  root.append(panel('Regel', row(route, rule, btn('Neu', reset), btn('Besten Weg zeigen', best)), two ? h('p', { class: 'small' }, 'Obere Zahl: Spieler B, Zahl in Klammern: Spieler A (im Buch umrandet).') : null), svg, info, log);
+  draw();
+}
+W.wege1 = (root) => wegeBoard(root, DATA.wege1, false);
+W.wege2 = (root) => wegeBoard(root, DATA.wege2, true);
+
+// 6 6-5-4-3-2-1
+W.z654321 = (root) => {
+  let total = 0, moves = 0, zw = null, d = null;
+  const a = numIn('10–99', '4em'), b = numIn('10–99', '4em'), o = opSel(), zwO = h('span', { class: 'mono big' }, '–'), dice = h('div', { class: 'dice' }), use = h('select', { class: 'opsel' }), md = opSel('*/'), pm = opSel('+-'), tot = h('div', { class: 'big mono' }, '0'), log = logBox();
+  function calc1() { const x = parseInt(a.value), y = parseInt(b.value); if (!(x >= 10 && x <= 99 && y >= 10 && y <= 99)) return; zw = Math.trunc(apply(x, o.value, y)); zwO.textContent = zw; d = [rint(1, 6), rint(1, 6)]; dice.innerHTML = ''; d.forEach(v => dice.append(die(v)));
+    use.innerHTML = ''; const opts = [[`${d[0]} und ${d[1]} einzeln`, 'sep'], [`${d[0]}+${d[1]} = ${d[0] + d[1]}`, d[0] + d[1]], [`${d[0]}×${d[1]} = ${d[0] * d[1]}`, d[0] * d[1]], [`${d[0]}${d[1]}`, d[0] * 10 + d[1]], [`${d[1]}${d[0]}`, d[1] * 10 + d[0]]];
+    opts.forEach(([t, v]) => use.append(h('option', { value: v }, t))); }
+  function finish() { if (zw === null) return; let r = zw; const v = use.value; if (v === 'sep') { r = Math.trunc(apply(Math.trunc(apply(r, md.value, d[0])), md.value, d[1])); } else r = Math.trunc(apply(r, md.value, +v));
+    total = pm.value === '+' ? total + r : total - r; moves++; tot.textContent = total; log.add(`${moves}. Zug: ${a.value}${OPS[o.value]}${b.value} = ${zw}, ${OPS[md.value]} Würfel (${use.selectedOptions[0].text}) = ${r}, ${OPS[pm.value]} → ${total}`);
+    zw = null; zwO.textContent = '–'; dice.innerHTML = ''; if (total === 654321) log.add(`654321 nach ${moves} Zügen! ${moves <= 5 ? 'Ausgezeichnet!' : moves <= 10 ? 'Sehr gut!' : ''}`, 'ok'); }
+  root.append(panel('1. Zwei zweistellige Zahlen', row(a, o, b, btn('= und würfeln', calc1), zwO), dice),
+    panel('2. Würfel verwenden', row(use, md, btn('Zug abschließen mit', finish), pm, ' zur Summe')), panel('Summe (Ziel 654321)', tot, row(btn('Neues Spiel', () => { total = 0; moves = 0; tot.textContent = 0; log.clear(); }))), log);
+};
+
+// 7 Zauberzahlen
+W.zauber = (root) => {
+  const pats = {
+    'Einsen im Quadrat': (k) => { const x = BigInt('1'.repeat(k)); return [`${x} × ${x}`, x * x]; },
+    '9 × 12…k + (k+1)': (k) => { const x = BigInt('123456789'.slice(0, k) || '0'); return [`9 × ${x} + ${k + 1}`, 9n * x + BigInt(k + 1)]; },
+    '8 × 12…k + k': (k) => { const x = BigInt('123456789'.slice(0, k)); return [`8 × ${x} + ${k}`, 8n * x + BigInt(k)]; },
+    'Potenzen von 11 (Pascal)': (k) => [`11^${k}`, 11n ** BigInt(k)],
+    '1089-Trick-Reihe 9 × 9…': (k) => { const x = BigInt('9'.repeat(k)); return [`${x} × ${x}`, x * x]; }
+  };
+  const sel = h('select', { class: 'opsel' }, ...Object.keys(pats).map(k => h('option', null, k))), tb = h('table', { class: 'score' }), hide = h('input', { type: 'checkbox' });
+  function draw() { tb.innerHTML = ''; tb.append(h('tr', null, h('th', null, 'Rechnung'), h('th', null, 'Ergebnis'), h('th', null, '8-stelliger Rechner')));
+    for (let k = 1; k <= 11; k++) { const [t, r] = pats[sel.value](k); const s = r.toString(); const fits = s.length <= 8;
+      const cell = h('td', { class: 'mono' }, hide.checked && k > 3 ? h('span', { class: 'hidden', onclick: (e) => e.target.textContent = s }, '? klicken') : s);
+      tb.append(h('tr', null, h('td', { class: 'mono' }, t), cell, h('td', { class: fits ? 'ok' : 'warn' }, fits ? '✓ passt' : 'Überlauf (E)'))); } }
+  sel.onchange = draw; hide.onchange = draw;
+  root.append(panel('Muster', row(sel, h('label', null, hide, ' ab Zeile 4 verdecken (selbst vorhersagen)'))), tb, h('p', { class: 'small' }, 'Überprüfe die ersten Zeilen im Rechner rechts. Wo das Muster bricht, entstehen Überträge – warum?'));
+  draw();
+};
+
+// 8 Entweder-Oder
+W.entwederoder = (root) => {
+  let cards, k, val, log = logBox(), grid = h('div', { class: 'keypad' }), disp = h('div', { class: 'big mono' });
+  const rate = (v) => { const n = String(Math.trunc(v)).length; return v <= 7669 ? 'zählt nicht' : n <= 5 ? 'befriedigend' : n === 6 ? 'gut' : n === 7 ? 'sehr gut' : 'ausgezeichnet'; };
+  function neu() { const d = deck(10); cards = {}; for (let i = 0; i <= 9; i++) cards[i] = { c: d[i], open: false }; k = 9; val = null; log.clear(); draw(); }
+  function step(useCard) { if (k < 0) return; const kv = k === 0 ? 1 : k; let v = kv; if (useCard) { cards[k].open = true; v = cards[k].c.v; }
+    const before = val; if (val === null) val = v; else if (val % 2 === 0) val += +(String(v) + String(v)); else val *= v;
+    log.add(`${k}er-Zug: ${useCard ? 'Karte ' + v : 'Taste ' + v} → ${val}`); k--; draw();
+    if (k < 0) { for (const i in cards) cards[i].open = true; draw(); log.add(`Ergebnis ${val}: ${rate(val)}`, 'ok'); } }
+  function draw() { grid.innerHTML = ''; for (const i of [7, 8, 9, 4, 5, 6, 1, 2, 3, 0]) { const c = cards[i];
+      grid.append(h('div', { class: 'kcell' + (i === k ? ' cur' : '') + (i > k ? ' done' : '') }, h('div', { class: 'klabel' }, i === 0 ? '0 (=1)' : String(i)), card(c.c, !c.open))); }
+    disp.textContent = val === null ? '–' : val + (val !== null ? (val % 2 ? '  (ungerade → ×)' : '  (gerade → + doppelt)') : ''); }
+  root.append(panel('Anzeige', disp, row(btn('Taste nehmen', () => step(false)), btn('Karte aufdecken', () => step(true)), btn('Neues Spiel', neu))), grid, log);
+  neu();
+};
+
+// 9 TR-Solitaire
+W.trsolitaire = (root) => {
+  let piles, talon, dis, top, pair, strict, size, rebuilds, sinceSuccess, over;
+  const vsel = h('select', { class: 'opsel' }, h('option', { value: '7' }, '3 × 7 (Grundform)'), h('option', { value: '8' }, '3 × 8'), h('option', { value: '6' }, '3 × 6, nur ein neuer Talon'), h('option', { value: 's' }, 'strenge Teilbarkeit (durch Produkt)'));
+  const table = h('div', { class: 'table' }), log = logBox();
+  function neu() { const d = deck(10); size = vsel.value === 's' ? 7 : +vsel.value; strict = vsel.value === 's'; piles = [0, 1, 2].map(() => d.splice(0, size)); talon = d; dis = [[], []]; rebuilds = 0; sinceSuccess = 0; over = false; pair = null; log.clear(); draw(); }
+  const prod = () => piles.reduce((p, s) => p * s[s.length - 1].v, 1);
+  function step() {
+    if (over) return; if (!piles[0].length) return;
+    if (talon.length < 2) { if (vsel.value === '6' && rebuilds >= 1) { end('Talon verbraucht – Patience nicht aufgegangen.'); return; }
+      if (sinceSuccess > 60) { end('Keine Teilung mehr möglich – Patience nicht aufgegangen.'); return; }
+      talon = talon.concat(dis[0], dis[1]); dis = [[], []]; rebuilds++; log.add('Neuer Talon aus den Ablagestapeln.'); if (talon.length < 2) { end('Zu wenige Karten.'); return; } }
+    const P = prod(); pair = [talon.shift(), talon.shift()];
+    const ok = strict ? P % (pair[0].v * pair[1].v) === 0 : P % pair[0].v === 0 && P % pair[1].v === 0;
+    log.add(`${P} ÷ ${pair[0].v} ${P % pair[0].v ? '✗' : '✓'}, ${P} ÷ ${pair[1].v} ${P % pair[1].v ? '✗' : '✓'}` + (ok ? ' → fünf Karten weg!' : ''), ok ? 'ok' : '');
+    if (ok) { piles.forEach(s => s.pop()); sinceSuccess = 0; pair = null; if (!piles[0].length) end('Alle Stapel abgeräumt – aufgegangen! 🎉', true); }
+    else { dis[0].push(pair[0]); dis[1].push(pair[1]); sinceSuccess++; }
+    draw();
+  }
+  function end(t, win) { over = true; log.add(t, win ? 'ok' : 'warn'); }
+  function draw() { table.innerHTML = '';
+    table.append(h('div', { class: 'piles' }, ...piles.map(s => h('div', { class: 'pile' }, s.length ? card(s[s.length - 1]) : h('span', { class: 'card empty' }), h('small', null, s.length + ' Karten')))),
+      piles[0].length ? h('div', { class: 'mono' }, 'Produkt: ' + prod()) : '',
+      h('div', { class: 'piles' }, h('div', { class: 'pile' }, card(null, true), h('small', null, 'Talon ' + talon.length)), ...dis.map((s, i) => h('div', { class: 'pile' }, s.length ? card(s[s.length - 1]) : h('span', { class: 'card empty' }), h('small', null, 'Ablage ' + (i + 1) + ': ' + s.length))))); }
+  root.append(panel('Variante', row(vsel, btn('Neu mischen', neu), btn('Zwei Talonkarten', step), btn('Automatisch bis zum Ende', () => { let g = 0; while (!over && g++ < 2000) step(); }))), table, log);
+  neu();
+};
+
+// 10 Kartenjagd
+W.kartenjagd = (root) => {
+  let band, sel = [], removed = 0, scores = [0, 0], turn = 0, two = false;
+  const vals = (c) => c.v === 1 ? [1, 11] : c.v === 11 ? [2, 12] : c.v === 12 ? [3, 13] : c.v === 13 ? [4, 14] : c.v === 9 ? [9, 100] : c.v === 10 ? [10] : [c.v, c.v * 10 + c.v + 1];
+  const box = h('div', { class: 'band' }), expr = h('input', { type: 'text', class: 'num', style: 'width:16em', placeholder: 'z.B. 3+6=9  oder 8*3=12+12' }), log = logBox(), st = h('div', { class: 'small' });
+  function neu() { band = deck(10, true); sel = []; removed = 0; scores = [0, 0]; turn = 0; log.clear(); draw(); }
+  function draw() { box.innerHTML = ''; band.forEach((c, i) => { const e = card(c, false, sel.includes(i) ? 'sel' : ''); e.title = 'Werte: ' + vals(c).join(' oder '); e.onclick = () => toggle(i); box.append(e); });
+    st.textContent = `${band.length} Karten im Band, ${removed} entfernt` + (two ? ` · Spieler ${'AB'[turn]} ist dran · A ${scores[0]} : B ${scores[1]}` : ''); }
+  function toggle(i) { if (sel.includes(i)) sel = sel.filter(x => x !== i); else sel.push(i); sel.sort((a, b) => a - b);
+    for (let j = 1; j < sel.length; j++) if (sel[j] !== sel[j - 1] + 1) { sel = [i]; break; } draw(); }
+  const chain = (toks) => { let v = toks[0]; for (let i = 1; i < toks.length; i += 2) v = apply(v, toks[i], toks[i + 1]); return v; };
+  function check() {
+    if (sel.length < 3) { log.add('Mindestens drei benachbarte Karten markieren.', 'warn'); return; }
+    const s = expr.value.replace(/\s/g, '').replace(/×|x/g, '*').replace(/:|÷/g, '/').replace(/−/g, '-'); const parts = s.split('=');
+    if (parts.length !== 2) { log.add('Genau ein Gleichheitszeichen.', 'warn'); return; }
+    const toks = parts.map(p => p.match(/\d+|[+\-*/]/g) || []); const nums = toks.flat().filter(t => /\d/.test(t)).map(Number);
+    if (nums.length !== sel.length) { log.add(`Es müssen genau ${sel.length} Zahlen vorkommen (eine pro Karte, in Reihenfolge).`, 'warn'); return; }
+    for (let j = 0; j < nums.length; j++) if (!vals(band[sel[j]]).includes(nums[j])) { log.add(`${nums[j]} passt nicht zur ${j + 1}. markierten Karte.`, 'warn'); return; }
+    const L = chain(toks[0].map(t => /\d/.test(t) ? +t : t)), R = chain(toks[1].map(t => /\d/.test(t) ? +t : t));
+    if (Math.abs(L - R) > 1e-9) { log.add(`Falsch: ${de(L)} ≠ ${de(R)}`, 'warn'); return; }
+    log.add(`Richtig! ${expr.value} – ${sel.length} Karten weg.`, 'ok'); scores[turn] += sel.length; removed += sel.length; band = band.filter((_, i) => !sel.includes(i)); sel = []; expr.value = ''; if (two) turn = 1 - turn; draw();
+    if (!band.length) log.add('Das Kartenband ist aufgelöst – gewonnen! 🎉', 'ok');
+  }
+  function hint() { for (let i = 0; i + 2 < band.length; i++) { const [A, B, C] = [band[i], band[i + 1], band[i + 2]].map(vals);
+      for (const a of A) for (const b of B) for (const c of C) for (const o of '+-*/') { if (Math.abs(apply(a, o, b) - c) < 1e-9) { sel = [i, i + 1, i + 2]; draw(); log.add(`Tipp: ${a}${OPS[o]}${b}=${c}`); return; } if (Math.abs(apply(b, o, c) - a) < 1e-9) { sel = [i, i + 1, i + 2]; draw(); log.add(`Tipp: ${a}=${b}${OPS[o]}${c}`); return; } } }
+    log.add('Keine einfache Dreier-Kombination gefunden.', 'warn'); }
+  expr.addEventListener('keydown', e => { if (e.key === 'Enter') check(); });
+  const tw = h('input', { type: 'checkbox', onchange: (e) => { two = e.target.checked; draw(); } });
+  root.append(panel('Steuerung', row(btn('Neu mischen', neu), h('label', null, tw, ' zwei Spieler'), btn('Tipp', hint)), st, h('p', { class: 'small' }, 'Benachbarte Karten anklicken, Gleichung eintippen (wird wie im Rechner von links nach rechts gerechnet). Maus über eine Karte zeigt ihre erlaubten Werte.')), box, panel('Gleichung', row(expr, btn('Prüfen', check))), log);
+  neu();
+};
+
+// 11/43/44/59 Reisespiele
+function reiseRoute(digits, keep) { const out = []; for (let i = 0; i < digits.length; i++) if (i === 0 || digits[i] !== digits[i - 1]) out.push(digits[i]); return out; }
+function reiseW(id, note, ordered) {
+  return (root) => {
+    const key = DATA.reise[id], list = h('ol', { class: 'cities' });
+    const div = divisionPanel('Pflichtstädte per Division', (d) => { list.innerHTML = ''; reiseRoute(d).forEach(z => list.append(h('li', null, `${z} – ${key[+z]}`))); });
+    root.append(div, panel(ordered ? 'Besuchsreihenfolge (fest)' : 'Pflichtstädte (Reihenfolge frei)', list), panel('Schlüssel', h('div', { class: 'alpha' }, ...key.map((c, i) => h('span', null, h('b', null, i), ' ' + c)))),
+      h('p', { class: 'small note' }, note));
+  };
+}
+const MAPNOTE = 'Hinweis: Die Strecken- und Zeitkarte der USA steht im Buch auf S. 36/37 und ist hier nicht nachgebildet – zum Mitrechnen der Meilen und Minuten dient der Taschenrechner rechts (Speicher M+).';
+W.reise11 = reiseW(11, MAPNOTE, false);
+W.reise43 = reiseW(43, MAPNOTE + ' Kosten: je angefangene 100 Meilen bzw. 2 Stunden 100 $, Verkauf 50 $ + 300 $ Essen; Startkapital 32000 $, 75 Maschinen.', true);
+W.reise44 = reiseW(44, MAPNOTE + ' Punkte: 1 je 100 Meilen bzw. 2 Std., 3 je Abschluss; 175 Punkte gewinnen.', true);
+W.reise59 = (root) => {
+  const tb = h('table', { class: 'score' }, h('tr', null, h('th', null, 'Spieler'), h('th', null, 'Start'), h('th', null, 'Ziel')),
+    ...[['A', 'Norfolk/Virginia', 'Los Angeles'], ['B', 'Jacksonville/Florida', 'San Francisco'], ['C', 'Pittsburgh/Pennsylvania', 'Seattle'], ['D', 'Spokane/Washington', 'New Orleans']].map(r => h('tr', null, ...r.map(x => h('td', null, x)))));
+  let min = 5760, mi = 4285, cities = 1; const st = h('div', { class: 'big mono' }), m1 = numIn('Minuten', '6em'), m2 = numIn('Meilen', '6em'), log = logBox();
+  const show = () => { st.textContent = `${min},${String(mi).padStart(4, '0')}   → ${Math.floor(min / 60)} Std ${min % 60} Min, ${mi} Meilen, ${cities} Städte`; };
+  root.append(panel('Startaufstellung', tb), panel('Restguthaben im Buch-Format „Minuten,Meilen“', st, row(m1, m2, btn('Stadt erreicht (abziehen)', () => { const a = parseInt(m1.value) || 0, b = parseInt(m2.value) || 0; min -= a; mi -= b; cities++; log.add(`− ${a},${String(b).padStart(4, '0')} → ${min},${String(mi).padStart(4, '0')}`); if (cities === 30) log.add('30 Städte: +16 Std. und 715 Meilen gutschreiben!', 'ok'); if (min < 0 || mi < 0) log.add('Vorgabe überzogen – ausgeschieden!', 'warn'); show(); }), btn('Gutschrift', () => { min += 960; mi += 715; show(); }), btn('Neu', () => { min = 5760; mi = 4285; cities = 1; log.clear(); show(); }))), log, h('p', { class: 'small note' }, MAPNOTE));
+  show();
+};
+
+// 12 Münzenwurf
+W.muenze = (root) => {
+  let digits = '', br = null; const k = h('select', { class: 'opsel' }, ...[1, 2, 3, 4, 5].map(n => h('option', { value: n }, n + (n > 1 ? ' Münzen' : ' Münze'))));
+  const shown = h('div', { class: 'big mono' }, '1,'), res = h('div', { class: 'big' }), pads = h('div', { class: 'chips' }), log = logBox();
+  const who = () => 'AB'[digits.length % 2];
+  const upd = () => { shown.textContent = '1,' + digits + (digits.length < 7 ? '   (' + who() + ' nennt die nächste Ziffer)' : ''); };
+  for (let i = 0; i <= 9; i++) pads.append(btn(String(i), () => { if (digits.length < 7) { digits += i; upd(); } }));
+  function wurf(next) { if (!next) { if (digits.length < 7) { log.add('Erst sieben Ziffern ansagen (oder „zufällig füllen“).', 'warn'); return; } br = new BookRand(digits); } else if (br) br.next(); else return;
+    const d = br.digits(); const n = +k.value; const pick = d.slice(-1 - n, -1); const r = pick.split('').map(x => +x % 2 ? 'Z' : 'W').join('');
+    res.textContent = `${br.value.replace('.', ',')}  →  ${r}`; log.add(`${br.value.replace('.', ',')}: Ziffern ${pick} → ${r.split('').map(x => x === 'W' ? 'Wappen' : 'Zahl').join(', ')}`); }
+  root.append(panel('Ziffern ansagen', shown, pads, row(btn('zufällig füllen', () => { digits = randDigits(7); upd(); }), btn('löschen', () => { digits = ''; br = null; upd(); res.textContent = ''; }))),
+    panel('Werfen', row(k, btn('× = = drücken', () => wurf(false)), btn('nächster Wurf (= =)', () => wurf(true))), res, h('p', { class: 'small' }, 'Gelesen wird von der vorletzten Ziffer nach links: gerade = Wappen, ungerade = Zahl.')), log);
+  upd();
+};
+
+// 13 Würfeln
+W.wuerfeln = (root) => {
+  const n = h('select', { class: 'opsel' }, ...[1, 2, 3].map(x => h('option', { value: x }, x + ' Würfel'))); const out = h('div'), log = logBox(); let P = null;
+  const pick = (d, k) => { const r = []; for (let i = d.length - 1; i >= 0 && r.length < k; i--) if (d[i] >= '1' && d[i] <= '6') r.push(+d[i]); return r; };
+  function show() { out.innerHTML = ''; const k = +n.value; const res = P.map(br => pick(br.digits(), k));
+    P.forEach((br, i) => out.append(h('div', { class: 'row' }, h('b', null, 'AB'[i] + ': '), h('span', { class: 'mono' }, br.value.replace('.', ',') + '  '), ...res[i].map(die), h('span', null, ' = ' + res[i].reduce((a, b) => a + b, 0)))));
+    const s = res.map(r => r.reduce((a, b) => a + b, 0)); log.add(s[0] === s[1] ? 'Unentschieden.' : `${s[0] > s[1] ? 'A' : 'B'} gewinnt (${s[0]} : ${s[1]})`, 'ok'); }
+  const a = numIn('Ziffern von B für A', '9em'), b = numIn('Ziffern von A für B', '9em');
+  root.append(panel('Ziffernfolgen (je „1,“ + Ziffern)', row(a, b, btn('zufällig', () => { a.value = randDigits(7); b.value = randDigits(7); }))),
+    panel('Würfeln', row(n, btn('× = = drücken', () => { if (!a.value) a.value = randDigits(7); if (!b.value) b.value = randDigits(7); P = [new BookRand(a.value.replace(/\D/g, '').slice(0, 7)), new BookRand(b.value.replace(/\D/g, '').slice(0, 7))]; show(); }), btn('nochmal (= =)', () => { if (P) { P.forEach(p => p.next()); show(); } })), out, h('p', { class: 'small' }, 'Augenzahl: letzte Ziffer zwischen 1 und 6, sonst die davor usw.')), log);
+};
+
+// 14 Craps
+W.craps = (root) => {
+  let chips = 100, br = null, point = null, stake = 0;
+  const st = h('div', { class: 'big' }), dd = h('div', { class: 'dice' }), bet = numIn('Einsatz', '5em'), log = logBox(); bet.value = 10;
+  const two = (d) => { const r = []; for (let i = d.length - 1; i >= 0 && r.length < 2; i--) if (d[i] >= '1' && d[i] <= '6') r.push(+d[i]); return r; };
+  const show = () => st.textContent = `Deine Marken: ${chips}` + (point ? `   · Point: ${point}` : '');
+  function roll() { let r = two(br.digits()); while (r.length < 2) { br.next(); r = two(br.digits()); } dd.innerHTML = ''; r.forEach(x => dd.append(die(x))); dd.append(h('span', { class: 'mono small' }, '  ' + br.value.replace('.', ','))); return r[0] + r[1]; }
+  function start() { if (point) return; stake = Math.min(chips, Math.max(1, parseInt(bet.value) || 1)); br = new BookRand(randDigits(7)); const s = roll();
+    if (s === 7 || s === 11) { chips += stake; log.add(`${s} – natural! Du gewinnst ${stake}.`, 'ok'); }
+    else if ([2, 3, 12].includes(s)) { chips -= stake; log.add(`${s} – craps! Du verlierst ${stake}.`, 'warn'); }
+    else { point = s; log.add(`${s} ist dein Point. Weiterwürfeln (= =)!`); } show(); }
+  function again() { if (!point) return; br.next(); const s = roll();
+    if (s === point) { chips += stake; log.add(`${s} – Point getroffen! +${stake}`, 'ok'); point = null; } else if (s === 7) { chips -= stake; log.add(`Seven-out! −${stake}`, 'warn'); point = null; } else log.add(`${s} – weiter.`); show(); }
+  root.append(panel('Du bist der Shooter (gegen die Mitspieler)', st, row(bet, btn('Setzen & würfeln', start), btn('Weiterwürfeln (= =)', again)), dd), log, h('p', { class: 'small' }, 'Die Würfel entstehen wie im Buch: „1,“ + zugerufene Ziffern, × = =, die letzten beiden Ziffern von 1–6.'));
+  show();
+};
+
+// 15 NIM
+W.nim = (root) => {
+  let heaps, turn, cnt = h('select', { class: 'opsel' }, h('option', { value: 3 }, '3 Haufen'), h('option', { value: 4 }, '4 Haufen')), lvl = h('select', { class: 'opsel' }, h('option', { value: 'h' }, 'Computer: schwer'), h('option', { value: 'e' }, 'Computer: leicht'));
+  const disp = h('div', { class: 'big mono' }), vis = h('div', { class: 'heaps' }), inp = numIn('abziehen, z.B. 30000', '9em'), log = logBox();
+  const packed = () => +heaps.map(x => String(x).padStart(2, '0')).join('');
+  function neu() { heaps = Array.from({ length: +cnt.value }, () => rint(1, 30)); turn = 0; log.clear(); draw(); }
+  function draw() { disp.textContent = String(packed()); vis.innerHTML = ''; heaps.forEach((x, i) => vis.append(h('div', { class: 'heap' }, h('b', null, `Haufen ${i + 1}: ${x}`), h('div', { class: 'sticks' }, '|'.repeat(x)), h('small', null, 'abziehen: Anzahl' + ('0'.repeat(2 * (heaps.length - 1 - i)) ? ' mit angehängtem „' + '0'.repeat(2 * (heaps.length - 1 - i)) + '“' : ' ohne Nullen'))))); }
+  function move(i, k, who) { heaps[i] -= k; log.add(`${who} nimmt ${k} von Haufen ${i + 1}: ${String(packed() + k * 10 ** (2 * (heaps.length - 1 - i)))} − ${k * 10 ** (2 * (heaps.length - 1 - i))} = ${packed()}`); draw();
+    if (heaps.every(x => x === 0)) { log.add(`${who} hat das letzte Hölzchen genommen und gewinnt!`, who === 'Du' ? 'ok' : 'warn'); return true; } return false; }
+  function you() { const v = parseInt(inp.value); if (!v) return; const L = heaps.length; let ok = false;
+    for (let i = 0; i < L; i++) { const f = 10 ** (2 * (L - 1 - i)); if (v % f === 0 && v / f >= 1 && v / f <= 99 && (i === L - 1 || v / f < 100)) { const k = v / f; if (k <= heaps[i] && Number.isInteger(k)) { inp.value = ''; ok = true; if (!move(i, k, 'Du')) setTimeout(cpu, 400); break; } } }
+    if (!ok) log.add('Ungültig: Anzahl mit 0, 2, 4 … angehängten Nullen, höchstens so viele wie im Haufen.', 'warn'); }
+  function cpu() { const x = heaps.reduce((a, b) => a ^ b, 0); let i, k;
+    if (lvl.value === 'h' && x) { i = heaps.findIndex(hh => (hh ^ x) < hh); k = heaps[i] - (heaps[i] ^ x); }
+    else { const nz = heaps.map((v, j) => v ? j : -1).filter(j => j >= 0); i = nz[rnd(nz.length)]; k = rint(1, heaps[i]); }
+    move(i, k, 'Computer'); }
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') you(); });
+  root.append(panel('Einstellungen', row(cnt, lvl, btn('Neues Spiel', neu), btn('Computer beginnt', cpu))), panel('Rechneranzeige', disp), vis, panel('Dein Zug', row(inp, btn('Subtrahieren', you))), log);
+  neu();
+};
+
+// 16 Gerade oder Ungerade
+W.geradeungerade = (root) => {
+  let left, val, turn, mine, first; const disp = h('div', { class: 'big mono' }), digs = h('div', { class: 'chips' }), op = opSel(), log = logBox(), info = h('div');
+  const rnd5 = (x) => Math.round(x); // kaufmännisch (positive Werte)
+  const doMove = (v, o, d) => v === null ? d : rnd5(apply(v, o, d));
+  const legal = (v) => { const m = []; for (const d of left) { if (v === null) m.push([null, d]); else for (const o of '+-*/') { if (o === '/' && d === 0) continue; m.push([o, d]); } } return m; };
+  function playout(v, rest) { rest = shuffle(rest.slice()); for (const d of rest) { let o; do { o = '+-*/'[rnd(4)]; } while (o === '/' && d === 0); v = doMove(v, o, d); } return v; }
+  function cpuMove() { const ms = legal(val); let best = null, bs = -1; const want = mine === 'gerade' ? 1 : 0; // Computer will das Gegenteil
+    for (const [o, d] of ms) { const v = doMove(val, o, d); const rest = left.filter(x => x !== d); let w = 0; for (let t = 0; t < 60; t++) { const e = rest.length ? playout(v, rest) : v; if (Math.abs(e) % 2 === want) w++; } if (w > bs) { bs = w; best = [o, d]; } }
+    play(best[0], best[1], 'Computer'); }
+  function play(o, d, who) { val = doMove(val, o, d); left = left.filter(x => x !== d); log.add(`${who}: ${o ? OPS[o] : ''}${d} → ${val}`); draw();
+    if (!left.length) { const even = Math.abs(val) % 2 === 0; const win = (even && mine === 'gerade') || (!even && mine === 'ungerade'); log.add(`Endzahl ${val} ist ${even ? 'gerade' : 'ungerade'} – ${win ? 'du gewinnst!' : 'der Computer gewinnt.'}`, win ? 'ok' : 'warn'); return; }
+    turn = 1 - turn; if (turn === 1) setTimeout(cpuMove, 300); }
+  function draw() { disp.textContent = val === null ? '–' : val; digs.innerHTML = ''; for (let d = 0; d <= 9; d++) digs.append(btn(String(d), () => { if (turn !== 0 || !left.includes(d)) return; if (val !== null && op.value === '/' && d === 0) return; play(val === null ? null : op.value, d, 'Du'); }, left.includes(d) ? '' : 'used'));
+    info.textContent = `Du spielst auf ${mine}. ` + (left.length ? (turn === 0 ? 'Du bist dran.' : 'Computer denkt …') : ''); }
+  function neu() { left = [0,1,2,3,4,5,6,7,8,9]; val = null; log.clear(); first = Math.random() < .5 ? 0 : 1; mine = first === 0 ? (Math.random() < .5 ? 'gerade' : 'ungerade') : (Math.random() < .5 ? 'ungerade' : 'gerade'); turn = first; log.add(first === 0 ? 'Münzwurf: du beginnst.' : 'Münzwurf: der Computer beginnt.'); draw(); if (turn === 1) setTimeout(cpuMove, 400); }
+  root.append(panel('Spiel', info, disp, row(op, h('span', { class: 'small' }, '← Rechenart, dann Ziffer wählen'), btn('Neues Spiel', neu)), digs), log);
+  neu();
+};
+
+// 17 Nimm und Gib
+W.nimmgib = (root) => {
+  let me, cp, turn, absent; const dm = h('div', { class: 'big mono' }), dc = h('div', { class: 'big mono' }), digs = h('div', { class: 'chips' }), log = logBox();
+  const distinct6 = () => { let d; do { d = shuffle([1,2,3,4,5,6,7,8,9,0]).slice(0, 6); } while (d[0] < 5 || d[0] > 6); return +d.join(''); };
+  function give(from, d) { const s = String(Math.abs(from)); for (let i = s.length - 1; i >= 0; i--) if (+s[i] === d) return d * 10 ** (s.length - 1 - i); return 0; }
+  function ask(d, who) { if (who === 'Du') { const v = give(cp, d); if (v) { cp -= v; me += v; log.add(`Du: „Gib mir deine ${d}er“ – du bekommst ${v}.`); } else log.add(`Du: „Gib mir deine ${d}er“ – hat er nicht.`); }
+    else { const v = give(me, d); if (v) { me -= v; cp += v; log.add(`Computer: „Gib mir deine ${d}er“ – du gibst ${v} ab.`, 'warn'); absent.delete(d); } else { log.add(`Computer: „Gib mir deine ${d}er“ – hast du nicht.`); absent.add(d); } }
+    draw(); if (me > 999999) { log.add('Über 999999 – du gewinnst!', 'ok'); turn = -1; return; } if (cp > 999999) { log.add('Der Computer gewinnt.', 'warn'); turn = -1; return; }
+    turn = who === 'Du' ? 1 : 0; if (turn === 1) setTimeout(() => { const c = [1,2,3,4,5,6,7,8,9].filter(x => !absent.has(x)); ask(c.length ? c[rnd(c.length)] : rint(1, 9), 'Computer'); }, 500); }
+  function draw() { dm.textContent = 'Du: ' + me; dc.textContent = 'Computer: ' + (turn === -1 ? cp : '??????'); }
+  function neu() { me = distinct6(); cp = distinct6(); turn = 0; absent = new Set(); log.clear(); draw(); }
+  digs.append(...[1,2,3,4,5,6,7,8,9].map(d => btn(`Gib mir deine ${d}er`, () => { if (turn === 0) ask(d, 'Du'); })));
+  root.append(panel('Rechner', dm, dc, h('p', { class: 'small' }, 'Die Zahl des Computers bleibt verdeckt – du hörst nur seine Abgaben.'), row(btn('Neues Spiel', neu))), panel('Dein Zug', digs), log);
+  neu();
+};
+
+// 18 Blindekuh
+W.blindekuh = (root) => {
+  let target, val, moves, pend, big; const disp = h('div', { class: 'big mono' }), ann = h('div', { class: 'big' }), digs = h('div', { class: 'chips' }), log = logBox(), lv = h('select', { class: 'opsel' }, h('option', { value: 3 }, 'dreistellig, Ziffern'), h('option', { value: 5 }, 'fünfstellig, zweistellige Zahlen'));
+  function chooseOp() { if (val === target) return null; if (val < target) return val * 2 <= target && val > 1 ? '*' : '+'; return val / 2 >= target ? '/' : '-'; }
+  function you(d) { if (val === target && moves) return; moves++; if (pend === null && moves === 1) val = d; else val = Math.trunc(apply(val, pend, d)); log.add(`${moves}. ${pend ? OPS[pend] : ''}${d} → ${val}`);
+    if (val === target) { log.add(`B: „Am Ziel!“ – ${target} nach ${moves} Zügen.`, 'ok'); ann.textContent = 'Ziel erreicht: ' + target; disp.textContent = val; return; } pend = chooseOp(); ann.textContent = 'B sagt an: ' + OPS[pend]; disp.textContent = val; }
+  function neu() { big = +lv.value === 5; target = big ? rint(10000, 99999) : rint(100, 999); val = 0; moves = 0; pend = null; log.clear(); ann.textContent = 'Nenne die erste ' + (big ? 'Zahl' : 'Ziffer') + '.'; disp.textContent = '–'; digs.innerHTML = '';
+    if (big) { const i = numIn('10–99', '5em'); digs.append(i, btn('nennen', () => { const v = parseInt(i.value); if (v >= 1 && v <= 99) { you(v); i.value = ''; } })); } else for (let d = 0; d <= 9; d++) digs.append(btn(String(d), () => you(d))); }
+  root.append(panel('Der Computer (B) kennt die geheime Zahl und lotst dich mit Rechenarten', row(lv, btn('Neues Spiel', neu)), ann, disp, digs), log);
+  neu();
+};
+
+// 19 Flinke Zahlen
+W.flinke = (root) => {
+  const a = numIn('vierstellig', '6em'), b = numIn('vierstellig', '6em'), out = h('div', { class: 'big mono' }), opts = h('div'), hard = h('input', { type: 'checkbox' });
+  const four = () => { let s; do { s = String(rint(1001, 9999)); } while (s.endsWith('0')); return s; };
+  function go() { if (!a.value) a.value = four(); if (!b.value) b.value = four(); const c = new AlgCalc(10); for (const ch of a.value) c.key(ch); c.key('/'); for (const ch of b.value) c.key(ch); c.key('=');
+    const d = c.display().replace(/[^\d]/g, ''); const f = d.slice(-5, -1).split('').map(Number); out.textContent = c.display().replace('.', ',') + '  →  ' + f.join(' : ');
+    const res = []; const P = (arr) => arr.length <= 1 ? [arr] : arr.flatMap((x, i) => P([...arr.slice(0, i), ...arr.slice(i + 1)]).map(p => [x, ...p]));
+    const allE = f.every(x => x % 2 === 0), allO = f.every(x => x % 2);
+    let bestAdd = null; for (const p of P(f)) { const s = (p[0] * 10 + p[1]) + (p[2] * 10 + p[3]); if (!bestAdd || s > bestAdd[0]) bestAdd = [s, `${p[0]}${p[1]} + ${p[2]}${p[3]}`]; }
+    const prod = f.reduce((x, y) => x * y, 1);
+    if (!hard.checked || !allO) res.push(['Zwei zweistellige addieren', bestAdd[1] + ' = ' + bestAdd[0], bestAdd[0]]);
+    if (!hard.checked || !allE) res.push(['Einzeln multiplizieren', f.join(' × ') + ' = ' + prod, prod]);
+    if (hard.checked) { const cnt = {}; f.forEach(x => cnt[x] = (cnt[x] || 0) + 1); const m = Math.max(...Object.values(cnt)); const rep = +Object.keys(cnt).find(k => cnt[k] === m);
+      if (m === 2) { const rest = f.slice(); rest.splice(rest.indexOf(rep), 1); rest.splice(rest.indexOf(rep), 1); const v = (rep * 11) * rest[0] * rest[1]; res.push(['Paar als Zahl × Rest', `${rep}${rep} × ${rest.join(' × ')} = ${v}`, v]); }
+      if (m === 3) { const r = f.find(x => x !== rep); const v = rep * 111 * r; res.push(['Drilling × Rest', `${rep}${rep}${rep} × ${r} = ${v}`, v]); }
+      if (m === 4) res.push(['Vier gleiche', '' + rep * 1111, rep * 1111]); }
+    const mx = Math.max(...res.map(r => r[2])); opts.innerHTML = ''; res.forEach(r => opts.append(h('div', { class: r[2] === mx ? 'ok' : '' }, `${r[0]}: ${r[1]}`))); }
+  root.append(panel('Flinke Zahlen erzeugen (10-stelliger Rechner)', row(a, ' ÷ ', b, btn('=', go), btn('neue Zahlen', () => { a.value = four(); b.value = four(); go(); }), h('label', null, hard, ' anspruchsvolle Regeln'))), out, panel('Wertungsmöglichkeiten', opts), scorePad(['A', 'B', 'C']));
+};
+
+// 20 Schatzsuche
+W.schatzsuche = (root) => {
+  let secret, known, n; const inp = numIn('sechsstellig', '8em'), st = h('div', { class: 'big mono' }), log = logBox();
+  function neu() { secret = randDigits(6).split('').map(Number); if (!secret[0]) secret[0] = rint(1, 9); known = Array(6).fill(null); n = 0; log.clear(); draw(); }
+  function draw() { st.textContent = known.map(x => x === null ? '_' : x).join(' ') + `   (${n} Abfragen)`; }
+  function guess() { const g = inp.value.replace(/\D/g, ''); if (g.length !== 6) return; n++; const hits = [];
+    for (let i = 0; i < 6; i++) if (+g[i] === secret[i] && known[i] === null) { known[i] = secret[i]; hits.push(`eine ${secret[i]} an der ${i + 1}. Stelle`); }
+    if (hits.length) { log.add(`${g}: ${hits.join(', ')}`, 'ok'); for (let i = 0; i < 6; i++) if (known[i] === null) secret[i] = rnd(10); } else log.add(`${g}: kein Treffer`);
+    inp.value = ''; draw(); if (known.every(x => x !== null)) log.add(`Schatz gefunden: ${secret.join('')} – ${n} Punkte.`, 'ok'); }
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') guess(); });
+  root.append(panel('Der Computer versteckt eine Zahl und tauscht nach jedem Treffer die unbekannten Ziffern aus', st, row(inp, btn('Abfragen', guess), btn('Neue Runde', neu))), log);
+  neu();
+};
+
+// ===== Spieltische, Teil 2 =====
+
+// 21 Tauziehen
+W.tauziehen = (root) => {
+  let A, B, ptsA = 0, ptsB = 0, turn; const dA = h('div', { class: 'big mono' }), dB = h('div', { class: 'big mono' }), pos = h('div', { class: 'chips' }), log = logBox(), sc = h('div');
+  const make21 = () => { let d; do { d = Array.from({ length: 6 }, () => rint(1, 6)); } while (d.reduce((a, b) => a + b) !== 21); return +d.join(''); };
+  const dig = (n, p) => Math.floor(Math.abs(n) / 10 ** (p - 1)) % 10; // p: Stelle von rechts (1..6)
+  function move(me, opp, p) { const v = dig(me, p); if (v < 1 || v > 6) return null; const d = dig(opp, v); return { take: d * 10 ** (v - 1), add: d * 10 ** (p - 1), v, d }; }
+  function you(p) { if (turn !== 0) return; const m = move(A, B, p); if (!m) { log.add('Diese Ziffer kann nicht verbessert werden (0 oder größer als 6).', 'warn'); return; }
+    B -= m.take; A += m.add; log.add(`Du verbesserst Stelle ${p} und fragst Stelle ${m.v} ab: du bekommst ${m.d}.`); draw(); turn = 1; setTimeout(cpu, 500); }
+  function cpu() { let best = null, bv = -99; for (let p = 1; p <= 6; p++) { const m = move(B, A, p); if (!m) continue; const g = qs(B + m.add) - qs(B) + (qs(A) - qs(A - m.take)); if (g > bv) { bv = g; best = [p, m]; } }
+    if (!best || (bv <= 0 && qs(B) > qs(A))) { log.add('Computer beendet die Runde.'); end(); return; }
+    const [p, m] = best; A -= m.take; B += m.add; log.add(`Computer verbessert Stelle ${p}, fragt deine Stelle ${m.v} ab: er bekommt ${m.d}.`, 'warn'); draw(); turn = 0; }
+  function end() { const a = qs(A), b = qs(B); if (a > b) ptsA += a - b; else ptsB += b - a; log.add(`Quersummen: du ${a}, Computer ${b}.`, a >= b ? 'ok' : 'warn'); turn = -1; draw();
+    if (ptsA >= 50 || ptsB >= 50) log.add(ptsA >= 50 ? 'Du gewinnst das Spiel!' : 'Der Computer gewinnt das Spiel.', 'ok'); }
+  function draw() { dA.textContent = `Du: ${A}  (QS ${qs(A)})`; dB.textContent = `Computer: ${B}  (QS ${qs(B)})`; sc.textContent = `Punkte – du ${ptsA} : ${ptsB} Computer (50 gewinnen)`; pos.innerHTML = '';
+    for (let p = 6; p >= 1; p--) pos.append(btn(`Stelle ${p} (${dig(A, p)})`, () => you(p))); }
+  function neu() { A = make21(); B = make21(); turn = 0; log.clear(); draw(); }
+  root.append(panel('Zahlen (Stellen von rechts gezählt)', dA, dB, sc), panel('Welche eigene Ziffer verbessern?', pos, row(btn('Runde beenden', end), btn('Neue Runde', neu))), log);
+  neu();
+};
+
+// 22 Blindrechnen
+W.blindrechnen = (root) => {
+  let task = null, minus = 0; const t = h('div', { class: 'big mono' }), log = logBox();
+  function neu() { const o1 = '+-*/'[rnd(4)], o2 = '+-*/'[rnd(4)]; task = [rint(100, 999), o1, rint(10, 99), o2, rint(1, 9)]; t.textContent = task.map(x => OPS[x] || x).join(' ') + ' ='; CALC.get(0).setBlind(true); }
+  function cmp() { if (!task) return; const c = new AlgCalc(8); for (const x of task) { if (OPS[x]) c.key(x); else for (const ch of String(x)) c.key(ch); } c.key('=');
+    const soll = parseFloat(c.display()), ist = parseFloat(CALC.get(0).calc.display()); const d = Math.round(Math.abs(soll - ist)); minus += d;
+    log.add(`Soll ${de(soll)}, dein Rechner ${isNaN(ist) ? 'E' : de(ist)} → ${d} Minuspunkte (gesamt ${minus})`, d ? 'warn' : 'ok'); CALC.get(0).setBlind(false); }
+  root.append(panel('Aufgabe (B tippt sichtbar vor)', t, row(btn('Neue Aufgabe + Tasten blind', neu), btn('Vergleichen', cmp), btn('Minuspunkte 0', () => { minus = 0; log.clear(); }))), h('p', { class: 'small' }, 'Tippe die Aufgabe in Rechner A, dessen Tastenbeschriftung jetzt verborgen ist (Tastaturkürzel sind abgeschaltet).'), log);
+};
+
+// 23 Gedankenübertragung
+W.gedanken = (root) => {
+  const tricks = [
+    { name: 'Die Zahl erscheint doppelt', digits: 3, steps: [['*', 7], ['*', 11], ['*', 13]], read: (v) => `Die Anzeige zeigt die gedachte Zahl zweimal: ${v}`, why: '7 · 11 · 13 = 1001, und abc · 1001 = abcabc.' },
+    { name: 'Die Zahl erscheint achtstellig', digits: 4, steps: [['*', 73], ['*', 137]], read: (v) => `Zweimal hintereinander: ${v}`, why: '73 · 137 = 10001, und abcd · 10001 = abcdabcd.' },
+    { name: 'Hellseher liest ab', digits: 3, steps: [['*', 25], ['+', 4], ['*', 4]], read: (v) => `Der Hellseher streicht die letzten zwei Ziffern: ${String(v).slice(0, -2)}`, why: '(n · 25 + 4) · 4 = 100 · n + 16 – die 16 am Ende ist nur Tarnung.' },
+    { name: 'Mit Kehrwert-Trick', digits: 3, steps: [['*', 37], ['+', 111], ['*', 27]], read: (v) => `Erste drei Ziffern minus 2: ${Math.floor(v / 1000) - 2}`, why: '(37n + 111) · 27 = 999n + 2997 = 1000 · (n + 2) + (997 − n).' }
+  ];
+  const sel = h('select', { class: 'opsel' }, ...tricks.map((t, i) => h('option', { value: i }, t.name))), sec = h('input', { type: 'password', class: 'num', placeholder: 'geheime Zahl', style: 'width:8em' }), out = h('div'), why = h('details', null, h('summary', null, 'Warum funktioniert das?'));
+  function go() { const t = tricks[sel.value]; let v = parseInt(sec.value); if (!v || String(v).length !== t.digits) { out.textContent = `Bitte eine ${t.digits}-stellige Zahl.`; return; }
+    out.innerHTML = ''; out.append(h('div', null, 'Versuchsperson tippt ihre Zahl ein.')); t.steps.forEach(([o, n]) => { v = apply(v, o, n); out.append(h('div', { class: 'mono' }, `Hellseher: „${OPS[o]} ${n}“ → Anzeige ${v}`)); });
+    out.append(h('div', { class: 'big' }, t.read(v))); why.lastChild?.remove?.(); why.innerHTML = '<summary>Warum funktioniert das?</summary>'; why.append(h('p', null, t.why)); }
+  root.append(panel('Trick wählen', row(sel, sec, btn('Vorführen', go))), out, why);
+};
+
+// 24 Quer und Mehr
+W.querundmehr = (root) => {
+  let A, B, turn; const dA = h('div', { class: 'big mono' }), dB = h('div', { class: 'big mono' }), digs = h('div', { class: 'chips' }), log = logBox(), lv = h('select', { class: 'opsel' }, h('option', { value: 'e' }, 'Computer: leicht'), h('option', { value: 'h' }, 'Computer: schwer'));
+  const app = (s, n) => s + Math.abs(n - +s[s.length - 1]);
+  function draw() { dA.textContent = `Du: ${A}  (QS ${qs(+A)})`; dB.textContent = `Computer: ${B}  (QS ${qs(+B)})`; }
+  function check() { if (A.length >= 6 && B.length >= 6) { const a = qs(+A), b = qs(+B); log.add(a > b ? 'Du gewinnst!' : a < b ? 'Der Computer gewinnt.' : 'Unentschieden.', 'ok'); turn = -1; return true; } return false; }
+  function you(n) { if (turn !== 0 || B.length >= 6) return; B = app(B, n); log.add(`Du nennst ${n} → Computer hängt ${B.slice(-1)} an.`); draw(); if (check()) return; turn = 1; setTimeout(cpu, 400); }
+  function cpu() { const l = +A[A.length - 1]; let n = lv.value === 'h' ? l : rnd(10); A = app(A, n); log.add(`Computer nennt ${n} → du hängst ${A.slice(-1)} an.`, 'warn'); draw(); if (check()) return; turn = 0; }
+  function neu() { A = String(rint(1, 9)); B = String(rint(1, 9)); turn = Math.random() < .5 ? 0 : 1; log.clear(); draw(); if (turn === 1) setTimeout(cpu, 400); }
+  for (let i = 0; i <= 9; i++) digs.append(btn(String(i), () => you(i)));
+  root.append(panel('Zahlen', dA, dB, row(lv, btn('Neues Spiel', neu))), panel('Nenne dem Computer eine Ziffer', digs), log);
+  neu();
+};
+
+// 25 Unter-Eins
+W.untereins = (root) => {
+  let sum, prev, turn; const st = h('div', { class: 'big mono' }), inp = numIn('2–999', '5em'), log = logBox(); const c8 = (x) => truncN(x, 8);
+  const allowed = () => { const r = []; const hi = prev === null || prev === 2 ? 999 : prev - 1; for (let n = 2; n <= hi; n++) r.push(n); return r; };
+  function play(n, who) { sum = c8(sum + c8(1 / n)); prev = n; log.add(`${who}: ${n} → 1 ÷ ${n} = ${de(c8(1 / n))}, Summe ${de(sum)}`, who === 'Computer' ? 'warn' : ''); draw();
+    if (sum > 1) { log.add(`${who} hat die Summe über 1 getrieben – ${who === 'Du' ? 'verloren' : 'du gewinnst'}!`, 'ok'); turn = -1; return; } turn = who === 'Du' ? 1 : 0; if (turn === 1) setTimeout(cpu, 400); }
+  function you() { const n = parseInt(inp.value); if (turn !== 0 || !allowed().includes(n)) { log.add('Nicht erlaubt (2–999, kleiner als die letzte Ansage, nach einer 2 wieder frei).', 'warn'); return; } inp.value = ''; play(n, 'Du'); }
+  function cpu() { const al = allowed(), safe = al.filter(n => c8(sum + c8(1 / n)) <= 1);
+    if (!safe.length) { play(al[al.length - 1], 'Computer'); return; }
+    const trap = safe.find(n => { const s = c8(sum + c8(1 / n)); const next = n === 2 ? 999 : n - 1; return next >= 2 && c8(s + c8(1 / next)) > 1 && (n !== 2 || c8(s + c8(1 / 999)) > 1); });
+    play(trap || safe[Math.max(0, safe.length - 1 - rnd(Math.min(safe.length, 30)))], 'Computer'); }
+  function draw() { st.textContent = `Summe: ${de(sum)}   ·   letzte Ansage: ${prev ?? '–'}`; }
+  function neu() { sum = 0; prev = null; turn = Math.random() < .5 ? 0 : 1; log.clear(); draw(); log.add(turn ? 'Der Computer beginnt.' : 'Du beginnst.'); if (turn === 1) setTimeout(cpu, 400); }
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') you(); });
+  root.append(panel('Stand', st, row(inp, btn('Ansagen', you), btn('Neues Spiel', neu))), log);
+  neu();
+};
+
+// 26 Telepathie
+W.telepathie = (root) => {
+  const tb = h('div', { class: 'small' }, 'So spielt ihr hier: Rechts zwei Rechner öffnen (Reiter A und B), beide mit „Abdecken“ verdecken und reihum nur die erlaubten Ansagen machen. Ergebnisse nach jedem Zug abrunden.');
+  const a = numIn('Zahl A'), b = numIn('Zahl B'), o = h('div', { class: 'big mono' });
+  root.append(panel('Ablauf', tb, h('ol', null, ...['„Deine Zahl ist größer. Subtrahiere x – ich addiere x.“', '„Deine Zahl ist kleiner. Addiere x – ich subtrahiere x.“', '„Deine Zahl ist viel größer. Teile durch x – ich multipliziere mit x.“', '„Deine Zahl ist viel kleiner. Multipliziere mit x – ich teile durch x.“', '„Ich glaube, unsere Zahlen stimmen überein.“'].map(t => h('li', null, t)))),
+    panel('Vergleich am Rundenende', row(a, b, btn('Differenz', () => o.textContent = 'Punkte: ' + Math.abs(Math.floor(pnum(a)) - Math.floor(pnum(b))))), o), scorePad(['A', 'B']));
+};
+
+// 27 Tausend
+W.tausend = (root) => {
+  let me, cp, cpNote, myOp; const dm = h('div', { class: 'big mono' }), dc = h('div', { class: 'big mono' }), note = numIn('deine Zahl', '6em'), op = opSel(), log = logBox(), ann = h('div', { class: 'big' });
+  function round() { const n = parseInt(note.value); if (!n) { log.add('Erst eine Zahl notieren.', 'warn'); return; }
+    // Computer notiert seine Zahl, bevor er deine Rechenart kennt
+    const need = { '+': 1000 - cp, '-': cp - 1000, '*': 1000 / cp, '/': cp / 1000 }; const cands = Object.values(need).filter(x => Number.isInteger(x) && x > 0 && x < 1000);
+    cpNote = cands.length && Math.random() < .5 ? cands[rnd(cands.length)] : rint(2, 99);
+    const meOp = '+-*/'[rnd(4)]; me = Math.trunc(apply(me, meOp, n)); cp = Math.trunc(apply(cp, op.value, cpNote));
+    log.add(`Computer sagt dir „${OPS[meOp]}“ → du rechnest ${OPS[meOp]}${n} = ${me}. Du sagst „${OPS[op.value]}“ → Computer hatte ${cpNote} notiert: ${cp}.`);
+    note.value = ''; draw(); const w1 = me === 1000, w2 = cp === 1000;
+    if (w1 || w2) { log.add(w1 && w2 ? 'Beide auf 1000 – unentschieden!' : w1 ? 'Genau 1000 – du gewinnst die Partie!' : 'Der Computer trifft 1000.', 'ok'); if (w1) me = rint(10, 99); if (w2) cp = rint(10, 99); draw(); } }
+  function draw() { dm.textContent = 'Du: ' + me; dc.textContent = 'Computer: ' + cp; }
+  function neu() { me = rint(10, 99); cp = rint(10, 99); log.clear(); draw(); }
+  root.append(panel('Stand (Ziel 1000)', dm, dc), panel('Runde', row(note, h('span', null, ' notieren · Rechenart für den Computer: '), op, btn('Aufdecken', round), btn('Neu', neu)), h('p', { class: 'small' }, 'Die Rechenart für deine Zahl bestimmt der Computer erst nach dem Notieren.')), log);
+  neu();
+};
+
+// 28 Geheimzahlen
+W.geheimzahlen = (root) => {
+  let P, turn; const tb = h('div'), op = opSel(), n = numIn('10–999', '5em'), log = logBox(), mine = numIn('deine Geheimzahl', '8em');
+  const up10 = (x) => Number.isInteger(x) ? x : Math.ceil(x / 10) * 10;
+  function neu() { const g = parseInt(mine.value); P = [{ n: 'Du', s: g >= 10000 && g <= 99999 ? g : rint(10000, 99999), v: rint(1, 10), out: false }, { n: 'Computer 1', s: rint(10000, 99999), v: rint(1, 10), out: false }, { n: 'Computer 2', s: rint(10000, 99999), v: rint(1, 10), out: false }]; mine.value = P[0].s; turn = 0; log.clear(); draw(); }
+  function draw(reveal) { tb.innerHTML = ''; tb.append(h('table', { class: 'score' }, h('tr', null, h('th', null, 'Spieler'), h('th', null, 'Rechner'), h('th', null, 'Geheimzahl')), ...P.map((p, i) => h('tr', { class: p.out ? 'out' : '' }, h('td', null, p.n + (i === turn ? ' ◀' : '')), h('td', { class: 'mono' }, p.v), h('td', { class: 'mono' }, i === 0 || reveal ? p.s : '?????'))))); }
+  function ann(o, x, who) { P.forEach(p => { if (!p.out) { p.v = up10(apply(p.v, o, x)); if (p.v > 999999 || p.v < 0) { p.out = true; log.add(`${p.n} scheidet aus (${p.v}).`, 'warn'); } } }); log.add(`${who} sagt an: ${OPS[o]} ${x}`);
+    const w = P.find(p => !p.out && p.v === p.s), alive = P.filter(p => !p.out); draw(); if (w || alive.length <= 1) { const win = w || alive[0]; log.add(win ? `${win.n} gewinnt!` : 'Alle ausgeschieden.', 'ok'); draw(true); turn = -1; return; }
+    do { turn = (turn + 1) % 3; } while (P[turn].out); if (turn) setTimeout(cpu, 500); }
+  function cpu() { const p = P[turn]; let best = null, bd = Infinity; for (const o of '+-*/') for (let x = 10; x <= 999; x += (x < 100 ? 1 : 7)) { const v = up10(apply(p.v, o, x)); if (v > 999999) continue; const d = Math.abs(Math.log(Math.max(v, 1) / p.s)); if (d < bd) { bd = d; best = [o, x]; } } ann(best[0], best[1], p.n); }
+  function you() { const x = parseInt(n.value); if (turn !== 0 || !(x >= 10 && x <= 999)) return; n.value = ''; ann(op.value, x, 'Du'); }
+  root.append(panel('Neues Spiel', row(mine, btn('Start', neu))), tb, panel('Deine Ansage', row(op, n, btn('Ansagen', you))), log);
+  neu();
+};
+
+// 29 UFO
+W.ufo = (root) => {
+  let F, fixed, n; const st = h('div', { class: 'big mono' }), inp = numIn('vierstellig', '6em'), log = logBox();
+  function neu() { const c = new AlgCalc(8); const a = String(rint(1111, 9999)).replace(/0/g, '5'), b = String(rint(1111, 9999)).replace(/0/g, '7'); for (const ch of a) c.key(ch); c.key('/'); for (const ch of b) c.key(ch); c.key('=');
+    F = shuffle((c.display().split('.')[1] + '0000').slice(0, 4).split('').map(Number)); fixed = Array(4).fill(false); n = 0; log.clear(); draw(); }
+  function draw() { st.textContent = F.map((d, i) => fixed[i] ? d : '?').join(' ') + `   · ${n} Rateversuche`; }
+  function guess() { const g = inp.value.replace(/\D/g, ''); if (g.length !== 4) return; n++; inp.value = ''; const hit = [0, 1, 2, 3].filter(i => +g[i] === F[i] && !fixed[i]);
+    if (!hit.length) log.add(`${g}: nichts gesichtet.`);
+    else if (qs(+g) >= F.reduce((a, b) => a + b)) { hit.forEach(i => fixed[i] = true); log.add(`${g}: UFO in Sicht! Identifiziert: ${hit.map(i => F[i] + ' an Stelle ' + (i + 1)).join(', ')}`, 'ok'); }
+    else log.add(`${g}: UFO in Sicht … aber Quersumme ${qs(+g)} zu klein – optische Täuschung.`, 'warn');
+    for (let i = 0; i < 4; i++) if (!fixed[i] && Math.random() < .5) F[i] = rint(0, 9); // Gegner baut um
+    draw(); if (fixed.every(Boolean)) log.add(`Verband vollständig identifiziert nach ${n} Versuchen!`, 'ok'); }
+  inp.addEventListener('keydown', e => { if (e.key === 'Enter') guess(); });
+  root.append(panel('Der Computer-Verband (unidentifizierte Ziffern werden zwischendurch umgebaut)', st, row(inp, btn('Raten', guess), btn('Neuer Verband', neu))), log);
+  neu();
+};
+
+// 30 Zweier-Patience
+W.zweierpatience = (root) => {
+  let v, lo, hi, est, turn; const op = opSel(), n = numIn('1–999', '5em'), log = logBox(), st = h('div', { class: 'big' });
+  function neu() { v = rint(1, 9); est = v; lo = 10000; hi = 12000; turn = 0; log.clear(); st.textContent = `Startzahl ${v}, Ziel ${lo}–${hi}. Anzeige abgedeckt.`; }
+  function you() { const x = parseInt(n.value); if (!(x >= 1 && x <= 999)) return; v = truncN(apply(v, op.value, x), 8); est = v * (1 + (Math.random() - .5) * .06); log.add(`Du: ${OPS[op.value]} ${x}`); n.value = ''; setTimeout(partner, 300); }
+  function partner() { if (est >= lo && est <= hi) { log.add('Partner: „Ich glaube, wir sind im Ziel – aufdecken?“', 'ok'); return; }
+    const mid = (lo + hi) / 2; let o, x; if (est < mid / 50) { o = '*'; x = Math.min(999, Math.max(2, Math.round(mid / est / 5))); } else if (est < lo) { if (mid - est > 999) { o = '*'; x = Math.max(2, Math.round(mid / est)); } else { o = '+'; x = Math.round(mid - est); } } else { if (est - mid > 999) { o = '/'; x = Math.max(2, Math.round(est / mid)); } else { o = '-'; x = Math.round(est - mid); } }
+    x = Math.min(999, Math.max(1, x)); v = truncN(apply(v, o, x), 8); est = v * (1 + (Math.random() - .5) * .06); log.add(`Partner: ${OPS[o]} ${x}`); }
+  root.append(panel('Gemeinsam blind', st, row(op, n, btn('Eintippen', you), btn('Aufdecken', () => { log.add(`Anzeige: ${de(v)} – ${v >= lo && v <= hi ? 'im Ziel! 🎉' : 'daneben.'}`, v >= lo && v <= hi ? 'ok' : 'warn'); }), btn('Neue Runde', neu))), log);
+  neu();
+};
+
+// 31 BOSS
+W.boss = (root) => {
+  const az = h('div', { class: 'big mono' }); let AZ = '';
+  const div = divisionPanel('Ausgangszahl: eigene ÷ genannte fünfstellige Zahl (erste 6 Nachkommastellen)', (d) => { AZ = (d + '000000').slice(0, 6); az.textContent = AZ; });
+  const word = h('input', { type: 'text', class: 'num', placeholder: 'Zielwort', style: 'width:8em' }), pos = numIn('Pos.', '3em'), out = h('div');
+  function wz() { if (!AZ) return null; const p = +pos.value - 1; const lead = AZ.slice(p, p + 3).padEnd(3, AZ[0]); const rest = (AZ.slice(0, p) + AZ.slice(p + 3)) || '1'; const c = new AlgCalc(8); for (const ch of lead) c.key(ch); c.key('/'); for (const ch of rest) c.key(ch); c.key('='); const d = c.display().split('.')[1] || '00'; return [c.display(), +(d[1] || 0)]; }
+  function go() { const w = word.value.toUpperCase(); const p = +pos.value - 1; if (!AZ || !w[p]) return; const L = w[p], bz = +AZ[p]; const r = wz(); const codes = DATA.alphabet[L] || [];
+    const reach = (x) => codes.filter(c => { const s = String(c).padStart(2, '0'); const a = +s[0], b = +s[1]; return [a + b, Math.abs(a - b), a * b, b && a % b === 0 ? a / b : -1, a && b % a === 0 ? b / a : -1].includes(x); });
+    const opts = [['BZ + WZ', bz + r[1]], ['BZ − WZ', Math.abs(bz - r[1])]].map(([t, x]) => `${t} = ${x}: ${reach(x).length ? '✓ ergibt ' + L + ' (' + reach(x).join('/') + ')' : '✗'}`);
+    out.innerHTML = ''; out.append(h('div', null, `Buchstabe ${L} (${codes.join(' oder ')}), BZ = ${bz}, Würfel: ${r[0].replace('.', ',')} → WZ = ${r[1]}`), ...opts.map(t => h('div', { class: t.includes('✓') ? 'ok' : '' }, t))); }
+  root.append(div, panel('Ausgangszahl', az), panel('Buchstaben sichern', row(word, pos, btn('Würfeln & prüfen', go)), out), panel('Tabelle', alphaTable()));
+};
+
+// 33 Würfel-Labyrinth
+W.wlab = (root) => {
+  const D = DATA.wlab, S = 70, O = 20; const edges = [];
+  for (let r = 0; r <= 4; r++) for (let c = 0; c < 4; c++) edges.push([`${r},${c}`, `${r},${c + 1}`, D.h[r][c]]);
+  for (let r = 0; r < 4; r++) for (let c = 0; c <= 4; c++) edges.push([`${r},${c}`, `${r + 1},${c}`, D.v[r][c]]);
+  for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) { const m = `m${r},${c}`; const [a, b, d, e] = D.d[r][c]; edges.push([`${r},${c}`, m, a], [`${r},${c + 1}`, m, b], [`${r + 1},${c}`, m, d], [`${r + 1},${c + 1}`, m, e]); }
+  const pos = (k) => k[0] === 'm' ? k.slice(1).split(',').map(Number).map(x => x + .5) : k.split(',').map(Number);
+  let path = [], used = [], target = null; const board = h('div', { class: 'board' }), info = h('div', { class: 'mono' }), log = logBox(), st = h('select', { class: 'opsel' }, h('option', { value: '0,0|4,4' }, 'Start 1 → Ziel 1'), h('option', { value: '0,4|4,0' }, 'Start 2 → Ziel 2'));
+  const prod = () => used.reduce((p, i) => p * edges[i][2], 1);
+  function draw() { let s = `<svg viewBox="0 0 ${2 * O + 4 * S} ${2 * O + 4 * S}" xmlns="http://www.w3.org/2000/svg">`;
+    edges.forEach((e, i) => { const [r1, c1] = pos(e[0]), [r2, c2] = pos(e[1]); const x1 = O + c1 * S, y1 = O + r1 * S, x2 = O + c2 * S, y2 = O + r2 * S; const on = used.includes(i);
+      s += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${on ? '#c0392b' : '#6b5a45'}" stroke-width="${on ? 3.5 : 1.2}"/><text x="${(x1 + x2) / 2 + (e[1][0] === 'm' ? 0 : 0)}" y="${(y1 + y2) / 2 - 2}" class="el sm">${String(e[2]).replace('.', ',')}</text>`; });
+    const nodes = new Set(edges.flatMap(e => [e[0], e[1]])); for (const k of nodes) { const [r, c] = pos(k); s += `<circle data-n="${k}" cx="${O + c * S}" cy="${O + r * S}" r="6" class="nd" fill="${path[path.length - 1] === k ? '#c0392b' : '#f3e6c8'}" stroke="#2b2118"/>`; }
+    board.innerHTML = s + '</svg>'; board.querySelectorAll('.nd').forEach(c => c.onclick = () => click(c.dataset.n));
+    info.textContent = (target ? `Zielzahl (Würfel): ${target}   ` : '') + (used.length ? `Produkt: ${de(prod())} → gerundet ${Math.round(prod())}` : 'Klicke den Startpunkt an.'); }
+  function click(n) { const [s, z] = st.value.split('|'); if (!path.length) { if (n === s) { path = [n]; draw(); } return; } const last = path[path.length - 1]; if (last === z) return;
+    const i = edges.findIndex((e, i) => !used.includes(i) && ((e[0] === last && e[1] === n) || (e[1] === last && e[0] === n))); if (i < 0) return; used.push(i); path.push(n); draw();
+    if (n === z) { const r = Math.round(prod()); log.add(`Am Ziel: ${de(prod())} → ${r}` + (target ? `, Abweichung ${Math.abs(r - target)} Minuspunkte` : ''), 'ok'); } }
+  const reset = () => { path = []; used = []; draw(); }; st.onchange = reset;
+  root.append(panel('Steuerung', row(st, btn('Würfeln', () => { target = rint(1, 6); reset(); }), btn('Weg löschen', reset))), board, info, timer(180), log, h('p', { class: 'small' }, 'Brett nach S. 88 nachgezeichnet. Kreuzungspunkte sind die Ecken und die Zellmitten.'));
+  draw();
+};
+
+// 34 / 58 Duorinth / Polyrinth
+const olab = (o) => ({ '*': '×', '/': '÷', '-': '−', '+': '+' })[o[0]] + o.slice(1).replace(/\./g, ',');
+function rinth(root, data, poly) {
+  const G = data.grid, R = data.goal; const opv = (op, x) => { const m = op.match(/^([+\-*/])(.*)$/); const n = m[2].includes('/') ? m[2].split('/').reduce((a, b) => a / b) : parseFloat(m[2]); return Math.round(apply(x, m[1], n) * 1e6) / 1e6; };
+  const cells = []; G.forEach((r, i) => r.forEach((c, j) => cells.push({ i, j, c, v: c ? c[1] : data.goalValue })));
+  const where = (v) => cells.filter(x => Math.abs(x.v - v) < 1e-6);
+  const dist = (() => { const d = new Map(); const goal = cells.find(x => !x.c); d.set(goal, 0); let fr = [goal]; while (fr.length) { const nx = []; for (const x of cells) if (!d.has(x) && x.c) { const t = [x.c[0], x.c[2]].flatMap(o => where(opv(o, x.v))); if (t.some(y => fr.includes(y))) { d.set(x, d.get(fr[0]) + 1); nx.push(x); } } fr = nx; } return d; })();
+  const names = poly ? ['A', 'B', 'C', 'D'] : ['A', 'B']; let pl, turn, extra, moves; const board = h('div', { class: 'rgrid' }), info = h('div', { class: 'big' }), log = logBox(), mode = h('select', { class: 'opsel' }, ...(poly ? [h('option', { value: 'm' }, 'Du (A) gegen 3 Computer')] : [h('option', { value: 'm' }, 'Du (A) gegen Computer (B)'), h('option', { value: '1' }, 'Monorinth (allein)')]));
+  const cellAt = (i, j) => cells.find(x => x.i === i && x.j === j);
+  function neu() { pl = names.map(n => cellAt(...data.start[n])); if (!poly && mode.value === '1') pl = [pl[0]]; turn = 0; extra = 0; moves = 0; log.clear(); draw(); }
+  function opts(p) { if (!p.c) return []; return [p.c[0], p.c[2]].flatMap(o => where(opv(o, p.v)).map(t => ({ o, t }))); }
+  function move(k, t, o) { const from = pl[k]; pl[k] = t; moves++; log.add(`${names[k]}: ${String(from.v).replace('.', ',')} ${olab(o)} = ${String(t.v).replace('.', ',')}`, k ? 'warn' : '');
+    if (!t.c) { log.add(`${names[k]} erreicht das Ziel` + (pl.length === 1 ? ` in ${moves} Zügen!` : '!'), 'ok'); turn = -1; draw(); return; }
+    let bonus = 0; pl.forEach((q, m) => { if (m === k) return; if (q === t) bonus = Math.max(bonus, poly ? 1 : 2); else if (!poly && Math.abs(q.i - t.i) + Math.abs(q.j - t.j) === 1) bonus = Math.max(bonus, 1); });
+    if (bonus) { extra += bonus; log.add(`${names[k]} bekommt ${bonus} Extrazug${bonus > 1 ? 'e' : ''}.`); }
+    if (extra > 0) extra--; else turn = (turn + 1) % pl.length; draw(); if (turn > 0) setTimeout(cpu, 450); }
+  function cpu() { if (turn <= 0) return; const p = pl[turn]; const o = opts(p); if (!o.length) { turn = (turn + 1) % pl.length; draw(); return; } o.sort((a, b) => (dist.get(a.t) ?? 99) - (dist.get(b.t) ?? 99)); move(turn, o[0].t, o[0].o); }
+  function draw() { board.innerHTML = ''; const my = turn === 0 ? opts(pl[0]) : [];
+    G.forEach((r, i) => r.forEach((c, j) => { const x = cellAt(i, j); const who = pl.map((q, k) => q === x ? names[k] : '').join(''); const tgt = my.filter(m => m.t === x);
+      board.append(h('div', { class: 'rc' + (c ? '' : ' goal') + (tgt.length ? ' tgt' : ''), onclick: () => { if (tgt.length) move(0, x, tgt[0].o); } },
+        c ? h('span', { class: 'o1' }, olab(c[0])) : h('span', { class: 'o1' }, 'ZIEL'), h('b', null, c ? c[1] : data.goalValue), c ? h('span', { class: 'o2' }, olab(c[2])) : '', who ? h('i', { class: 'tok' }, who) : '')); }));
+    info.textContent = turn < 0 ? 'Spiel beendet.' : turn === 0 ? 'Du bist dran – klicke ein grün markiertes Zielfeld.' : names[turn] + ' zieht …'; }
+  root.append(panel('Spiel', row(mode, btn('Neues Spiel', neu)), info), board, log);
+  neu();
+}
+W.duorinth = (root) => rinth(root, DATA.duo, false);
+W.polyrinth = (root) => rinth(root, DATA.poly, true);
+
+// 35 Jahreszahl
+W.jahreszahl = (root) => {
+  let me, cp, n, d; const tgt = numIn('Jahreszahl', '5em'); tgt.value = 1976; const st = h('div', { class: 'big mono' }), dd = h('div', { class: 'dice' }), ch = h('div', { class: 'row' }), log = logBox();
+  const T = () => parseInt(tgt.value) || 1976;
+  function apply2(v, s, sign) { if (s === 7) return Math.trunc(v / 7); if (s === 11) return v * 11; return sign === '+' ? v + s : v - s; }
+  function neu() { me = rint(1, 6) + rint(1, 6); cp = rint(1, 6) + rint(1, 6); n = 0; log.clear(); log.add(`Startwürfe: du ${me}, Computer ${cp}.`); draw(); }
+  function draw() { st.textContent = `Du: ${me}   ·   Computer: ${cp}   ·   Ziel ${T()}`; }
+  function roll() { if (d) return; d = [rint(1, 6), rint(1, 6)]; const s = d[0] + d[1]; dd.innerHTML = ''; d.forEach(x => dd.append(die(x))); ch.innerHTML = '';
+    if (s === 7 || s === 11) ch.append(btn(s === 7 ? '÷ 7 (Pflicht)' : '× 11 (Pflicht)', () => take(s, null))); else { ch.append(btn('+ ' + s, () => take(s, '+')), btn('− ' + s, () => take(s, '-'))); } }
+  function take(s, sign) { me = apply2(me, s, sign); n++; d = null; ch.innerHTML = ''; log.add(`Du: ${s === 7 ? '÷7' : s === 11 ? '×11' : sign === '+' ? '+' + s : '−' + s} → ${me}`); if (me === T()) { log.add(`Jahreszahl erreicht nach ${n} Würfen!`, 'ok'); draw(); return; }
+    const c = rint(1, 6) + rint(1, 6); const a = apply2(cp, c, '+'), b = apply2(cp, c, '-'); cp = c === 7 || c === 11 ? a : Math.abs(a - T()) < Math.abs(b - T()) ? a : b; log.add(`Computer würfelt ${c} → ${cp}`, 'warn'); draw(); if (cp === T()) log.add('Der Computer erreicht die Jahreszahl zuerst.', 'warn'); }
+  root.append(panel('Stand', row(h('span', null, 'Ziel: '), tgt, btn('Neues Spiel', neu)), st), panel('Dein Wurf', row(btn('Würfeln', roll)), dd, ch), log);
+  neu();
+};
+
+// 36 Komplementär
+W.komplementaer = (root) => {
+  let cards, k, me, cp, chooser; const grid = h('div', { class: 'keypad' }), st = h('div', { class: 'big mono' }), ch = h('div', { class: 'row' }), log = logBox();
+  const op = (v, x) => v === null ? x : v % 2 === 0 ? v + +(String(x) + String(x)) : v * x;
+  function neu() { const d = deck(10); cards = {}; for (let i = 0; i <= 9; i++) cards[i] = { c: d[i], open: false }; k = 9; me = null; cp = null; chooser = rnd(2); log.clear(); draw(); if (chooser === 1) setTimeout(cpuChoose, 400); }
+  function resolve(meKey) { const kv = k === 0 ? 1 : k, cv = cards[k].c.v; cards[k].open = true; me = op(me, meKey ? kv : cv); cp = op(cp, meKey ? cv : kv); log.add(`${k}er-Zug: du ${meKey ? 'Taste ' + kv : 'Karte ' + cv}, Computer ${meKey ? 'Karte ' + cv : 'Taste ' + kv}`); k--; chooser = 1 - chooser; draw();
+    if (k < 0) { log.add(me > cp ? 'Du gewinnst!' : me < cp ? 'Der Computer gewinnt.' : 'Unentschieden.', 'ok'); return; } if (chooser === 1) setTimeout(cpuChoose, 400); }
+  function cpuChoose() { const kv = k === 0 ? 1 : k; const takeKey = kv >= 5.5; log.add(`Computer wählt ${takeKey ? 'die Taste' : 'die Karte'}.`, 'warn'); resolve(!takeKey); }
+  function draw() { grid.innerHTML = ''; for (const i of [7, 8, 9, 4, 5, 6, 1, 2, 3, 0]) grid.append(h('div', { class: 'kcell' + (i === k ? ' cur' : '') + (i > k ? ' done' : '') }, h('div', { class: 'klabel' }, i === 0 ? '0 (=1)' : String(i)), card(cards[i].c, !cards[i].open)));
+    st.textContent = `Du: ${me ?? '–'}   ·   Computer: ${cp ?? '–'}`; ch.innerHTML = ''; if (k >= 0 && chooser === 0) ch.append(btn('Ich nehme die Taste', () => resolve(true)), btn('Ich nehme die Karte', () => resolve(false))); }
+  root.append(panel('Stand', st, ch, row(btn('Neues Spiel', neu))), grid, log);
+  neu();
+};
+
+// 37 Mini-Max
+W.minimax = (root) => {
+  let mine, cpc, sel = null, totA = 0, totB = 0, round = 0; const area = h('div'), log = logBox(), st = h('div', { class: 'big' });
+  const val = (c) => (c[0] * 10 + c[1]) * (c[2] * 10 + c[3]) * (c[4] * 10 + c[5]);
+  const best = (c) => { let b = 0, bp = null; const P = (a) => a.length <= 1 ? [a] : a.flatMap((x, i) => P([...a.slice(0, i), ...a.slice(i + 1)]).map(p => [x, ...p])); for (const p of P(c)) { const v = val(p); if (v > b) { b = v; bp = p; } } return [b, bp]; };
+  function deal() { const d = shuffle([].concat(...[1,2,3,4,5,6,7,8,9].map(v => [v, v, v, v]))); mine = d.slice(0, 6); cpc = d.slice(6, 12); round++; mine.start = val(mine); draw(); }
+  function draw() { area.innerHTML = ''; const row1 = h('div', { class: 'piles' }); mine.forEach((v, i) => { const e = card({ v, s: '♣' }, false, sel === i ? 'sel' : ''); e.onclick = () => { if (sel === null) sel = i; else { [mine[sel], mine[i]] = [mine[i], mine[sel]]; sel = null; } draw(); }; row1.append(e); if (i % 2) row1.append(h('span', { class: 'gap' })); });
+    area.append(h('div', null, `Ausgangswert ${mine.start}  ·  jetzt: ${mine.slice(0, 2).join('')} × ${mine.slice(2, 4).join('')} × ${mine.slice(4).join('')} = ${val(mine)}`), row1, h('p', { class: 'small' }, 'Zwei Karten nacheinander anklicken, um sie zu tauschen.'));
+    st.textContent = `Runde ${round} · Punkte: du ${totA} – Computer ${totB} (1 000 000 gewinnen)`; }
+  function done() { const a = val(mine) - mine.start; const s0 = val(cpc), [b] = best(cpc); totA += a; totB += b - s0; const [bm] = best(mine);
+    log.add(`Du: ${val(mine)} − ${mine.start} = ${a}${val(mine) < bm ? ` (möglich wären ${bm})` : ' (optimal!)'} · Computer: ${b} − ${s0} = ${b - s0}`);
+    if (totA > 1e6 || totB > 1e6) { log.add(totA > totB ? 'Du gewinnst!' : 'Der Computer gewinnt.', 'ok'); totA = totB = 0; round = 0; } deal(); }
+  root.append(panel('Mini-Max', st, row(btn('Fertig umgeordnet', done), btn('Neues Spiel', () => { totA = totB = round = 0; log.clear(); deal(); }))), area, log);
+  deal();
+};
+
+// 38 Dreimal 49 – Löser
+function reach49(cards) {
+  const n = cards.length, memo = new Map(); const key = (x) => Math.round(x * 1e6) / 1e6;
+  function vals(mask) { if (memo.has(mask)) return memo.get(mask); const bits = []; for (let i = 0; i < n; i++) if (mask >> i & 1) bits.push(i); let s = new Set();
+    if (bits.length === 1) s.add(cards[bits[0]]); else { for (let sub = (mask - 1) & mask; sub > 0; sub = (sub - 1) & mask) { const o = mask ^ sub; if (sub < o) continue; const A = vals(sub), B = vals(o);
+      for (const a of A) for (const b of B) { s.add(key(a + b)); s.add(key(a - b)); s.add(key(b - a)); s.add(key(a * b)); if (b) s.add(key(a / b)); if (a) s.add(key(b / a)); } } }
+    memo.set(mask, s); return s; }
+  return (mask) => { let c = 0; for (let i = 0; i < n; i++) if (mask >> i & 1) c++; if (c < 2 || c > 6) return false; if (c === 2) { const b = []; for (let i = 0; i < n; i++) if (mask >> i & 1) b.push(cards[i]); return b[0] === 7 && b[1] === 7; } return vals(mask).has(49); };
+}
+function partition49(cards) { const ok = reach49(cards), n = cards.length, full = (1 << n) - 1;
+  function rec(rem, groups) { if (!rem) return groups.length === 3 ? groups : null; if (groups.length === 3) return null; const low = rem & -rem;
+    for (let sub = rem; sub > 0; sub = (sub - 1) & rem) { if (!(sub & low)) continue; if (ok(sub)) { const r = rec(rem ^ sub, [...groups, sub]); if (r) return r; } } return null; }
+  if (n === 10) return rec(full, []);
+  for (let skip = 0; skip < n; skip++) { const r = rec(full ^ (1 << skip), []); if (r) return r; } return null; }
+W.dreimal49 = (root) => {
+  let hand, talon, disc, n; const area = h('div'), log = logBox(), st = h('div'); let sel = null;
+  function neu() { const d = deck(10); hand = d.splice(0, 11); talon = d; disc = []; n = 0; log.clear(); draw(); }
+  function draw() { area.innerHTML = ''; const r = h('div', { class: 'piles' }); hand.forEach((c, i) => { const e = card(c, false, sel === i ? 'sel' : ''); e.onclick = () => { sel = sel === i ? null : i; draw(); }; r.append(e); });
+    area.append(r, row(btn('Markierte Karte ablegen', () => { if (sel === null || hand.length < 11) return; disc.push(hand.splice(sel, 1)[0]); sel = null; n++; draw(); }), btn('Vom Talon ziehen', () => { if (hand.length >= 11 || !talon.length) return; hand.push(talon.shift()); draw(); }), btn('Ablage nehmen', () => { if (hand.length >= 11 || !disc.length) return; hand.push(disc.pop()); draw(); }), btn('Prüfen: drei Sätze à 49?', check)));
+    st.textContent = `Talon ${talon.length} · Ablage: ${disc.length ? (CNAME[disc[disc.length - 1].v] || disc[disc.length - 1].v) : '–'} · Ablagen bisher ${n}`; }
+  function check() { const v = hand.map(c => c.v); const p = partition49(v); if (!p) { log.add('Noch keine drei Sätze à 49.', 'warn'); return; }
+    log.add('Geschafft! ' + p.map(m => v.filter((_, i) => m >> i & 1).join(', ')).join('  |  '), 'ok'); }
+  root.append(panel('Patience-Fassung (allein üben)', st, h('p', { class: 'small' }, 'Du hältst 11 Karten: eine ablegen, dann ziehen (Talon oder Ablage) – bis zehn Karten drei Sätze mit dem Wert 49 bilden. Der Prüfer sucht alle Rechenwege (+ − × ÷, beliebige Klammern).'), row(btn('Neu geben', neu))), area, log);
+  neu();
+};
+
+// 39 Patience zu zweit
+W.patience2 = (root) => {
+  const F = [['(a+b)×c', (a, b, c) => (a + b) * c], ['a×b×c', (a, b, c) => a * b * c], ['a+b+c', (a, b, c) => a + b + c], ['a×b+c', (a, b, c) => a * b + c], ['(a−b)×c', (a, b, c) => (a - b) * c], ['a+b×c', (a, b, c) => a + b * c]];
+  const pref = F.map(() => 1); let me, pa; const st = h('div', { class: 'big mono' }), ch = h('div', { class: 'chips' }), log = logBox();
+  const two = () => { let x; do { x = rint(12, 98); } while (String(x)[0] === String(x)[1] || String(x).includes('0')); return x; };
+  function neu() { me = [two(), two(), rint(1, 6)]; pa = [two(), two(), rint(1, 6)]; st.textContent = `Du: ${me[0]},${me[1]}0${me[2]}    Partner: ${pa[0]},${pa[1]}0${pa[2]}`; }
+  F.forEach(([t, f], i) => ch.append(btn(t, () => { const r1 = f(...me); const j = pref.indexOf(Math.max(...pref)); const r2 = F[j][1](...pa); pref[i]++; const d = Math.abs(r1 - r2);
+    log.add(`Du ${t} = ${r1}, Partner ${F[j][0]} = ${r2} → Abstand ${d}`, d === 0 ? 'ok' : d < 50 ? '' : 'warn'); neu(); })));
+  root.append(panel('Zahlen (a,b0c)', st, h('p', { class: 'small' }, 'Wähle deine Rechnung – der Computer-Partner lernt, welche Formeln du bevorzugst.'), ch), log);
+  neu();
+};
+
+// 40 Blind-Match
+W.blindmatch = (root) => {
+  let v, my, cpT, r; const tol = 25; const t = numIn('deine Endzahl (50–300)', '10em'), op = opSel(), n = numIn('Zahl', '5em'), log = logBox(), info = h('div');
+  function neu() { v = 100; cpT = rint(50, 300); r = 0; log.clear(); info.textContent = 'Startzahl 100, Anzeige verdeckt. Erlaubte Abweichung ±25.'; }
+  function you() { const x = pnum(n); if (!x) return; my = parseInt(t.value); if (!(my >= 50 && my <= 300)) { log.add('Erst deine Endzahl (50–300) notieren.', 'warn'); return; }
+    v = apply(v, op.value, x); r++; log.add(`Du: ${OPS[op.value]} ${x}`); n.value = '';
+    const o = v < cpT ? (cpT - v > 300 ? '*' : '+') : (v - cpT > 300 ? '/' : '-'); const y = o === '*' || o === '/' ? Math.max(2, Math.round(o === '*' ? cpT / v : v / cpT)) : Math.round(Math.abs(cpT - v)); v = apply(v, o, y); log.add(`Computer: ${OPS[o]} ${y}`); }
+  function stop() { if (r < 3) { log.add('Abbruch erst ab Runde 3.', 'warn'); return; } const agree = Math.abs(v - cpT) <= tol || Math.random() < .5; if (!agree) { log.add('Computer widerspricht – Münzwurf …'); if (Math.random() < .5) { log.add('Wappen: es geht weiter.'); return; } }
+    const dm = Math.abs(v - my), dc = Math.abs(v - cpT); log.add(`Aufgedeckt: ${de(v)}. Deine Zahl ${my} (Abstand ${de(dm)}), Computer ${cpT} (Abstand ${de(dc)}) → ${dm <= tol && dm <= dc ? 'Punkt für dich!' : dc <= tol ? 'Punkt für den Computer.' : 'keiner im Toleranzband.'}`, 'ok'); neu(); }
+  root.append(panel('Blind-Match gegen den Computer', info, row(t), row(op, n, btn('Eintippen', you), btn('Abbruch verlangen', stop), btn('Neu', neu))), log);
+  neu();
+};
+
+// 41 Rundum-Schach
+W.rundum = (root) => {
+  const VAL = Array.from({ length: 28 }, (_, i) => [1, 7, 6, 5, 4, 3, 2][i % 7]);
+  let me, cp, c, turn; const board = h('div', { class: 'ring' }), st = h('div'), ch = h('div', { class: 'row' }), log = logBox();
+  const coords = (i) => { const s = i % 7, side = Math.floor(i / 7); return side === 0 ? [0, s] : side === 1 ? [s, 7] : side === 2 ? [7, 7 - s] : [7 - s, 0]; };
+  function steps(own, opp, d) { const f = VAL[own], g = VAL[opp]; switch (f) { case 1: return d + g; case 2: return 2 * d; case 3: return 2 * d - 2; case 4: case 5: return 2 * g - d; case 6: return Math.ceil(d * g / 2); case 7: return Math.ceil(d * 7 / 2); } }
+  function roll() { if (!c) { c = new AlgCalc(8); for (const ch2 of '1.' + randDigits(6, true)) c.key(ch2); c.key('*'); c.key('='); } else c.key('='); const d = c.display().replace(/\D/g, ''); return [c.display(), [+d[2], +d[3], +d[4]]]; }
+  function draw() { board.innerHTML = ''; for (let i = 0; i < 28; i++) { const [r, cc] = coords(i); board.append(h('div', { class: 'rf' + (i === me ? ' me' : '') + (i === cp ? ' cp' : ''), style: `grid-row:${r + 1};grid-column:${cc + 1}` }, String(VAL[i]))); }
+    board.append(h('div', { class: 'rmid' }, 'rot = du, blau = Computer')); }
+  function yourTurn() { const [disp, ds] = roll(); st.textContent = `Würfelzahl: ${disp.replace('.', ',')} – wähle Ziffer 3, 4 oder 5`; ch.innerHTML = '';
+    ds.forEach(d => { const s = steps(me, cp, d); ch.append(btn(`${d} → ${s >= 0 ? s + ' vor' : -s + ' zurück'}`, () => { me = ((me + s) % 28 + 28) % 28; log.add(`Du ziehst ${s} Felder.`); ch.innerHTML = ''; draw(); if (me === cp) { log.add('Getroffen – du gewinnst!', 'ok'); return; } setTimeout(cpuTurn, 500); })); }); }
+  function cpuTurn() { const [disp, ds] = roll(); let pick = ds.map(d => steps(cp, me, d)); let s = pick.find(x => ((cp + x) % 28 + 28) % 28 === me); if (s === undefined) s = pick[rnd(3)];
+    cp = ((cp + s) % 28 + 28) % 28; log.add(`Computer würfelt ${disp.replace('.', ',')} und zieht ${s}.`, 'warn'); draw(); if (me === cp) { log.add('Der Computer hat dich erwischt.', 'warn'); return; } yourTurn(); }
+  function neu() { me = 0; cp = 14; c = null; log.clear(); draw(); yourTurn(); }
+  const rules = h('table', { class: 'score small' }, ...[['1', 'Augen + Feldzahl des Gegners'], ['2', 'Augen × 2'], ['3', 'Augen × 2 − 2'], ['4 / 5', 'Gegnerfeld × 2 − Augen'], ['6', 'Augen × Gegnerfeld ÷ 2 (aufrunden)'], ['7', 'Augen × eigenes Feld ÷ 2 (aufrunden)']].map(r => h('tr', null, h('td', null, 'Feld ' + r[0]), h('td', null, r[1]))));
+  root.append(panel('Rundum-Schach', st, ch, row(btn('Neues Spiel', neu))), board, panel('Zugweite', rules), log);
+  neu();
+};
+
+// 42 Kreis-Halma
+W.kreishalma = (root) => {
+  const s = numIn('0,111–0,999', '6em'), n = numIn('11–99', '4em'), o = h('div', { class: 'big' });
+  root.append(panel('Zug-Zahl', row(s, ' × ', n, btn('=', () => { if (!s.value) s.value = '0,' + rint(111, 999); if (!n.value) n.value = rint(11, 99); const r = Math.floor(pnum(s) * parseInt(n.value)); o.textContent = `${r} → mögliche Zugweite: ${[...new Set(String(r).split(''))].join(' oder ')}`; }), btn('neu', () => { s.value = ''; n.value = ''; o.textContent = ''; })), o), h('p', { class: 'small note' }, 'Das ringförmige Spielbrett (S. 108) ist hier nicht nachgebaut; zeichne Ringe und Reihen auf Papier oder nutze ein Halma-Brett.'));
+};
+
+// 45 Höchst-Wert
+W.hoechstwert = (root) => {
+  const G = DATA.hw; const word = h('input', { type: 'text', class: 'num', value: 'KUCHEN', style: 'width:8em' }), grid = h('div', { class: 'hwgrid' }), out = h('div'), log = logBox(); let picks = [];
+  const vals = (x, y) => { const s = new Set([x + y, Math.abs(x - y), x * y]); if (x % y === 0) s.add(x / y); if (y % x === 0) s.add(y / x); return s; };
+  const occ = (L) => { const r = []; G.forEach((row, y) => [...row].forEach((c, x) => { if (c === L) r.push([x + 1, y + 1]); })); return r; };
+  function draw() { grid.innerHTML = ''; grid.append(h('span', { class: 'hh' }, '')); for (let x = 1; x <= 25; x++) grid.append(h('span', { class: 'hh' }, x));
+    G.forEach((row, y) => { grid.append(h('span', { class: 'hh' }, y + 1)); [...row].forEach((c, x) => { const k = picks.findIndex(p => p[0] === x + 1 && p[1] === y + 1); grid.append(h('span', { class: 'hc' + (k >= 0 ? ' on' : ''), title: `${c} (${x + 1}|${y + 1})`, onclick: () => pick(x + 1, y + 1, c) }, k >= 0 ? h('b', null, c) : c)); }); });
+    const w = word.value.toUpperCase(); out.textContent = picks.length < w.length ? `Nächster Buchstabe: ${w[picks.length]}` : 'Wort vollständig.'; }
+  function pick(x, y, c) { const w = word.value.toUpperCase(); if (picks.length >= w.length) return; if (c !== w[picks.length]) { log.add(`Das ist ${c}, gesucht ist ${w[picks.length]}.`, 'warn'); return; }
+    if (picks.length) { const [px, py] = picks[picks.length - 1]; const common = [...vals(px, py)].filter(v => vals(x, y).has(v)); if (!common.length) { log.add(`(${x}|${y}) passt rechnerisch nicht an (${px}|${py}).`, 'warn'); return; } log.add(`${c} (${x}|${y}) – gemeinsamer Wert ${common.join(' / ')}`); } else log.add(`${c} (${x}|${y})`);
+    picks.push([x, y]); draw(); if (picks.length === w.length) log.add('Summe der Koordinaten: ' + picks.reduce((s, p) => s + p[0] + p[1], 0), 'ok'); }
+  function best() { const w = word.value.toUpperCase().replace(/[^A-Z]/g, ''); let prev = occ(w[0]).map(p => ({ p, s: p[0] + p[1], path: [p] }));
+    for (let i = 1; i < w.length; i++) { const nx = []; for (const q of occ(w[i])) { let b = null; for (const o of prev) { const [px, py] = o.p; if ([...vals(px, py)].some(v => vals(q[0], q[1]).has(v)) && (!b || o.s > b.s)) b = o; } if (b) nx.push({ p: q, s: b.s + q[0] + q[1], path: [...b.path, q] }); } prev = nx; if (!prev.length) break; }
+    if (!prev.length) { log.add('Keine gültige Kette gefunden.', 'warn'); return; } const b = prev.reduce((a, c) => c.s > a.s ? c : a); log.add(`Höchstwert: ${b.s} mit ${b.path.map(p => `(${p[0]}|${p[1]})`).join(' ')}`, 'ok'); }
+  root.append(panel('Wort', row(word, btn('Neu beginnen', () => { picks = []; log.clear(); draw(); }), btn('Höchstwert berechnen', best)), out), grid, log, h('p', { class: 'small' }, 'Koordinaten: (Spalte|Zeile). Buchstaben im Feld der Reihe nach anklicken.'));
+  draw();
+};
+
+// 46 Teilen und Gewinnen
+W.teilen = (root) => {
+  let P, turn, round, R; const tb = h('div'), digs = h('div', { class: 'chips' }), log = logBox(), cnt = h('select', { class: 'opsel' }, ...[3, 4, 5].map(n => h('option', { value: n }, n + ' Spieler')));
+  const lastInt = (v) => Math.floor(Math.abs(v)) % 10;
+  function neu() { const k = +cnt.value; P = Array.from({ length: k }, (_, i) => ({ n: i ? 'Computer ' + i : 'Du', v: [1, 2, 3, 4, 6, 7, 8, 9][rnd(8)], dead: false })); R = k === 3 ? 6 : k === 4 ? 8 : 10; round = 0; turn = rnd(k); log.clear(); draw(); if (turn) setTimeout(cpu, 500); }
+  function ann(d, who) { P.forEach(p => { if (p.dead) return; const nv = lastInt(p.v) === d ? truncN(p.v / d, 10) : truncN(p.v * d, 10); if (isNaN(nv)) { p.dead = true; p.v = Infinity; } else p.v = nv; }); log.add(`${who} sagt ${d} an.`); round++; draw();
+    if (round >= R) { const w = P.reduce((a, b) => b.v < a.v ? b : a); log.add(`${w.n} hat die kleinste Zahl und gewinnt!`, 'ok'); turn = -1; draw(); return; } turn = (turn + 1) % P.length; if (turn) setTimeout(cpu, 500); }
+  function cpu() { const p = P[turn]; const l = lastInt(p.v); ann(l && l !== 5 ? l : [1, 2, 3, 4, 6, 7, 8, 9][rnd(8)], p.n); }
+  function draw() { tb.innerHTML = ''; tb.append(h('table', { class: 'score' }, h('tr', null, h('th', null, 'Spieler'), h('th', null, 'Rechner')), ...P.map((p, i) => h('tr', null, h('td', null, p.n + (i === turn ? ' ◀' : '')), h('td', { class: 'mono' }, i === 0 || turn === -1 ? (p.dead ? 'E' : de(p.v)) : '·····')))), h('div', null, `Runde ${round} von ${R}`)); }
+  [1, 2, 3, 4, 6, 7, 8, 9].forEach(d => digs.append(btn(String(d), () => { if (turn === 0) ann(d, 'Du'); })));
+  root.append(panel('Einstellungen', row(cnt, btn('Neues Spiel', neu))), tb, panel('Deine Ansage (wenn ◀ bei dir)', digs), log);
+  neu();
+};
+
+// 47 Zweifeln
+W.zweifeln = (root) => {
+  const z = h('div', { class: 'big mono' });
+  root.append(divisionPanel('Zufallszahl im Zusatzrechner', (d) => { z.textContent = 'Spielziffern: ' + d.replace(/0/g, '').split('').join(', '); }), z, h('p', { class: 'small' }, 'Rechner mit „Abdecken“ vorbereiten und reihum Ziffern 1–9 eintippen lassen; dann Ziffer für Ziffer behaupten, glauben oder zweifeln.'), scorePad(['A', 'B', 'C']));
+};
+
+// 48/49 Poker
+function pokerCat(s) { const d = s.split('').map(Number), cnt = {}; d.forEach(x => cnt[x] = (cnt[x] || 0) + 1); const c = Object.values(cnt).sort((a, b) => b - a), q = d.reduce((a, b) => a + b);
+  const straight = d.every((x, i) => !i || x === d[i - 1] + 1), even = d.every(x => x % 2 === 0), odd = d.every(x => x % 2);
+  let k = 1; if (c[0] === 2) k = 2; if (c[0] === 2 && c[1] === 2) k = 3; if (c[0] === 3) k = 4; if (straight) k = Math.max(k, 5); if (even || odd) k = Math.max(k, 6); if (c[0] === 3 && c[1] === 2) k = 7; if (c[0] === 4) k = 8;
+  if (s === '02468') k = 9; if (s === '13579') k = 10; if (c[0] === 5) k = 11; return [k, q]; }
+const CATN = ['', 'Höchstzahl', 'ein Paar', 'zwei Paare', 'Drilling', 'Straße', 'Flush', 'Full House', 'Vierling', 'gerader Straight Flush', 'ungerader Straight Flush', 'Fünfling'];
+function pokerTable(root, tr) {
+  let P = [], chips = [20, 20, 20, 20]; const n = h('select', { class: 'opsel' }, ...[3, 4].map(x => h('option', { value: x }, x + ' Spieler'))), tb = h('div'), log = logBox(), ex = h('div', { class: 'chips' }); let sel = new Set(), phase = 0;
+  const five = () => { let s; do { s = String(rint(10001, 99999)); } while (s.endsWith('0')); return s; };
+  const high = (s) => s.split('').sort().reverse().slice(0, 3).join('');
+  function deal() { const k = +n.value; const nums = Array.from({ length: k }, five); P = nums.map((x, i) => { const c = new AlgCalc(8); for (const ch of x) c.key(ch); c.key('/'); for (const ch of nums[(i + 1) % k]) c.key(ch); c.key('='); const d = ((c.display().split('.')[1] || '') + '00000').slice(0, 5); return { name: i ? 'Computer ' + i : 'Du', calc: `${x} ÷ ${nums[(i + 1) % k]} = ${c.display().replace('.', ',')}`, hand: d }; });
+    chips = chips.slice(0, k).map(c => c - 1); phase = tr ? 1 : 2; sel = new Set(); draw(); if (!tr) show(); }
+  const score = (s) => tr ? pokerCat(s) : [+high(s), 0];
+  function draw() { tb.innerHTML = ''; tb.append(h('table', { class: 'score' }, h('tr', null, h('th', null, 'Spieler'), h('th', null, 'Rechnung'), h('th', null, 'Hand'), h('th', null, 'Wertung'), h('th', null, 'Marken')),
+      ...P.map((p, i) => h('tr', null, h('td', null, p.name), h('td', { class: 'mono small' }, i === 0 || phase === 2 ? p.calc : '…'), h('td', { class: 'mono big' }, i === 0 || phase === 2 ? p.hand : '?????'), h('td', null, i === 0 || phase === 2 ? (tr ? CATN[score(p.hand)[0]] : high(p.hand)) : ''), h('td', null, chips[i])))));
+    ex.innerHTML = ''; if (tr && phase === 1) { P[0].hand.split('').forEach((d, i) => ex.append(btn(`Stelle ${5 - i}: ${d}`, () => { sel.has(i) ? sel.delete(i) : sel.size < 3 && sel.add(i); draw(); }, sel.has(i) ? 'sel' : ''))); ex.append(btn('Tauschen (rechter Nachbar) & aufdecken', swap)); } }
+  function swap() { const k = P.length; const nb = P[k - 1]; let h0 = P[0].hand.split(''); sel.forEach(i => h0[i] = nb.hand[i]); P[0].hand = h0.join('');
+    for (let i = 1; i < k; i++) { const right = P[i - 1]; const d = P[i].hand.split(''); const cnt = {}; d.forEach(x => cnt[x] = (cnt[x] || 0) + 1); d.forEach((x, j) => { if (cnt[x] === 1 && +x < 5 && Math.random() < .7) d[j] = right.hand[j]; }); P[i].hand = d.join(''); }
+    log.add(sel.size ? `Du tauschst ${sel.size} Stelle(n) mit dem rechten Nachbarn.` : 'Du behältst deine Hand.'); phase = 2; show(); }
+  function show() { phase = 2; let w = 0; P.forEach((p, i) => { const a = score(p.hand), b = score(P[w].hand); if (a[0] > b[0] || (a[0] === b[0] && a[1] > b[1])) w = i; }); chips[w] += P.length; log.add(`${P[w].name} gewinnt den Pott mit ${tr ? CATN[score(P[w].hand)[0]] : high(P[w].hand)} (${P[w].hand}).`, 'ok'); draw(); }
+  root.append(panel('Tisch', row(n, btn('Geben (je 1 Marke in den Pott)', deal))), tb, ex, log, tr ? panel('Kategorien (aufsteigend)', h('p', { class: 'small' }, CATN.slice(1).join(' · '))) : null);
+  deal();
+}
+W.einfachpoker = (root) => pokerTable(root, false);
+W.trpoker = (root) => pokerTable(root, true);
+
+// 50 Treibjagd
+W.treibjagd = (root) => {
+  let P, round; const tb = h('div'), ch = h('div', { class: 'row' }), log = logBox(), T = 1002;
+  function neu() { P = ['Du', 'Computer 1', 'Computer 2'].map(n => ({ n, v: null, op: null })); round = 0; log.clear(); next(); }
+  function next() { round++; const rolls = P.map(() => rint(1, 6) + rint(1, 6)); P.forEach((p, i) => { p.roll = rolls[i]; p.v = p.v === null ? rolls[i] : apply(p.v, p.op, rolls[i]); });
+    log.add(`Runde ${round}: Würfe ${P.map(p => p.n + ' ' + p.roll).join(', ')}`); const hit = P.filter(p => Math.abs(p.v) >= T);
+    if (hit.length) { const w = P.reduce((a, b) => Math.abs(Math.abs(b.v) - T) < Math.abs(Math.abs(a.v) - T) ? b : a); log.add(`${w.n} gewinnt (am nächsten an 1002: ${w.v}).`, 'ok'); draw(); return; }
+    const order = P.map((p, i) => i).sort((a, b) => P[b].roll - P[a].roll || Math.random() - .5); let avail = ['+', '-', '*']; P.forEach(p => p.op = null);
+    const pickCpu = (p) => { const est = (o) => Math.abs(Math.abs(apply(p.v, o, 7)) - T); return avail.slice().sort((a, b) => est(a) - est(b))[0]; };
+    const step = (k) => { if (k >= 3) { draw(); ch.innerHTML = ''; ch.append(btn('Nächste Runde würfeln', next)); return; } const i = order[k], p = P[i];
+      if (i === 0) { draw(); ch.innerHTML = ''; ch.append(h('span', null, 'Deine Wahl: '), ...avail.map(o => btn(OPS[o], () => { p.op = o; avail = avail.filter(x => x !== o); log.add(`Du wählst ${OPS[o]}`); step(k + 1); }))); }
+      else { const o = avail.length === 1 ? avail[0] : pickCpu(p); p.op = o; avail = avail.filter(x => x !== o); log.add(`${p.n} wählt ${OPS[o]}`, 'warn'); step(k + 1); } };
+    step(0); }
+  function draw() { tb.innerHTML = ''; tb.append(h('table', { class: 'score' }, h('tr', null, h('th', null, 'Spieler'), h('th', null, 'Anzeige'), h('th', null, 'nächste Rechenart')), ...P.map(p => h('tr', null, h('td', null, p.n), h('td', { class: 'mono big' }, p.v), h('td', null, p.op ? OPS[p.op] : '…'))))); }
+  root.append(panel('Treibjagd auf 1002', row(btn('Neues Spiel', neu)), ch), tb, log);
+  neu();
+};
+
+// 51 PSI
+W.psi = (root) => {
+  let k; const n = h('select', { class: 'opsel' }, ...[3, 4, 5, 6].map(x => h('option', { value: x }, x + ' Spieler'))), op = opSel('+-'), num = numIn('10–99', '4em'), log = logBox(), start = 11, goal = 111;
+  function play() { const x = parseInt(num.value); if (!(x >= 10 && x <= 99)) return; k = +n.value; let v = start; const parts = [`${start}`];
+    const need = goal - start; const share = need / k; v = apply(v, op.value, x); parts.push(`Du ${OPS[op.value]}${x}`);
+    for (let i = 1; i < k; i++) { const guess = Math.max(10, Math.min(99, Math.round(share + (Math.random() - .5) * 30))); const o = Math.random() < .85 ? '+' : '-'; v = apply(v, o, guess); parts.push(`C${i} ${OPS[o]}${guess}`); }
+    log.add(`${parts.join(' ')} → ${v}` + (v === goal ? '  Treffer! 🎉' : v > goal ? '  zu hoch' : '  zu niedrig'), v === goal ? 'ok' : 'warn'); }
+  root.append(panel(`Start ${start}, Ziel ${goal} – die Computer-Mitspieler tippen verdeckt`, row(n, op, num, btn('Runde spielen', play))), log);
+};
+
+// 52 Henry / 53 Economy / 55 Wettlauf / 56 Zielschießen / 57 Rohstoff
+W.henry = (root) => { root.append(panel('Henrys Buchführung', h('p', { class: 'small' }, 'A und B nutzen Rechner A und B (abgedeckt). Henry notiert Punkte und die Summe der Waffenkennzahlen.')), scorePad(['Henry-Punkte', 'Summe A+B'])); };
+W.economy = (root) => {
+  const out = h('div', { class: 'big' }); const wurf = () => { const d = rint(1, 6), w = Math.random() < .5; return [d + (w ? 6 : 0), `${FACES[d]} ${w ? 'Wappen (+6)' : 'Zahl'}`]; };
+  const beans = numIn('Bohnen auf dem Tisch', '10em');
+  root.append(panel('Angebot', row(btn('Verkäufer wirft', () => { const [v, t] = wurf(); out.textContent = `${t} → ${v} Klammern im Angebot`; }))),
+    panel('Wechselkurs', row(beans, btn('Beide werfen', () => { const a = wurf(), b = wurf(), p = a[0] * b[0], t = parseInt(beans.value) || 0; const sell = Math.ceil(t * p / 100);
+      out.textContent = `${a[1]} · ${b[1]} → Kurs ${p} %` + (t ? ` → Verkäufer erhält ${sell} Bohnen` + (sell > t ? `, Käufer zahlt ${sell - t} nach` : `, Käufer nimmt ${t - sell} zurück`) : ''); }))), out, scorePad(['A', 'B', 'C']));
+};
+W.wettlauf = (root) => {
+  const inp = numIn('dreistellige Zahl', '8em'), o = h('div', { class: 'big mono' });
+  root.append(panel('Quadrieren und ablesen', row(inp, btn('× =', () => { const v = parseInt(inp.value); if (!v) return; const q = String(v * v); const m = +q[q.length - 2] || 10; o.textContent = `${v}² = ${q} → Mannschaftszahl ${m}, Zufallszahl ${q[q.length - 3]}`; }))), o, scorePad(['Mannschaft A', 'Mannschaft B']));
+};
+W.zielschiessen = (root) => { root.append(h('p', { class: 'small' }, 'Bis zu vier Rechner rechts öffnen (A–D), alle mit „Abdecken“. Reihum abwechselnd eine zweistellige Zahl bzw. eine Rechenart tippen; nach drei Umläufen = drücken und gemeinsam aufdecken.'), scorePad(['A', 'B', 'C', 'D'])); };
+W.rohstoff = (root) => {
+  const S = ['Eisen', 'Kupfer', 'Mangan', 'Nickel']; const inv = [0, 1, 2, 3].map(i => S.map((_, j) => i === j ? 100 : 0)); let lost = 0, year = 1; const tb = h('div'), log = logBox();
+  const from = h('select', { class: 'opsel' }, ...'ABCD'.split('').map((x, i) => h('option', { value: i }, x))), to = h('select', { class: 'opsel' }, ...'ABCD'.split('').map((x, i) => h('option', { value: i }, x))), sort = h('select', { class: 'opsel' }, ...S.map((s, i) => h('option', { value: i }, s))), amt = numIn('Menge', '5em');
+  function draw() { tb.innerHTML = ''; tb.append(h('table', { class: 'score' }, h('tr', null, h('th', null, ''), ...S.map(s => h('th', null, s))), ...inv.map((r, i) => h('tr', null, h('th', null, 'ABCD'[i]), ...r.map(v => h('td', { class: v === 25 ? 'ok' : '' }, v))))), h('div', null, `Jahr ${year} · verloren (Umwelt): ${lost}`)); }
+  const ras = h('div', { class: 'big mono' });
+  root.append(panel('RAS erzeugen', row(btn('Division zweier vierstelliger Zahlen', () => { const a = String(rint(1111, 9999)).replace(/0/g, '3'), b = String(rint(1111, 9999)).replace(/0/g, '4'); const c = new AlgCalc(8); for (const ch of a) c.key(ch); c.key('/'); for (const ch of b) c.key(ch); c.key('='); const d = (c.display().split('.')[1] || '0000') + '0000'; ras.textContent = `${a} ÷ ${b} = ${c.display().replace('.', ',')} → RAS = ${d[2]} + ${d[3]} = ${+d[2] + +d[3]}`; })), ras),
+    panel('Abgabe buchen', row(from, ' gibt ', amt, sort, ' an ', to, btn('Buchen', () => { const a = parseInt(amt.value) || 0, f = +from.value, t = +to.value, s = +sort.value; if (a > inv[f][s]) return; inv[f][s] -= a; inv[t][s] += a; log.add(`${'ABCD'[f]} → ${'ABCD'[t]}: ${a} ${S[s]}`); draw(); }), btn('Jahr beenden', () => { year++; if (year > 8) { inv.forEach(r => { const j = r.indexOf(Math.max(...r)); const x = Math.min(5, r[j]); r[j] -= x; lost += x; }); log.add('Umweltabgabe: je 5 Einheiten.', 'warn'); } if (lost > 50) log.add('Mehr als 50 Einheiten verloren – alle haben verloren.', 'warn'); if (inv.every(r => r.every(v => v === 25))) log.add('Gerecht verteilt – gemeinsam gewonnen!', 'ok'); draw(); }))), tb, log);
+  draw();
+};
+
+// 54 Fuffzich
+function bestUnder(cards, lim) { let best = -Infinity, how = ''; const rec = (items) => { if (items.length === 1) { const [v, s] = items[0]; if (v <= lim + 1e-9 && v > best + 1e-9) { best = v; how = s; } return; }
+    for (let i = 0; i < items.length; i++) for (let j = 0; j < items.length; j++) { if (i === j) continue; const [a, sa] = items[i], [b, sb] = items[j]; const rest = items.filter((_, k) => k !== i && k !== j);
+      const cand = [[a + b, `(${sa}+${sb})`], [a - b, `(${sa}−${sb})`], [a * b, `${sa}×${sb}`]]; if (b) cand.push([a / b, `${sa}÷${sb}`]); for (const c of cand) rec([...rest, c]); } };
+  rec(cards.map(v => [v, String(v)])); return [best, how]; }
+W.fuffzich = (root) => {
+  let dk, P; const tb = h('div'), log = logBox(), expr = h('input', { type: 'text', class: 'num', style: 'width:14em', placeholder: 'z.B. 7*7+1' });
+  function neu() { dk = deck(10); P = ['Du', 'Computer 1', 'Computer 2'].map(n => ({ n, c: dk.splice(0, 3).map(x => x.v) })); for (const p of P.slice(1)) while (bestUnder(p.c, 50)[0] < 47 && p.c.length < 5) p.c.push(dk.shift().v); log.clear(); draw(); }
+  function draw(end) { tb.innerHTML = ''; tb.append(h('table', { class: 'score' }, ...P.map((p, i) => h('tr', null, h('td', null, p.n), h('td', null, h('div', { class: 'piles' }, ...p.c.map((v, j) => card({ v, s: '♠' }, i > 0 && j > 0 && !end)))))))); }
+  function show() { const s = expr.value.replace(/\s/g, '').replace(/×|x/g, '*').replace(/÷|:/g, '/').replace(/−/g, '-'); const nums = (s.match(/\d+/g) || []).map(Number).sort((a, b) => a - b);
+    if (JSON.stringify(nums) !== JSON.stringify(P[0].c.slice().sort((a, b) => a - b))) { log.add('Jede deiner Karten genau einmal verwenden.', 'warn'); return; }
+    let mine; try { if (!/^[\d+\-*/().]+$/.test(s)) throw 0; mine = Function('return ' + s)(); } catch (e) { log.add('Ausdruck nicht lesbar.', 'warn'); return; }
+    const res = P.map((p, i) => i === 0 ? [mine, s] : bestUnder(p.c, 50)); draw(true); res.forEach((r, i) => log.add(`${P[i].n}: ${r[1]} = ${de(r[0])}${r[0] > 50 ? ' – überkauft!' : ''}`));
+    const valid = res.map((r, i) => [r[0], i]).filter(x => x[0] <= 50); if (valid.length) { const m = Math.max(...valid.map(x => x[0])); log.add('Gewinner: ' + valid.filter(x => x[0] === m).map(x => P[x[1]].n).join(' und '), 'ok'); }
+    const b = bestUnder(P[0].c, 50); if (b[0] > mine || mine > 50) log.add(`Möglich gewesen: ${b[1]} = ${de(b[0])}`); }
+  root.append(panel('Fuffzich', row(btn('Neu geben', neu), btn('Karte kaufen', () => { P[0].c.push(dk.shift().v); draw(); })), h('p', { class: 'small' }, 'Normale Rechenregeln und Klammern sind erlaubt.')), tb, panel('Deine Rechnung', row(expr, btn('Aufdecken', show))), log);
+  neu();
+};
+
+// 60 Mini-Roulette
+W.roulette = (root) => {
+  let chips = 50; const BETS = [['Über', ['U']], ['Unter', ['N']], ['Gleich', ['G']], ['Ungleich', ['X']], ['Über + Gleich', ['U', 'G']], ['Über + Ungleich', ['U', 'X']], ['Unter + Gleich', ['N', 'G']], ['Unter + Ungleich', ['N', 'X']]];
+  const bet = h('select', { class: 'opsel' }, ...BETS.map((b, i) => h('option', { value: i }, b[0]))), stake = numIn('Einsatz', '4em'), mine = numIn('deine Zahl', '4em'), out = h('div'), st = h('div', { class: 'big' }), log = logBox(); stake.value = 5;
+  const show = () => st.textContent = `Deine Marken: ${chips}`;
+  function spin() { const s = Math.min(chips, parseInt(stake.value) || 1); const nums = [String(parseInt(mine.value) || rint(10, 99)).padStart(2, '0').slice(-2), ...Array.from({ length: 4 }, () => String(rint(10, 99)))];
+    let dg = ''; for (let p = 0; dg.length < 7; p = 1 - p) for (const x of nums) if (dg.length < 7) dg += x[p];
+    const c = new AlgCalc(8); for (const ch of '1.' + dg) c.key(ch); c.key('*'); c.key('='); c.key('='); const d1 = c.display().replace(/\D/g, ''); const z1 = +(d1.slice(-3, -1)) || 100;
+    c.key('*'); c.key('='); c.key('='); const d2 = c.display().replace(/\D/g, '').padStart(3, '0'); const z2 = +(d2.slice(-3, -1)) || 100; const zz = z1 + z2;
+    out.innerHTML = ''; out.append(h('div', { class: 'mono' }, `Zahlen der Spieler: ${nums.join(', ')} → Bank tippt 1,${dg}`), h('div', { class: 'big' }, `ZZ = ${z1} + ${z2} = ${zz}`));
+    if (zz === 101) { log.add('Zéro (101)! Einsätze bleiben stehen.', 'warn'); return; }
+    const res = { U: zz > 101, N: zz < 101, G: z1 % 2 === z2 % 2, X: z1 % 2 !== z2 % 2 }; const b = BETS[bet.value][1]; const hits = b.filter(x => res[x]).length;
+    let win = b.length === 1 ? (hits ? s : -s) : hits === 2 ? s : hits === 1 ? 0 : -s; chips += win; show(); log.add(`${BETS[bet.value][0]}: ${win > 0 ? 'gewonnen +' + win : win === 0 ? 'Einsatz zurück' : 'verloren ' + win}`, win > 0 ? 'ok' : win < 0 ? 'warn' : ''); }
+  root.append(panel('Faites vos jeux', st, row(mine, bet, stake, btn('Rien ne va plus – drehen', spin))), out, log);
+  show();
+};
+
+// ===== Taschenrechner-Dock =====
+const MODELS = {
+  buch: { name: 'Buch-Rechner (8 Stellen)', make: () => new AlgCalc(8), cells: 9, kind: 'led',
+    keys: [['7', '8', '9', '+'], ['4', '5', '6', '-'], ['1', '2', '3', '/'], ['0', '.', 'C', '*'], [null, null, 'CE', '=']] },
+  buchM: { name: 'mit Speicher, √ und % (8 Stellen)', make: () => new AlgCalc(8), cells: 9, kind: 'led',
+    keys: [['MC', 'MR', 'M-', 'M+'], ['sqrt', '%', 'chs', 'CE'], ['7', '8', '9', '+'], ['4', '5', '6', '-'], ['1', '2', '3', '/'], ['0', '.', 'C', '*'], [null, null, null, '=']] },
+  zehn: { name: 'Zehnstelliger Rechner', make: () => new AlgCalc(10), cells: 11, kind: 'led',
+    keys: [['MC', 'MR', 'M-', 'M+'], ['sqrt', 'sq', 'inv', '%'], ['7', '8', '9', '+'], ['4', '5', '6', '-'], ['1', '2', '3', '/'], ['0', '.', 'chs', '*'], ['C', 'CE', null, '=']] },
+  hp65: { name: 'HP-65 (UPN, 1974)', make: () => new RpnCalc(10), cells: 11, kind: 'hp65',
+    keys: [['inv', 'sqrt', 'sq', '%', 'lastx'], ['STO', 'RCL', 'rdn', 'swap', 'int'], ['ENTER', 'chs', 'CLx', 'C'], ['-', '7', '8', '9'], ['+', '4', '5', '6'], ['*', '1', '2', '3'], ['/', '0', '.', null]] },
+  hp41: { name: 'HP-41C (UPN, 1979)', make: () => new RpnCalc(10), cells: 12, kind: 'hp41',
+    keys: [['inv', 'sqrt', 'sq', '%', 'lastx'], ['swap', 'rdn', 'STO', 'RCL', 'int'], ['ENTER', 'chs', 'CLx', 'C'], ['-', '7', '8', '9'], ['+', '4', '5', '6'], ['*', '1', '2', '3'], ['/', '0', '.', null]] }
+};
+const KLABEL = { '*': '×', '/': '÷', '-': '−', '+': '+', '.': '•', sqrt: '√x', sq: 'x²', inv: '1/x', chs: '±', ENTER: 'ENTER↑', CLx: 'CLx', C: 'C', CE: 'CE', swap: 'x⇄y', rdn: 'R↓', lastx: 'LASTx', int: 'INT', STO: 'STO', RCL: 'RCL', '%': '%', 'M+': 'M+', 'M-': 'M−', MR: 'MR', MC: 'MC' };
+const CALC = (() => {
+  const units = []; let active = 0; let dock, tabs, body;
+  function mk(i) {
+    const u = { model: i === 0 ? 'buch' : 'buch', cover: false, rot: false, blind: false, tape: [] }; u.calc = MODELS[u.model].make();
+    u.setBlind = (b) => { u.blind = b; render(); }; return u; }
+  function press(u, k) { u.calc.key(k); u.tape.unshift(KLABEL[k] || k); if (u.tape.length > 40) u.tape.pop(); renderDisplay(); renderTape(); }
+  let disp, tape;
+  function renderDisplay() { const u = units[active], m = MODELS[u.model]; const t = u.calc.display(); disp.className = 'cdisp ' + m.kind + (u.rot ? ' rot' : '') + (u.cover ? ' covered' : '');
+    if (m.kind === 'hp41') { disp.innerHTML = ''; disp.append(h('span', { class: 'lcd' }, t.replace(/\.$/, '').replace('.', ','))); }
+    else if (/^[-\d. ]+$|^E$|^Error$/.test(t)) disp.innerHTML = sevenSeg(t === 'Error' ? 'Error' : t, m.cells, '#ff3b1f'); else { disp.innerHTML = ''; disp.append(h('span', { class: 'ledtxt' }, t)); }
+    const mem = u.calc.mem ? h('span', { class: 'mflag' }, 'M') : null; if (mem) disp.append(mem);
+    if (u.calc.s) { stackEl.textContent = `T ${fmtN(u.calc.s[3], 10)}   Z ${fmtN(u.calc.s[2], 10)}   Y ${fmtN(u.calc.s[1], 10)}`; stackEl.style.display = ''; } else stackEl.style.display = 'none'; }
+  function renderTape() { tape.textContent = units[active].tape.slice().reverse().join(' '); }
+  let stackEl;
+  function render() {
+    tabs.innerHTML = ''; units.forEach((u, i) => tabs.append(h('button', { class: 'tab' + (i === active ? ' on' : ''), onclick: () => { active = i; render(); } }, 'Rechner ' + 'ABCD'[i])));
+    if (units.length < 4) tabs.append(h('button', { class: 'tab', title: 'weiteren Rechner', onclick: () => { units.push(mk(units.length)); active = units.length - 1; render(); } }, '+'));
+    const u = units[active], m = MODELS[u.model]; body.innerHTML = '';
+    const sel = h('select', { class: 'opsel', onchange: (e) => { u.model = e.target.value; u.calc = MODELS[u.model].make(); u.tape = []; render(); } }, ...Object.entries(MODELS).map(([k, v]) => h('option', { value: k, selected: k === u.model ? 'selected' : null }, v.name)));
+    disp = h('div'); stackEl = h('div', { class: 'stack mono' }); tape = h('div', { class: 'tape mono' });
+    const pad = h('div', { class: 'cpad ' + m.kind + (u.blind ? ' blind' : ''), style: 'grid-template-columns:repeat(20,1fr)' });
+    m.keys.forEach(r => { const units = r.length + (r.includes('ENTER') ? 1 : 0); const w = 20 / units;
+      r.forEach(k => { const span = k === 'ENTER' ? 2 * w : w; if (k === null) { pad.append(h('span', { style: `grid-column:span ${span}` })); return; }
+        pad.append(h('button', { class: 'ckey' + (/^\d$|^\.$/.test(k) ? ' dig' : /^[+\-*/=]$/.test(k) ? ' op' : ' fn') + (k === 'C' || k === 'CE' || k === 'CLx' ? ' clr' : ''), style: `grid-column:span ${span}`, onclick: () => press(u, k) }, u.blind ? '' : (KLABEL[k] || k))); }); });
+    // ENTER belegt zwei Spalten -> letzte Zelle der Reihe weglassen
+    body.append(h('div', { class: 'cbody ' + m.kind },
+      h('div', { class: 'brand' }, m.kind === 'hp65' ? 'HEWLETT·PACKARD 65' : m.kind === 'hp41' ? 'HEWLETT·PACKARD 41C' : 'ELECTRONIC CALCULATOR'), disp, stackEl, pad),
+      row(sel), h('div', { class: 'opts' },
+        h('label', null, h('input', { type: 'checkbox', checked: u.cover ? 'checked' : null, onchange: (e) => { u.cover = e.target.checked; renderDisplay(); } }), ' Abdecken'),
+        h('label', null, h('input', { type: 'checkbox', checked: u.rot ? 'checked' : null, onchange: (e) => { u.rot = e.target.checked; renderDisplay(); } }), ' Umdrehen'),
+        h('label', null, h('input', { type: 'checkbox', checked: u.blind ? 'checked' : null, onchange: (e) => { u.blind = e.target.checked; render(); } }), ' Tasten blind')),
+      h('div', { class: 'small' }, 'Tippstreifen:'), tape,
+      m.kind === 'led' ? h('p', { class: 'small' }, 'Kettenrechnung ohne Punkt-vor-Strich, Konstantenautomatik: „a × =“ quadriert, jedes weitere „=“ multipliziert noch einmal mit a. Ergebnisse werden abgeschnitten wie bei den Rechnern von 1975.')
+        : h('p', { class: 'small' }, 'UPN: erst Zahlen, dann Rechenart. Das Buch-Zufallsverfahren „× = =“ lautet hier: x ENTER↑ ENTER↑ ENTER↑ × × – jedes weitere × × multipliziert erneut mit x², weil T nachrückt.'));
+    renderDisplay(); renderTape();
+  }
+  function init(el) { dock = el; tabs = h('div', { class: 'tabs' }); body = h('div'); dock.append(tabs, body); units.push(mk(0)); render();
+    document.addEventListener('keydown', (e) => { const t = e.target; if (t && (t.tagName === 'INPUT' || t.tagName === 'SELECT' || t.tagName === 'TEXTAREA')) return; const u = units[active]; if (u.blind) return; const m = MODELS[u.model];
+      let k = null; if (/^\d$/.test(e.key)) k = e.key; else if (e.key === '.' || e.key === ',') k = '.'; else if ('+-*/'.includes(e.key) && e.key.length === 1) k = e.key; else if (e.key === 'Enter' || e.key === '=') k = m.kind === 'led' ? '=' : 'ENTER'; else if (e.key === 'Escape') k = 'C'; else if (e.key === 'Backspace') k = m.kind === 'led' ? 'CE' : 'CLx'; else if (e.key === '%') k = '%';
+      if (k) { e.preventDefault(); press(u, k); } }); }
+  return { init, get: (i) => units[i] || units[0] };
+})();
+
+// ===== Navigation =====
+function startView(main) {
+  main.append(h('section', { class: 'intro' },
+    h('h2', null, 'Spiel und Spaß mit dem Taschenrechner'),
+    h('p', null, 'Ein Ratgeber-Taschenbuch aus Ullsteins Reihe (Nr. 4151, 1980): 60 Spiele für den einfachen Taschenrechner – von Patiencen über elektronisches Würfeln bis zu Poker und Wirtschaftssimulationen. Vorlage war „The Pocket Calculator Game Book“ von Edwin Schlossberg und John Brockman (1975); die deutsche Ausgabe hat Dr. Hermann Athen bearbeitet und um eigene Spiele ergänzt, übersetzt von Tom Werneck.'),
+    h('p', null, 'Hier gibt es zu jedem Spiel eine Kurzfassung der Regeln in eigenen Worten und einen Spieltisch: Würfel, Karten, Spielbretter und – wo es sich anbietet – einen Computergegner. Rechts steht der passende Taschenrechner.'),
+    h('h3', null, 'Die Rechner'),
+    h('ul', null,
+      h('li', null, h('b', null, 'Buch-Rechner: '), 'genau das Gerät aus der Begriffserklärung des Buches – acht Stellen, Tasten 0–9, + − × ÷, C, CE, =. Er rechnet „wie gesprochen“ ohne Punkt-vor-Strich, schneidet Nachkommastellen ab und hat die Konstantenautomatik, auf der alle elektronischen Zufallsverfahren des Buches beruhen. Die Musterbeispiele des Buches (z. B. 1,0365247 × = = → 1,1136249) kommen hier Ziffer für Ziffer genau heraus.'),
+      h('li', null, h('b', null, 'Mit Speicher, √ und %: '), 'der „anspruchsvollere“ Rechner mit saldierendem Speicher (M+, M−, MR), den einige Spiele empfehlen.'),
+      h('li', null, h('b', null, 'Zehnstelliger Rechner: '), 'für Spiele, deren Musterbeispiel mit zehn Stellen rechnet (Zahlenalphabet, Flinke Zahlen).'),
+      h('li', null, h('b', null, 'HP-65 und HP-41C: '), 'die beiden Hewlett-Packard-Klassiker in vereinfachter Form mit UPN-Stapel, falls man die Spiele einmal „wie ein Profi von 1975“ spielen will. Die vollständigen Emulatoren gibt es hier: ',
+        h('a', { href: 'https://sky4walk.github.io/SmallCircuits/SmallHtml/hp65.html', target: '_blank' }, 'HP-65-Simulator'), ', ', h('a', { href: 'https://sky4walk.github.io/SmallCircuits/SmallHtml/hp41cx.html', target: '_blank' }, 'HP-41CX-Emulator'), '.')),
+    h('p', null, 'Hintergrund zu den beiden HP-Rechnern: ', h('a', { href: 'https://itzwieseltal.wordpress.com/2026/07/06/hp-65/', target: '_blank' }, 'HP-65'), ' und ', h('a', { href: 'https://itzwieseltal.wordpress.com/2026/10/26/hp-41c-cv-und-cx-der-taschenrechner-der-ein-computer-sein-wollte/', target: '_blank' }, 'HP-41C, CV und CX – der Taschenrechner, der ein Computer sein wollte'), ' auf itzwieseltal.'),
+    h('h3', null, 'Das elektronische Würfeln'),
+    h('p', null, 'Das Buch erzeugt Zufall ohne Würfel: Man tippt „1,“ und lässt sich die übrigen Ziffern von den Mitspielern zurufen. Dann × = = – die Zahl wird hoch drei genommen. Die hinteren Ziffern sind kaum vorherzusagen und dienen als Münze, Würfel oder Roulettekugel. Jedes weitere = = liefert die nächste Zufallszahl. Probier es im Rechner rechts: 1,0365247 × = = ergibt 1,1136249.'),
+    h('p', { class: 'small' }, 'Das Buch selbst steht nicht im Netz; die Regeln hier sind eigene Kurzfassungen. Die Strecken- und Zeitkarte der USA (S. 36/37), die vier Reisespiele benötigen, ist nicht nachgebaut.')));
+}
+function gameView(main, g) {
+  main.append(h('section', { class: 'game' },
+    h('div', { class: 'gnum' }, 'Spiel ' + g.n + ' · ' + GROUPS[g.g]), h('h2', null, g.t), h('div', { class: 'who' }, g.who),
+    h('p', { class: 'goal' }, h('b', null, 'Ziel: '), g.goal),
+    h('details', { open: 'open', class: 'rules' }, h('summary', null, 'Regeln (Kurzfassung)'), h('ul', null, ...g.rules.map(r => h('li', null, r))), g.tip ? h('p', { class: 'tip' }, '💡 ' + g.tip) : null),
+    h('h3', null, 'Spieltisch')));
+  const t = h('div', { class: 'tisch' }); main.append(t);
+  try { (W[g.w] || ((r) => r.append('—')))(t, g); } catch (e) { t.append(h('pre', null, String(e.stack || e))); }
+  const prev = GAMES.find(x => x.n === g.n - 1), next = GAMES.find(x => x.n === g.n + 1);
+  main.append(row(prev ? h('a', { class: 'btn', href: '#spiel' + prev.n }, '← ' + prev.t) : '', h('span', { style: 'flex:1' }), next ? h('a', { class: 'btn', href: '#spiel' + next.n }, next.t + ' →') : ''));
+}
+function route() {
+  const main = document.getElementById('main'); main.innerHTML = ''; const m = location.hash.match(/spiel(\d+)/); const g = m && GAMES.find(x => x.n === +m[1]);
+  document.querySelectorAll('#nav a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === (g ? '#spiel' + g.n : '#start')));
+  if (g) gameView(main, g); else startView(main); window.scrollTo(0, 0);
+}
+function buildNav() { const nav = document.getElementById('nav'); nav.append(h('a', { href: '#start' }, 'Einführung & Rechner'));
+  for (const gr in GROUPS) { nav.append(h('div', { class: 'ngroup' }, GROUPS[gr])); GAMES.filter(x => x.g === +gr).forEach(x => nav.append(h('a', { href: '#spiel' + x.n }, h('span', { class: 'nn' }, x.n), ' ' + x.t))); } }
+window.addEventListener('hashchange', route);
+window.addEventListener('DOMContentLoaded', () => { buildNav(); CALC.init(document.getElementById('dock')); route(); });
+
+</script>
+</body>
+</html>
