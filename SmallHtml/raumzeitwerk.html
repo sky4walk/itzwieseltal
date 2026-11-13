@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Raumzeitwerk – Relativitätstheorie zum Anschauen</title>
+<style>
+:root{--bg:#0e1116;--panel:#161b22;--line:#2a313c;--ink:#e6edf3;--dim:#8b949e;--acc:#f0b429;--blue:#58a6ff;--red:#ff7b72;--green:#7ee787;--violet:#d2a8ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--blue)}
+header{padding:18px 22px 6px}
+h1{margin:0;font-size:24px;letter-spacing:.5px}
+h1 span{color:var(--acc)}
+.sub{color:var(--dim);margin:2px 0 0}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:10px 22px;border-bottom:1px solid var(--line)}
+nav button{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font:inherit}
+nav button.on{background:var(--acc);color:#111;border-color:var(--acc);font-weight:600}
+main{padding:16px 22px;max-width:1280px}
+.tab{display:none}.tab.on{display:block}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:16px;align-items:start}
+@media(max-width:900px){.grid{grid-template-columns:1fr}}
+canvas{width:100%;height:auto;background:#0a0d12;border:1px solid var(--line);border-radius:8px;display:block}
+.side{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.side h3{margin:0 0 8px;font-size:15px;color:var(--acc)}
+label{display:block;margin:8px 0 2px;color:var(--dim);font-size:13px}
+label.ck{display:flex;gap:6px;align-items:center;color:var(--ink)}
+input[type=range]{width:100%}
+.val{float:right;color:var(--ink);font-variant-numeric:tabular-nums}
+.read{font-variant-numeric:tabular-nums;margin-top:10px;border-top:1px solid var(--line);padding-top:8px;font-size:14px}
+.read div{display:flex;justify-content:space-between;gap:8px}
+.read b{color:var(--ink);text-align:right}
+.btn{background:#21262d;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:6px 10px;cursor:pointer;font:inherit;margin:6px 4px 0 0}
+.btn.on{border-color:var(--acc);color:var(--acc)}
+.note{color:var(--dim);font-size:13.5px;margin-top:10px}
+.expl{margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.expl p{margin:6px 0}
+.expl b{color:var(--acc)}
+select,input[type=number]{background:#0a0d12;color:var(--ink);border:1px solid var(--line);border-radius:5px;padding:4px 6px;font:inherit;width:100%}
+footer{padding:18px 22px;color:var(--dim);border-top:1px solid var(--line);margin-top:20px}
+</style>
+</head>
+<body>
+<header>
+<h1>Raumzeit<span>werk</span></h1>
+<p class="sub">Spezielle und Allgemeine Relativitätstheorie zum Anschauen – sieben kleine Simulationen zu den Artikeln auf <a href="https://itzwieseltal.wordpress.com/">itzwieseltal.wordpress.com</a></p>
+</header>
+<nav>
+<button data-t="lichtuhr" class="on">1 · Lichtuhr</button>
+<button data-t="gleich">2 · Gleichzeitigkeit</button>
+<button data-t="zwilling">3 · Zwillinge</button>
+<button data-t="aequi">4 · Aufzug &amp; Rakete</button>
+<button data-t="uhren">5 · Uhren im Schwerefeld</button>
+<button data-t="bahnen">6 · Licht, Planeten, Schwarzes Loch</button>
+<button data-t="welle">7 · Gravitationswelle</button>
+</nav>
+<main>
+
+<!-- 1 Lichtuhr -->
+<section class="tab on" id="lichtuhr">
+<div class="grid">
+<canvas id="cv1" width="960" height="520"></canvas>
+<div class="side">
+<h3>Zwei Lichtuhren</h3>
+<label>Geschwindigkeit von Uhr B <span class="val" id="u_vV"></span></label>
+<input type="range" id="u_v" min="0" max="0.99" step="0.01" value="0.6">
+<label>Animationstempo <span class="val" id="u_sV"></span></label>
+<input type="range" id="u_s" min="0.2" max="3" step="0.1" value="1">
+<button class="btn" id="u_reset">Zähler zurücksetzen</button>
+<div class="read" id="u_read"></div>
+<h3 style="margin-top:14px">Myonen-Rechner</h3>
+<div class="note">Myonen entstehen ca. 15 km hoch in der Atmosphäre und leben im Mittel nur 2,2 µs. Mit der Geschwindigkeit vom Regler oben (echte Myonen: etwa 0,99 c bis 0,999 c):</div>
+<div class="read" id="u_myon"></div>
+</div>
+</div>
+<div class="expl">
+<p><b>Was passiert hier?</b> Eine Lichtuhr ist ein Lichtblitz zwischen zwei Spiegeln. Jedes Mal, wenn er unten ankommt, macht die Uhr „tick“. Uhr A ruht, Uhr B fliegt nach rechts.</p>
+<p>Von A aus gesehen muss das Licht in Uhr B schräg laufen (gelbe Zickzack-Spur), also einen längeren Weg zurücklegen. Weil Licht für alle gleich schnell ist, braucht es dafür länger – Uhr B tickt langsamer. Das Dreieck rechts oben ist genau das Pythagoras-Dreieck, aus dem die Formel t = t₀ / √(1 − v²/c²) folgt.</p>
+</div>
+</section>
+
+<!-- 2 Gleichzeitigkeit -->
+<section class="tab" id="gleich">
+<div class="grid">
+<canvas id="cv2" width="960" height="360"></canvas>
+<div class="side">
+<h3>Lampe in der Zugmitte</h3>
+<label>Geschwindigkeit des Zuges <span class="val" id="g_vV"></span></label>
+<input type="range" id="g_v" min="0" max="0.7" step="0.05" value="0.5">
+<button class="btn on" id="g_bahn">Sicht vom Bahnsteig</button>
+<button class="btn" id="g_zug">Sicht im Zug</button><br>
+<button class="btn" id="g_blitz">⚡ Lampe blitzen lassen</button>
+<div class="read" id="g_read"></div>
+</div>
+</div>
+<div class="expl">
+<p><b>Was passiert hier?</b> In der Mitte des Wagens blitzt eine Lampe. Das Licht läuft nach vorn und nach hinten zu den Türen, die sich öffnen, sobald das Licht ankommt.</p>
+<p>Im Zug ist alles symmetrisch: Beide Türen gehen <i>gleichzeitig</i> auf. Vom Bahnsteig aus läuft die hintere Tür dem Licht entgegen und die vordere davon – hinten geht die Tür <i>zuerst</i> auf. Beide haben recht: „Gleichzeitig“ hängt davon ab, wie man sich bewegt.</p>
+</div>
+</section>
+
+<!-- 3 Zwillinge -->
+<section class="tab" id="zwilling">
+<div class="grid">
+<canvas id="cv3" width="960" height="560"></canvas>
+<div class="side">
+<h3>Zwillingsparadoxon</h3>
+<label>Reisegeschwindigkeit von Ben <span class="val" id="z_vV"></span></label>
+<input type="range" id="z_v" min="0.1" max="0.95" step="0.05" value="0.8">
+<label>Entfernung des Ziels <span class="val" id="z_DV"></span></label>
+<input type="range" id="z_D" min="1" max="10" step="1" value="4">
+<label>Tempo <span class="val" id="z_sV"></span></label>
+<input type="range" id="z_s" min="0.2" max="4" step="0.1" value="1">
+<label class="ck"><input type="checkbox" id="z_sig" checked> Geburtstagsgrüße (ein Lichtsignal pro Jahr)</label>
+<label class="ck"><input type="checkbox" id="z_sim"> Bens „Jetzt“-Linien (Gleichzeitigkeit)</label>
+<button class="btn" id="z_play">▶ Start</button><button class="btn" id="z_reset">↺ Zurück</button>
+<div class="read" id="z_read"></div>
+</div>
+</div>
+<div class="expl">
+<p><b>Raumzeit-Diagramm:</b> Nach oben läuft die Zeit (Jahre auf der Erde), nach rechts der Raum (Lichtjahre). Licht läuft unter 45°. Anna bleibt zu Hause (blaue senkrechte Linie), Ben fliegt zum Stern und zurück (rote Linie mit Knick).</p>
+<p><b>Geburtstagsgrüße:</b> Beide schicken sich zu jedem eigenen Geburtstag ein Lichtsignal. Ben bekommt Annas Grüße auf dem Hinweg selten, auf dem Rückweg dicht hintereinander – und der Wechsel kommt für ihn genau bei der Umkehr. Anna merkt Bens Umkehr erst viel später, wenn dessen Licht sie erreicht. Diese Asymmetrie ist der Kern der Lösung.</p>
+<p><b>„Jetzt“-Linien:</b> Sie zeigen, welcher Moment auf der Erde für Ben gerade „gleichzeitig“ ist. Bei der Umkehr kippt diese Linie und springt auf der Erdachse nach oben (gelb). Einstein hat das 1918 so erklärt: Während Ben bremst und umkehrt, spürt er ein Schwerefeld. Anna steht darin „weit oben“ – und weit oben laufen Uhren schneller.</p>
+</div>
+</section>
+
+<!-- 4 Aequivalenz -->
+<section class="tab" id="aequi">
+<div class="grid">
+<canvas id="cv4" width="960" height="480"></canvas>
+<div class="side">
+<h3>Einsteins Kabine</h3>
+<button class="btn on" id="a_erde">Auf der Erde</button>
+<button class="btn" id="a_rakete">Rakete im All</button>
+<button class="btn" id="a_fall">Freier Fall</button>
+<button class="btn" id="a_all">Schwebend im All</button><br>
+<button class="btn" id="a_restart">↺ Neu starten</button>
+<div class="note" id="a_text"></div>
+</div>
+</div>
+<div class="expl">
+<p><b>Das Äquivalenzprinzip:</b> Vergleiche die linke Innensicht für „Erde“ und „Rakete“ – sie ist identisch. Genauso für „Freier Fall“ und „Schwebend im All“. Kein Experiment in einer kleinen Kabine kann Schwerkraft und Beschleunigung unterscheiden.</p>
+<p>Das Licht ist in der Animation absichtlich extrem langsam, damit man die Krümmung seines Weges sieht. Rechts siehst du, was ein Beobachter von außen sieht: In der Rakete fliegen Ball und Licht völlig gerade – es ist der Boden, der ihnen entgegenkommt.</p>
+</div>
+</section>
+
+<!-- 5 Uhren -->
+<section class="tab" id="uhren">
+<div class="grid">
+<canvas id="cv5" width="960" height="480"></canvas>
+<div class="side">
+<h3>Uhren im Turm</h3>
+<label>Übertreibung des Gangunterschieds <span class="val" id="c_kV"></span></label>
+<input type="range" id="c_k" min="0" max="0.25" step="0.01" value="0.08">
+<button class="btn" id="c_reset">↺ Zurücksetzen</button>
+<h3 style="margin-top:14px">Echte Zahlen</h3>
+<label>Beispiel</label>
+<select id="c_pre">
+<option value="kopf">Kopf gegen Füße (1,7 m, 80 Jahre)</option>
+<option value="zug">Zugspitze gegen Meer (1 Jahr)</option>
+<option value="flug">Flugzeug in 10 km (1 Tag)</option>
+<option value="iss">Raumstation ISS (1 Tag)</option>
+<option value="gps" selected>GPS-Satellit (1 Tag)</option>
+</select>
+<label>Höhe über dem Boden (m)</label><input type="number" id="c_h" value="20200000">
+<label>Geschwindigkeit (m/s)</label><input type="number" id="c_v" value="3874">
+<label class="ck"><input type="checkbox" id="c_orbit" checked> Umlaufgeschwindigkeit automatisch</label>
+<label>Dauer (Tage)</label><input type="number" id="c_days" value="1">
+<div class="read" id="c_out"></div>
+<div class="note">Vergleich mit einer Uhr am Boden; die Erddrehung ist vernachlässigt.</div>
+</div>
+</div>
+<div class="expl">
+<p><b>Links:</b> Vier Uhren in einem Turm. Je höher, desto schneller läuft die Uhr (hier maßlos übertrieben – echt ist es ein Milliardstel von einem Milliardstel pro Meter). Die unterste Uhr schickt jede Sekunde einen Lichtpuls nach oben. Oben kommen die Pulse in größeren Abständen an – gemessen mit der eigenen, schnelleren Uhr. Das ist die gravitative Rotverschiebung.</p>
+<p><b>Rechts:</b> Eine Achse mit zwei Rädern rollt „in die Zukunft“. Oben drehen die Räder schneller, weil dort die Zeit schneller läuft. Dadurch schwenkt die Achse ganz von selbst zur langsamen Seite – nach unten. Genau so kippt die Weltlinie eines Apfels von der Zeit- in die Raumrichtung: Er fällt. Stell die Übertreibung auf 0 – dann rollt die Achse geradeaus, und nichts fällt.</p>
+</div>
+</section>
+
+<!-- 6 Bahnen -->
+<section class="tab" id="bahnen">
+<div class="grid">
+<canvas id="cv6" width="960" height="520"></canvas>
+<div class="side">
+<h3>Geodäten</h3>
+<button class="btn on" id="b_licht">Lichtablenkung</button>
+<button class="btn" id="b_planet">Periheldrehung</button>
+<button class="btn" id="b_kegel">Lichtkegel am Horizont</button>
+<div id="b_lpar">
+<label>Masse (Schwarzschild-Radius) <span class="val" id="b_rsV"></span></label>
+<input type="range" id="b_rs" min="6" max="60" step="1" value="26">
+<label class="ck"><input type="checkbox" id="b_newton" checked> Zum Vergleich: Newton</label>
+</div>
+<div id="b_ppar" style="display:none">
+<label>Stärke des Relativitätseffekts <span class="val" id="b_alphaV"></span></label>
+<input type="range" id="b_alpha" min="0" max="0.3" step="0.01" value="0.08">
+</div>
+<button class="btn" id="b_restart">↺ Neu starten</button>
+<div class="read" id="b_read"></div>
+<div class="note" id="b_text"></div>
+</div>
+</div>
+</section>
+
+<!-- 7 Welle -->
+<section class="tab" id="welle">
+<div class="grid">
+<canvas id="cv7" width="960" height="440"></canvas>
+<div class="side">
+<h3>Gravitationswelle</h3>
+<label>Stärke <span class="val" id="w_AV"></span></label>
+<input type="range" id="w_A" min="0" max="0.5" step="0.01" value="0.25">
+<label>Frequenz <span class="val" id="w_fV"></span></label>
+<input type="range" id="w_f" min="0.2" max="3" step="0.1" value="0.8">
+<button class="btn on" id="w_plus">Polarisation +</button><button class="btn" id="w_cross">Polarisation ×</button><br>
+<button class="btn" id="w_chirp">🔊 Verschmelzung („Chirp“)</button>
+<div class="note">Echte Wellen ändern Abstände um etwa 10⁻²¹ – bei LIGO weniger als ein Zweihundertstel eines Protondurchmessers auf 4 km Armlänge.</div>
+</div>
+</div>
+<div class="expl">
+<p><b>Was passiert hier?</b> Die Welle läuft senkrecht aus dem Bildschirm heraus auf dich zu. Ein Ring frei schwebender Teilchen wird abwechselnd in die eine Richtung gestreckt und in die andere gestaucht. Nichts schiebt die Teilchen an – die Abstände selbst ändern sich.</p>
+<p>Ein LIGO-Detektor misst genau das: Ein Laserstrahl läuft in zwei senkrechten Armen hin und her. Wird ein Arm länger und der andere kürzer, verschiebt sich das Interferenzmuster. Der „Chirp“ zeigt das Signal zweier verschmelzender Schwarzer Löcher: immer schneller, immer stärker – dann Stille.</p>
+</div>
+</section>
+</main>
+
+<footer>Raumzeitwerk · Begleitseite zur Artikelreihe „Relativitätstheorie verstehen“ auf <a href="https://itzwieseltal.wordpress.com/">itzwieseltal.wordpress.com</a> · Und danach ein Bier aus der Vereinsbrauerei: <a href="https://zwieselbrau.wordpress.com/">zwieselbrau.wordpress.com</a><br>
+Alle Effekte in den Animationen sind stark übertrieben; die Rechner arbeiten mit echten Zahlen.</footer>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const fx=(x,d=2)=>Number(x).toLocaleString('de-DE',{minimumFractionDigits:d,maximumFractionDigits:d});
+const gam=b=>1/Math.sqrt(1-b*b);
+function rng(id,fmt){const el=$(id),out=$(id+'V');const up=()=>{if(out)out.textContent=fmt(+el.value);};el.addEventListener('input',up);up();return()=>+el.value;}
+function rows(el,arr){el.innerHTML=arr.map(r=>'<div><span>'+r[0]+'</span><b>'+r[1]+'</b></div>').join('');}
+function toggle(ids,cur){ids.forEach(i=>$(i).classList.toggle('on',i===cur));}
+function dot(g,x,y,r,c){g.fillStyle=c;g.beginPath();g.arc(x,y,r,0,Math.PI*2);g.fill();}
+function line(g,x1,y1,x2,y2,c,w,dash){g.strokeStyle=c;g.lineWidth=w||1;g.setLineDash(dash||[]);g.beginPath();g.moveTo(x1,y1);g.lineTo(x2,y2);g.stroke();g.setLineDash([]);}
+function txt(g,s,x,y,c,f,al){g.fillStyle=c||'#8b949e';g.font=f||'14px system-ui,sans-serif';g.textAlign=al||'left';g.fillText(s,x,y);}
+function poly(g,pts,c,w,dash){if(pts.length<2)return;g.strokeStyle=c;g.lineWidth=w||1;g.setLineDash(dash||[]);g.beginPath();g.moveTo(pts[0][0],pts[0][1]);for(let i=1;i<pts.length;i++)g.lineTo(pts[i][0],pts[i][1]);g.stroke();g.setLineDash([]);}
+const B15='600 15px system-ui,sans-serif',S12='12px system-ui,sans-serif',S13='13px system-ui,sans-serif';
+const mods={};let active='lichtuhr',frame=0;
+document.querySelectorAll('nav button').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('.tab').forEach(s=>s.classList.toggle('on',s.id===b.dataset.t));
+  active=b.dataset.t;}));
+
+/* ---------- 1 Lichtuhr ---------- */
+(()=>{const cv=$('cv1'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+const gv=rng('u_v',v=>fx(v)+' c'),gs=rng('u_s',v=>fx(v,1)+'×');
+const d=150,cpx=200;let phA=0,phB=0,xB=90,trail=[];
+$('u_reset').onclick=()=>{phA=0;phB=0;xB=90;trail=[];};
+$('u_v').addEventListener('input',()=>{trail=[];});
+const mir=(x,y)=>{g.fillStyle='#9aa4b2';g.fillRect(x-32,y-4,64,8);};
+const tri=(ph,yb,yt)=>{const p=ph-Math.floor(ph);return p<.5?yb-(yb-yt)*p*2:yt+(yb-yt)*(p-.5)*2;};
+const pct=p=>p<=0?'0 %':p>=0.001?fx(p*100,1)+' %':'≈ '+p.toExponential(1).replace('.',',').replace('e',' · 10^')+' %';
+mods.lichtuhr={step(dt){const b=gv(),s=gs(),G=gam(b),P0=2*d/cpx;
+ phA+=dt*s/P0;phB+=dt*s/(G*P0);xB+=b*cpx*dt*s;
+ if(xB>W-60){xB=90;trail=[];}
+ g.clearRect(0,0,W,H);
+ line(g,0,270,W,270,'#2a313c');
+ txt(g,'Uhr A – ruht',20,28,'#e6edf3',B15);
+ txt(g,'Uhr B – fliegt mit '+fx(b)+' c nach rechts',20,298,'#e6edf3',B15);
+ const xA=110,tA=60,bA=tA+d;mir(xA,tA);mir(xA,bA);
+ line(g,xA,tA,xA,bA,'rgba(240,180,41,.3)',2);
+ dot(g,xA,tri(phA,bA,tA),7,'#f0b429');
+ txt(g,'Ticks: '+Math.floor(phA),xA+45,bA-4,'#7ee787',B15);
+ const tB=330,bB=tB+d,yB=tri(phB,bB,tB);
+ trail.push([xB,yB]);if(trail.length>3000)trail.shift();
+ poly(g,trail,'rgba(240,180,41,.5)',2);
+ mir(xB,tB);mir(xB,bB);dot(g,xB,yB,7,'#f0b429');
+ txt(g,'Ticks: '+Math.floor(phB),xB+45,bB-4,'#ff7b72',B15);
+ // Pythagoras-Dreieck
+ const hx=b*G*d,k=Math.min(1,380/Math.max(hx,1)),x0=470,y0=235,X2=x0+hx*k,Y2=y0-d*k;
+ txt(g,'Ein halber Tick von Uhr B, von A aus gesehen:',x0,30,'#8b949e',S13);
+ line(g,x0,y0,X2,y0,'#58a6ff',2,[5,4]);line(g,X2,y0,X2,Y2,'#58a6ff',2,[5,4]);line(g,x0,y0,X2,Y2,'#f0b429',3);
+ txt(g,'d',X2+8,(y0+Y2)/2,'#58a6ff',B15);
+ if(hx>20)txt(g,'v·t/2',(x0+X2)/2,y0+18,'#58a6ff',B15,'center');
+ txt(g,'c·t/2',(x0+X2)/2-14,(y0+Y2)/2-8,'#f0b429',B15,'right');
+ if(++frame%6)return;
+ rows($('u_read'),[['Lorentzfaktor γ',fx(G,3)],['Uhr B läuft langsamer um','Faktor '+fx(G,3)],['B zeigt von A’s Zeit',fx(100/G,1)+' %'],['Ticks A : B',Math.floor(phA)+' : '+Math.floor(phB)]]);
+ const tau=2.2e-6,v=b*299792458,d0=v*tau,dG=G*d0;
+ rows($('u_myon'),[['Flugstrecke ohne Zeitdehnung',fx(d0,0)+' m'],['Flugstrecke mit Zeitdehnung',fx(dG,0)+' m'],['Am Boden kommen an (ohne)',pct(d0>0?Math.exp(-15000/d0):0)],['Am Boden kommen an (mit)',pct(dG>0?Math.exp(-15000/dG):0)]]);
+}};})();
+
+/* ---------- 2 Gleichzeitigkeit ---------- */
+(()=>{const cv=$('cv2'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+const gv=rng('g_v',v=>fx(v)+' c');let view='bahn',t=0,run=true;
+const setV=v=>{view=v;toggle(['g_bahn','g_zug'],v==='bahn'?'g_bahn':'g_zug');t=0;run=true;};
+$('g_bahn').onclick=()=>setV('bahn');$('g_zug').onclick=()=>setV('zug');$('g_blitz').onclick=()=>{t=0;run=true;};
+$('g_v').addEventListener('input',()=>{t=0;run=true;});
+const L0=480,c=170,yT=120,hT=80;
+function door(x,open){g.fillStyle=open?'#7ee787':'#3b4553';g.fillRect(x-5,yT+15,10,hT-25);}
+function person(x,col,lab){dot(g,x,yT+hT+52,7,col);line(g,x,yT+hT+59,x,yT+hT+82,col,3);txt(g,lab,x,yT+hT+100,col,S12,'center');}
+mods.gleich={step(dt){const b=gv(),G=gam(b);if(run)t+=dt;
+ let L,xc,lampX,tr,tf,plat;
+ if(view==='bahn'){L=L0/G;tr=(L/2)/(c*(1+b));tf=(L/2)/(c*(1-b));const trav=b*c*tf;
+  const xc0=Math.max(30+L/2,Math.min(W/2,W-30-L/2-trav));xc=xc0+b*c*t;lampX=xc0;plat=0;}
+ else{L=L0;tr=tf=(L/2)/c;xc=W/2;lampX=W/2;plat=-b*c*t;}
+ if(t>tf+1.6)run=false;
+ g.clearRect(0,0,W,H);
+ txt(g,view==='bahn'?'Sicht vom Bahnsteig: Der Zug fährt nach rechts. Die hintere Tür kommt dem Licht entgegen.':'Sicht im Zug: Der Zug steht, der Bahnsteig gleitet nach links. Beide Türen sind gleich weit weg.',20,30,'#e6edf3',B15);
+ // Bahnsteig
+ g.fillStyle='#1d232c';g.fillRect(0,yT+hT+12,W,22);
+ const off=((plat%60)+60)%60;for(let x=off-60;x<W+60;x+=60)line(g,x,yT+hT+12,x,yT+hT+34,'#3b4553',2);
+ person(view==='bahn'?lampX:W/2+plat,'#58a6ff','Bahnsteig');
+ // Zug
+ const r=xc-L/2,f=xc+L/2;
+ g.fillStyle='#24303f';g.fillRect(r,yT,L,hT);g.strokeStyle='#9aa4b2';g.lineWidth=2;g.strokeRect(r,yT,L,hT);
+ dot(g,r+30,yT+hT+6,7,'#9aa4b2');dot(g,f-30,yT+hT+6,7,'#9aa4b2');
+ door(r+6,run||t>0?t>=tr:false);door(f-6,t>=tf);
+ dot(g,xc,yT+12,6,t<0.15?'#fff':'#f0b429');
+ // Licht
+ if(t>0){const xl=Math.max(lampX-c*t,r),xr=Math.min(lampX+c*t,f),y=yT+hT/2;
+  line(g,xl,y,xr,y,'rgba(240,180,41,.9)',4);
+  if(t<tr)dot(g,xl,y,6,'#fff');if(t<tf)dot(g,xr,y,6,'#fff');}
+ txt(g,t>=tr?'hinten offen nach '+fx(tr)+' s':'',r,yT-10,'#7ee787',S13);
+ txt(g,t>=tf?'vorne offen nach '+fx(tf)+' s':'',f,yT-10,'#7ee787',S13,'right');
+ if(++frame%6)return;
+ rows($('g_read'),[['Hintere Tür',fx(tr)+' s'],['Vordere Tür',fx(tf)+' s'],['Unterschied',fx(tf-tr)+' s'],['Gleichzeitig?',Math.abs(tf-tr)<1e-9?'ja':'nein']]);
+}};})();
+
+/* ---------- 3 Zwillinge ---------- */
+(()=>{const cv=$('cv3'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+const gv=rng('z_v',v=>fx(v)+' c'),gD=rng('z_D',v=>v+' Lj'),gs=rng('z_s',v=>fx(v,1)+' Jahre/s');
+let t=0,play=false;
+const reset=()=>{t=0;play=false;$('z_play').textContent='▶ Start';};
+$('z_play').onclick=()=>{const T=2*gD()/gv();if(t>=T-1e-9)t=0;play=!play;$('z_play').textContent=play?'⏸ Pause':'▶ Weiter';};
+$('z_reset').onclick=reset;$('z_v').addEventListener('input',reset);$('z_D').addEventListener('input',reset);
+mods.zwilling={step(dt){
+ const v=gv(),D=gD(),G=gam(v),T=2*D/v,tu=D/v,sig=$('z_sig').checked,sim=$('z_sim').checked;
+ if(play){t+=dt*gs();if(t>=T){t=T;play=false;$('z_play').textContent='▶ Nochmal';}}
+ const pos=q=>q<=tu?v*q:Math.max(0,D-v*(q-tu));
+ const s=Math.min((H-70)/T,(W-330)/D),ox=80,oy=H-38,X=x=>ox+x*s,Y=q=>oy-q*s;
+ g.clearRect(0,0,W,H);
+ let st=1;if(s<14)st=5;if(s*5<14)st=10;
+ for(let k=0;k<=T+1e-9;k+=st){line(g,ox,Y(k),X(D)+40,Y(k),'#1b212a');txt(g,String(k),ox-10,Y(k)+4,'#8b949e',S12,'right');}
+ for(let k=0;k<=D;k++){line(g,X(k),oy,X(k),oy+5,'#8b949e');txt(g,String(k),X(k),oy+18,'#8b949e',S12,'center');}
+ line(g,ox,oy,X(D)+40,oy,'#8b949e');line(g,ox,oy,ox,Y(T)-12,'#8b949e');
+ txt(g,'Erdzeit in Jahren ↑',ox+6,Y(T)-16,'#8b949e',S12);
+ txt(g,'Lichtjahre →',X(D)+44,oy+4,'#8b949e',S12);
+ const lc=Math.min(D+0.6,T);line(g,X(0),Y(0),X(lc),Y(lc),'rgba(240,180,41,.25)',1,[4,4]);
+ {const lx=X(D)+110;let ly=60;txt(g,'Legende',lx,ly,'#e6edf3',B15);
+  [['#58a6ff',4,null,'Anna bleibt auf der Erde'],['#ff7b72',4,null,'Ben fliegt hin und zurück'],['rgba(240,180,41,.6)',1,[4,4],'Licht: immer 45°'],
+   ['rgba(88,166,255,.8)',1.2,null,'Annas Geburtstagsgrüße'],['rgba(255,123,114,.8)',1.2,null,'Bens Geburtstagsgrüße'],['#d2a8ff',2,null,'Bens „Jetzt“-Linie'],['#f0b429',6,null,'Sprung bei der Umkehr']]
+  .forEach(e=>{ly+=24;line(g,lx,ly-4,lx+34,ly-4,e[0],e[1],e[2]);txt(g,e[3],lx+44,ly,'#8b949e',S13);});
+  txt(g,'Erdzeit: so viele Jahre vergehen auf der Erde.',lx,ly+40,'#8b949e',S12);
+  txt(g,'Bens Uhr zeigt seine eigene Zeit (Eigenzeit).',lx,ly+58,'#8b949e',S12);}
+ // geplante Wege
+ line(g,X(0),Y(0),X(0),Y(T),'rgba(88,166,255,.25)',2,[6,5]);
+ line(g,X(0),Y(0),X(D),Y(tu),'rgba(255,123,114,.25)',2,[6,5]);line(g,X(D),Y(tu),X(0),Y(T),'rgba(255,123,114,.25)',2,[6,5]);
+ // Signale
+ let nA=0,nB=0;
+ if(sig){
+  for(let k=1;k<=Math.floor(T+1e-9);k++){if(k>t)break;let rc=k/(1-v);if(rc>tu)rc=(2*D+k)/(1+v);const e=Math.min(rc,t);
+   line(g,X(0),Y(k),X(e-k),Y(e),'rgba(88,166,255,.55)',1.2);if(rc<=t+1e-9){nB++;dot(g,X(e-k),Y(e),3,'#58a6ff');}}
+  for(let j=1;j<=Math.floor(T/G+1e-9);j++){const te=j*G;if(te>t)break;const xe=pos(te),rc=te+xe,e=Math.min(rc,t);
+   line(g,X(xe),Y(te),X(xe-(e-te)),Y(e),'rgba(255,123,114,.55)',1.2);if(rc<=t+1e-9){nA++;dot(g,X(0),Y(rc),3,'#ff7b72');}}
+ }
+ // Gleichzeitigkeitslinien
+ if(sim){
+  for(let j=1;j<=Math.floor(T/G);j++){const te=j*G;if(te>t)break;if(Math.abs(te-tu)<1e-6)continue;const xe=pos(te),tE=te<tu?te-v*xe:te+v*xe;
+   line(g,X(0),Y(tE),X(xe),Y(te),'rgba(210,168,255,.45)',1);}
+  if(t>=tu){line(g,X(0),Y(tu-v*D),X(D),Y(tu),'#f0b429',1.5);line(g,X(0),Y(tu+v*D),X(D),Y(tu),'#f0b429',1.5);
+   line(g,X(0),Y(tu-v*D),X(0),Y(tu+v*D),'#f0b429',6);
+   txt(g,'Sprung: '+fx(2*v*D,1)+' Jahre',X(0)+10,Y(tu)+4,'#f0b429',B15);}
+  const xn=pos(t),tn=t<tu?t-v*xn:t+v*xn;line(g,X(0),Y(tn),X(xn),Y(t),'#d2a8ff',2);
+ }
+ // tatsächliche Wege
+ line(g,X(0),Y(0),X(0),Y(t),'#58a6ff',4);
+ if(t<=tu)line(g,X(0),Y(0),X(pos(t)),Y(t),'#ff7b72',4);else{line(g,X(0),Y(0),X(D),Y(tu),'#ff7b72',4);line(g,X(D),Y(tu),X(pos(t)),Y(t),'#ff7b72',4);}
+ dot(g,X(0),Y(t),7,'#58a6ff');dot(g,X(pos(t)),Y(t),7,'#ff7b72');
+ txt(g,'Anna '+fx(t,1)+' J',X(0)+10,Y(t)-10,'#58a6ff',B15);
+ txt(g,'Ben '+fx(t/G,1)+' J',X(pos(t))+12,Y(t)+5,'#ff7b72',B15);
+ dot(g,X(D),Y(tu),5,'#f0b429');txt(g,'Stern – Umkehr',X(D)+10,Y(tu)+18,'#f0b429',S12);
+ if(++frame%5)return;
+ const xn=pos(t),tn=t<tu?t-v*xn:t+v*xn;
+ rows($('z_read'),[['γ',fx(G,3)],['Anna (Erde) ist gealtert',fx(t,2)+' J'],['Ben (Reise) ist gealtert',fx(t/G,2)+' J'],['Unterschied',fx(t-t/G,2)+' J'],
+  ['Grüße bei Ben angekommen',sig?nB:'–'],['Grüße bei Anna angekommen',sig?nA:'–'],['Bens „Jetzt“ auf der Erde',fx(tn,2)+' J'],['Sprung bei der Umkehr',fx(2*v*D,2)+' J'],
+  ['Am Ende: Anna / Ben',fx(T,1)+' / '+fx(T/G,1)+' J']]);
+}};})();
+
+/* ---------- 4 Aequivalenz ---------- */
+(()=>{const cv=$('cv4'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+let mode='erde',t=0;const gp=120,cp=170,TE=2.5;
+const cab={x:90,y:130,w:300,h:300},B0={x:170,y:170,r:12},L0={x:90,y:210},k=0.55;
+const stars=[];for(let i=0;i<70;i++)stars.push([480+((i*137)%470),10+((i*89)%440),(i%3)+1]);
+const texts={
+ erde:'<b>Kabine steht auf der Erde.</b> Der Ball fällt, das (extrem langsame) Licht biegt sich nach unten. Der Beschleunigungssensor zeigt 9,81 m/s² – nach oben, denn der Boden drückt dich hoch.',
+ rakete:'<b>Kabine in einer Rakete fern jeder Masse,</b> die mit 9,81 m/s² beschleunigt. Innen sieht alles genauso aus wie auf der Erde! Außen sieht man: Ball und Licht fliegen gerade, der Boden kommt ihnen entgegen.',
+ fall:'<b>Kabine fällt frei auf die Erde zu</b> (wie die ISS, die ständig um die Erde herumfällt). Innen schwebt der Ball, das Licht läuft gerade. Der Sensor zeigt null. Schwerelos heißt: im freien Fall.',
+ all:'<b>Kabine schwebt weit weg von allem im All.</b> Innen: exakt dasselbe wie im freien Fall. Kein Experiment in der Kabine kann die beiden Fälle unterscheiden.'};
+const setM=m=>{mode=m;t=0;toggle(['a_erde','a_rakete','a_fall','a_all'],'a_'+m);$('a_text').innerHTML=texts[m];};
+['erde','rakete','fall','all'].forEach(m=>$('a_'+m).onclick=()=>setM(m));$('a_restart').onclick=()=>{t=0;};setM('erde');
+const gin=()=>(mode==='erde'||mode==='rakete')?gp:0;
+const off=q=>mode==='rakete'?-.5*gp*q*q:mode==='fall'?.5*gp*q*q:0;
+const ballY=q=>Math.min(B0.y+.5*gin()*q*q,cab.y+cab.h-B0.r);
+const tL=cab.w/cp;
+const light=q=>{q=Math.min(q,tL);return[L0.x+cp*q,L0.y+.5*gin()*q*q];};
+function scene(ox,oy,sc,outside){g.save();g.translate(ox,oy);g.scale(sc,sc);g.translate(-cab.x,-cab.y);
+ const o=outside?off(t):0;
+ if(outside&&mode==='rakete'){g.fillStyle='rgba(255,140,40,'+(0.6+0.3*Math.random())+')';g.beginPath();g.moveTo(cab.x+90,cab.y+cab.h+o);g.lineTo(cab.x+150,cab.y+cab.h+o+60+20*Math.random());g.lineTo(cab.x+210,cab.y+cab.h+o);g.fill();}
+ g.fillStyle='#121821';g.fillRect(cab.x,cab.y+o,cab.w,cab.h);g.strokeStyle='#9aa4b2';g.lineWidth=3;g.strokeRect(cab.x,cab.y+o,cab.w,cab.h);
+ g.fillStyle='#f0b429';g.fillRect(cab.x,L0.y+o-8,10,16);
+ line(g,cab.x+cab.w-14,L0.y+o,cab.x+cab.w,L0.y+o,'#58a6ff',3);
+ if(!outside||t<=tL+0.25){const pts=[];for(let q=0;q<=Math.min(t,tL)+1e-9;q+=0.02){const p=light(q);pts.push([p[0],p[1]+(outside?off(q):0)]);}
+  if(t>0){const p=light(t);pts.push([p[0],p[1]+(outside?off(Math.min(t,tL)):0)]);}
+  poly(g,pts,'#f0b429',3);}
+ if(t>=tL){const hy=light(tL)[1]+o;g.fillStyle='#f0b429';g.fillRect(cab.x+cab.w-8,hy-8,8,16);}
+ dot(g,B0.x,ballY(t)+o,B0.r,'#ff7b72');
+ g.restore();}
+mods.aequi={step(dt){t+=dt;if(t>TE+0.8)t=0;
+ g.clearRect(0,0,W,H);
+ txt(g,'Innensicht (in der Kabine)',20,28,'#e6edf3',B15);
+ scene(cab.x,cab.y-20,1,false);
+ const a=gin()?'9,81 m/s² nach oben':'0 m/s²';
+ txt(g,'Beschleunigungssensor: '+a,20,465,gin()?'#f0b429':'#7ee787',B15);
+ txt(g,'Blauer Strich rechts = Höhe der Lampe',20,48,'#8b949e',S12);
+ line(g,480,0,480,H,'#2a313c',2);
+ txt(g,'Außensicht',500,28,'#e6edf3',B15);
+ const sw=cab.w*k,ox=480+(480-sw)/2;let oy=150;
+ if(mode==='rakete'||mode==='all')stars.forEach(s=>dot(g,s[0],s[1],s[2]*0.6,'rgba(230,237,243,.55)'));
+ if(mode==='erde'){g.fillStyle='#2b3a22';g.fillRect(480,440,480,40);txt(g,'Erdboden',500,465,'#7ee787',S13);oy=440-cab.h*k;}
+ if(mode==='rakete'){oy=250;txt(g,'Ball und Licht fliegen geradeaus – der Boden kommt ihnen entgegen.',500,465,'#8b949e',S12);}
+ if(mode==='fall'){g.fillStyle='#16324f';g.beginPath();g.arc(720,1090,650,0,Math.PI*2);g.fill();txt(g,'Erde',705,468,'#58a6ff',S13);oy=40;}
+ if(mode==='all')txt(g,'Nichts beschleunigt, nichts zieht.',500,465,'#8b949e',S12);
+ scene(ox,oy,k,true);
+}};})();
+
+/* ---------- 5 Uhren im Schwerefeld ---------- */
+(()=>{const cv=$('cv5'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+const gk=rng('c_k',v=>'+'+fx(v*100,0)+' % je Stockwerk');
+let ph,pulses,lastArr,ivl,ax;
+const lv=i=>415-i*115,X0=150;
+const resetAx=()=>{ax={x:500,y:120,th:0,a1:0,a2:0,trail:[]};};
+const resetAll=()=>{ph=[0,0,0,0];pulses=[];lastArr=[null,null,null,null];ivl=[null,null,null,null];resetAx();};resetAll();
+$('c_reset').onclick=resetAll;$('c_k').addEventListener('input',resetAx);
+function clock(x,y,p,col){g.strokeStyle='#9aa4b2';g.lineWidth=2;g.beginPath();g.arc(x,y,34,0,Math.PI*2);g.stroke();
+ for(let i=0;i<12;i++){const a=i*Math.PI/6;line(g,x+28*Math.cos(a),y+28*Math.sin(a),x+33*Math.cos(a),y+33*Math.sin(a),'#9aa4b2',2);}
+ const a=p*Math.PI/6-Math.PI/2;line(g,x,y,x+28*Math.cos(a),y+28*Math.sin(a),col,3);dot(g,x,y,3,col);}
+function wheel(x,y,ang,col){g.strokeStyle=col;g.lineWidth=2;g.beginPath();g.arc(x,y,13,0,Math.PI*2);g.stroke();
+ for(let i=0;i<3;i++){const a=ang+i*Math.PI/3;line(g,x-13*Math.cos(a),y-13*Math.sin(a),x+13*Math.cos(a),y+13*Math.sin(a),col,1.5);}}
+mods.uhren={step(dt){const k=gk();
+ for(let i=0;i<4;i++){const b4=ph[i];ph[i]+=dt*(1+k*i);if(i===0&&Math.floor(ph[0])>Math.floor(b4))pulses.push({y:lv(0)});}
+ pulses.forEach(p=>{const yo=p.y;p.y-=140*dt;for(let i=1;i<4;i++)if(yo>lv(i)&&p.y<=lv(i)){if(lastArr[i]!==null)ivl[i]=ph[i]-lastArr[i];lastArr[i]=ph[i];}});
+ pulses=pulses.filter(p=>p.y>lv(3)-30);
+ g.clearRect(0,0,W,H);
+ // Turm
+ g.fillStyle='#151b24';g.fillRect(X0-60,lv(3)-55,260,455-lv(3)+55);g.fillStyle='#2b3a22';g.fillRect(0,455,440,25);
+ txt(g,'Turm mit vier gleichen Uhren',20,24,'#e6edf3',B15);
+ line(g,X0+75,lv(0),X0+75,lv(3),'rgba(240,180,41,.15)',2,[3,4]);
+ for(let i=0;i<4;i++){const y=lv(i);clock(X0,y,ph[i],i?'#58a6ff':'#ff7b72');
+  txt(g,fx(ph[i],1)+' s',X0+95,y-8,'#e6edf3',B15);
+  txt(g,'Gang: '+fx(1+k*i,2)+'×',X0+95,y+10,'#8b949e',S12);
+  if(i)txt(g,ivl[i]===null?'Pulsabstand: …':'Pulsabstand: '+fx(ivl[i],2)+' s',X0+95,y+26,'#f0b429',S12);
+  else txt(g,'sendet 1 Puls pro Sekunde',X0+95,y+26,'#f0b429',S12);}
+ pulses.forEach(p=>{const hgt=(lv(0)-p.y)/(lv(0)-lv(3));const hue=Math.max(0,50-hgt*k*250);dot(g,X0+75,p.y,6,'hsl('+hue+',95%,60%)');});
+ // Achse mit zwei Rädern
+ line(g,450,0,450,H,'#2a313c',2);
+ const grd=g.createLinearGradient(0,40,0,H);grd.addColorStop(0,'rgba(88,166,255,.10)');grd.addColorStop(1,'rgba(255,123,114,.10)');g.fillStyle=grd;g.fillRect(452,40,W-452,H-40);
+ txt(g,'Zwei Räder rollen „in die Zukunft“',470,24,'#e6edf3',B15);
+ txt(g,'oben: Zeit läuft schneller',W-14,62,'#58a6ff',S13,'right');txt(g,'unten: Zeit läuft langsamer',W-14,H-14,'#ff7b72',S13,'right');
+ const kap=k*0.02,w=44,v=110,rate=y=>1+kap*(455-y);
+ const lx=ax.x+Math.sin(ax.th)*w/2,ly=ax.y-Math.cos(ax.th)*w/2,rx=ax.x-Math.sin(ax.th)*w/2,ry=ax.y+Math.cos(ax.th)*w/2;
+ const vl=v*rate(ly),vr=v*rate(ry);
+ ax.th+=(vl-vr)/w*dt;const vm=(vl+vr)/2;ax.x+=vm*Math.cos(ax.th)*dt;ax.y+=vm*Math.sin(ax.th)*dt;ax.a1+=vl*dt/13;ax.a2+=vr*dt/13;
+ ax.trail.push([ax.x,ax.y]);
+ poly(g,ax.trail,'rgba(126,231,135,.7)',2,[6,4]);
+ line(g,lx,ly,rx,ry,'#e6edf3',3);wheel(lx,ly,ax.a1,'#58a6ff');wheel(rx,ry,ax.a2,'#ff7b72');
+ const hd=ax.th;line(g,ax.x,ax.y,ax.x+30*Math.cos(hd),ax.y+30*Math.sin(hd),'#7ee787',2);
+ txt(g,'→ Zeitrichtung',470,62,'#8b949e',S13);txt(g,'↓ Raum (nach unten = fallen)',470,82,'#8b949e',S13);
+ if(ax.x>W-20||ax.y>H-25||ax.th>1.6)resetAx();
+}};
+// Rechner
+const GM=3.986004418e14,R=6.371e6,C=299792458;
+const pre={kopf:[1.7,0,false,80*365.25],zug:[2962,0,false,365.25],flug:[10000,250,false,1],iss:[400e3,0,true,1],gps:[20200e3,0,true,1]};
+const fT=s=>{const a=Math.abs(s);return a<1e-9?fx(a*1e12,2)+' ps':a<1e-6?fx(a*1e9,2)+' ns':a<1e-3?fx(a*1e6,2)+' µs':a<1?fx(a*1e3,2)+' ms':fx(a,3)+' s';};
+const fL=m=>m<1?fx(m*100,1)+' cm':m<1000?fx(m,1)+' m':fx(m/1000,1)+' km';
+function calc(){const h=+$('c_h').value,days=+$('c_days').value;let v=+$('c_v').value;
+ if($('c_orbit').checked){v=Math.sqrt(GM/(R+h));$('c_v').value=Math.round(v);}
+ const gr=GM/(C*C)*(1/R-1/(R+h)),ve=v*v/(2*C*C),net=gr-ve,sec=days*86400;
+ rows($('c_out'),[['Höher → schneller (ART)','+ '+fT(gr*sec)],['Bewegung → langsamer (SRT)','− '+fT(ve*sec)],['Netto',(net>=0?'+ ':'− ')+fT(net*sec)],['Lichtweg in dieser Zeit',fL(Math.abs(net*sec)*C)]]);}
+$('c_pre').onchange=()=>{const p=pre[$('c_pre').value];$('c_h').value=p[0];$('c_v').value=p[1];$('c_orbit').checked=p[2];$('c_days').value=p[3];calc();};
+['c_h','c_v','c_days','c_orbit'].forEach(i=>$(i).addEventListener('input',calc));$('c_orbit').addEventListener('change',calc);calc();
+})();
+
+/* ---------- 6 Bahnen ---------- */
+(()=>{const cv=$('cv6'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+let mode='licht',ph=[],pl=null,wait=0;const cx=560,cy=260;
+const grs=rng('b_rs',v=>v+' px'),gal=rng('b_alpha',v=>fx(v));
+const texts={
+ licht:'Lichtstrahlen fliegen von links an einem Schwarzen Loch vorbei. Gelb: Einsteins Bahn (exakt, Schwarzschild). Blau gestrichelt: Newton, der Licht wie eine schnelle Kugel behandelt. Weit draußen lenkt Einstein doppelt so stark ab – das wurde 1919 bei der Sonnenfinsternis gemessen. (Je kleiner die Masse am Regler, desto näher liegt das Verhältnis an genau 2.) Gestrichelte Kreise: Photonensphäre (1,5 r<sub>s</sub>), auf der Licht im Kreis laufen kann, und der „Schatten“ (2,6 r<sub>s</sub>), den das Event Horizon Telescope fotografiert hat.',
+ planet:'Ein Planet auf einer Ellipse. Bei Newton (Stärke 0) schließt sich die Bahn exakt. Mit dem Zusatzterm der ART dreht sich die Ellipse bei jedem Umlauf ein Stück weiter – eine Rosette entsteht. Beim echten Merkur sind es nur 0,1 Bogensekunden pro Umlauf, 43″ pro Jahrhundert; hier ist der Effekt millionenfach übertrieben.',
+ kegel:'Raumzeit-Diagramm um ein Schwarzes Loch (Eddington-Finkelstein-Koordinaten, damit am Horizont nichts unendlich wird). Nach rechts: Abstand vom Zentrum, nach oben: Zeit. Die Dreiecke sind Lichtkegel – alle möglichen Zukünfte. Außen zeigt ein Teil nach außen, am Horizont steht die äußere Kante senkrecht, innen zeigt der ganze Kegel nach innen. Gelbe Linien: nach außen geschicktes Licht; rot: dasselbe, aber innerhalb des Horizonts. Grün: eine frei fallende Astronautin – sie überquert den Horizont ohne Halt.'};
+function setM(m){mode=m;toggle(['b_licht','b_planet','b_kegel'],'b_'+m);$('b_lpar').style.display=m==='licht'?'':'none';$('b_ppar').style.display=m==='planet'?'':'none';$('b_text').innerHTML=texts[m];$('b_read').innerHTML='';init();}
+function initL(){const nw=$('b_newton').checked;ph=[];for(let b=-225;b<=225;b+=15){if(!b)continue;ph.push({x:-540,y:b,vx:1,vy:0,ok:true,cap:false,p:[[-540,b]],nw:false});if(nw)ph.push({x:-540,y:b,vx:1,vy:0,ok:true,cap:false,p:[[-540,b]],nw:true});}wait=0;}
+function initP(){const rp=70,e=.5,a=rp/(1-e),T=3,GM=4*Math.PI*Math.PI*a*a*a/(T*T);pl={x:rp,y:0,vx:0,vy:-Math.sqrt(GM*(1+e)/rp),GM,rp,tr:[[rp,0]],rd:0,peri:[],cnt:0};}
+function init(){if(mode==='licht')initL();if(mode==='planet')initP();}
+['licht','planet','kegel'].forEach(m=>$('b_'+m).onclick=()=>setM(m));$('b_restart').onclick=init;
+$('b_rs').addEventListener('input',initL);$('b_newton').addEventListener('change',initL);$('b_alpha').addEventListener('input',initP);
+setM('licht');
+function stepL(dt){const rs=grs(),ds=0.5,n=Math.ceil(300*dt/ds);let alive=0;
+ ph.forEach(p=>{if(!p.ok)return;alive++;for(let i=0;i<n&&p.ok;i++){const r2=p.x*p.x+p.y*p.y,r=Math.sqrt(r2);let f;
+  if(!p.nw){const h=p.x*p.vy-p.y*p.vx;f=-1.5*rs*h*h/(r2*r2*r);}else f=-(rs/2)/(r2*r);
+  p.vx+=f*p.x*ds;p.vy+=f*p.y*ds;if(!p.nw){const m=Math.hypot(p.vx,p.vy);p.vx/=m;p.vy/=m;}
+  p.x+=p.vx*ds;p.y+=p.vy*ds;if(i%6===0)p.p.push([p.x,p.y]);
+  if(Math.hypot(p.x,p.y)<rs){p.ok=false;p.cap=true;p.p.push([p.x,p.y]);}
+  if(p.x>410||Math.abs(p.y)>290||p.x<-560){p.ok=false;p.p.push([p.x,p.y]);}}});
+ if(!alive){wait+=dt;if(wait>1.5)initL();}
+ g.clearRect(0,0,W,H);g.save();g.translate(cx,cy);
+ for(let x=-540;x<=400;x+=60)line(g,x,-260,x,260,'#12171e');for(let y=-240;y<=240;y+=60)line(g,-560,y,400,y,'#12171e');
+ g.setLineDash([4,5]);g.strokeStyle='rgba(240,180,41,.35)';g.lineWidth=1;g.beginPath();g.arc(0,0,1.5*rs,0,Math.PI*2);g.stroke();
+ g.strokeStyle='rgba(230,237,243,.18)';g.beginPath();g.arc(0,0,2.598*rs,0,Math.PI*2);g.stroke();g.setLineDash([]);
+ ph.forEach(p=>poly(g,p.nw?p.p.concat([[p.x,p.y]]):p.p.concat([[p.x,p.y]]),p.nw?'rgba(88,166,255,.75)':(p.cap?'rgba(255,123,114,.85)':'rgba(240,180,41,.9)'),p.nw?1.3:1.8,p.nw?[5,4]:null));
+ dot(g,0,0,rs,'#000');g.strokeStyle='#ff9b3d';g.lineWidth=2;g.beginPath();g.arc(0,0,rs,0,Math.PI*2);g.stroke();
+ g.restore();
+ txt(g,'Licht am Schwarzen Loch  ·  gelb: Einstein  ·  rot: eingefangen  ·  blau: Newton',16,24,'#e6edf3',B15);
+ if(frame%10===0){const far=ph.filter(p=>!p.ok&&!p.cap&&Math.abs(p.p[0][1])>=200);let aE=0,aN=0,nE=0,nN=0;
+  far.forEach(p=>{const a=Math.abs(Math.atan2(p.p[p.p.length-1][1]-p.p[p.p.length-2][1],p.p[p.p.length-1][0]-p.p[p.p.length-2][0]))*180/Math.PI;if(p.nw){aN+=a;nN++;}else{aE+=a;nE++;}});
+  rows($('b_read'),[['Ablenkung außen (Einstein)',nE?fx(aE/nE,1)+'°':'…'],['Ablenkung außen (Newton)',nN?fx(aN/nN,1)+'°':'…'],['Verhältnis',nE&&nN?fx(aE/nE/(aN/nN),2):'…']]);}}
+function accP(x,y){const r=Math.hypot(x,y),f=-pl.GM/(r*r)*(1+gal()*(pl.rp/r)*(pl.rp/r));return[f*x/r,f*y/r];}
+function stepP(dt){const n=Math.ceil(dt/0.0004),h=dt/n;
+ for(let i=0;i<n;i++){let a=accP(pl.x,pl.y);pl.vx+=a[0]*h/2;pl.vy+=a[1]*h/2;pl.x+=pl.vx*h;pl.y+=pl.vy*h;a=accP(pl.x,pl.y);pl.vx+=a[0]*h/2;pl.vy+=a[1]*h/2;
+  const r=Math.hypot(pl.x,pl.y),rd=(pl.x*pl.vx+pl.y*pl.vy)/r;if(pl.rd<0&&rd>=0){pl.peri.push(Math.atan2(pl.y,pl.x));pl.cnt++;}pl.rd=rd;
+  if(i%5===0)pl.tr.push([pl.x,pl.y]);}
+ if(pl.tr.length>40000)pl.tr.splice(0,5000);
+ g.clearRect(0,0,W,H);g.save();g.translate(cx,cy);
+ poly(g,pl.tr,'rgba(88,166,255,.55)',1.2);
+ pl.peri.slice(-14).forEach((a,i,arr)=>line(g,0,0,95*Math.cos(a),95*Math.sin(a),'rgba(240,180,41,'+(0.25+0.75*(i+1)/arr.length)+')',1.5));
+ dot(g,0,0,12,'#f0b429');dot(g,pl.x,pl.y,6,'#58a6ff');g.restore();
+ txt(g,'Periheldrehung  ·  gelbe Striche: sonnennächste Punkte',16,24,'#e6edf3',B15);
+ if(frame%10===0){let d='…';if(pl.peri.length>1){let x=pl.peri[pl.peri.length-1]-pl.peri[pl.peri.length-2];while(x>Math.PI)x-=2*Math.PI;while(x<-Math.PI)x+=2*Math.PI;d=fx(Math.abs(x)*180/Math.PI,2)+'°';}
+  rows($('b_read'),[['Umläufe',pl.cnt],['Drehung je Umlauf',d],['Echter Merkur','0,0000287° je Umlauf']]);}}
+function drawK(){g.clearRect(0,0,W,H);const sc=190,ox=90,oy=480,X=r=>ox+r*sc,Y=q=>oy-q*sc;
+ txt(g,'Lichtkegel um ein Schwarzes Loch  (Einheiten: Schwarzschild-Radius r_s)',16,24,'#e6edf3',B15);
+ line(g,ox,oy,W-20,oy,'#8b949e');txt(g,'Abstand vom Zentrum →',W-24,oy-8,'#8b949e',S12,'right');txt(g,'Zeit ↑',ox+6,46,'#8b949e',S12);
+ for(let r=1;r<=4;r++){line(g,X(r),oy,X(r),oy+5,'#8b949e');txt(g,r+' r_s',X(r),oy+18,'#8b949e',S12,'center');}
+ g.fillStyle='rgba(255,123,114,.06)';g.fillRect(ox,40,sc,oy-40);
+ line(g,X(1),40,X(1),oy,'#ff7b72',2,[7,5]);txt(g,'Ereignishorizont',X(1)+6,56,'#ff7b72',S13);
+ g.strokeStyle='#d2a8ff';g.lineWidth=2;g.beginPath();for(let y=oy;y>40;y-=12){g.lineTo(ox+(((oy-y)/12)%2?5:-5),y);}g.stroke();txt(g,'Singularität',ox+10,76,'#d2a8ff',S13);
+ for(let q0=-1;q0<=2;q0+=0.5)line(g,X(4.4),Y(q0),X(0),Y(q0+4.4),'rgba(88,166,255,.18)',1);
+ [0.3,0.6,0.85,0.97,1.03,1.12,1.4,2,3].forEach(r0=>{let r=r0,q=0;const pts=[[X(r),Y(q)]];
+  while(q<2.25&&r>0.02&&X(r)<W-10){r+=(r-1)/(r+1)*0.004;q+=0.004;pts.push([X(r),Y(q)]);}
+  poly(g,pts,r0<1?'rgba(255,123,114,.85)':'rgba(240,180,41,.85)',1.6);});
+ {let r=1.6,q=0;txt(g,'Astronautin',X(1.6)+8,Y(0)-8,'#7ee787',S13);const pts=[[X(r),Y(q)]];while(r>0.03&&q<2.3){const s=Math.sqrt(1/r),dq=-(1+s+s*s)/(s*(1+s));r-=0.004;q-=dq*0.004;pts.push([X(r),Y(q)]);}
+  poly(g,pts,'#7ee787',3);}
+ [0.45,0.8,1,1.4,2.2,3.4].forEach(r=>[0.55,1.6].forEach(q=>{const ax=X(r),ay=Y(q),L=40;
+  let ix=-1,iy=1,m=Math.hypot(ix,iy);ix/=m;iy/=m;let ux=r-1,uy=r+1;m=Math.hypot(ux,uy);ux/=m;uy/=m;
+  g.fillStyle='rgba(230,237,243,.18)';g.strokeStyle='rgba(230,237,243,.75)';g.lineWidth=1.3;g.beginPath();g.moveTo(ax,ay);g.lineTo(ax+ix*L,ay-iy*L);g.lineTo(ax+ux*L,ay-uy*L);g.closePath();g.fill();g.stroke();dot(g,ax,ay,2.5,'#e6edf3');}));
+ txt(g,'innen: jede Zukunft zeigt nach innen',X(0.06),oy-12,'#ff7b72',S13);
+ txt(g,'außen: Flucht nach außen möglich',X(2.25),oy-12,'#f0b429',S13);}
+mods.bahnen={step(dt){frame++;if(mode==='licht')stepL(dt);else if(mode==='planet')stepP(dt);else drawK();}};
+})();
+
+/* ---------- 7 Gravitationswelle ---------- */
+(()=>{const cv=$('cv7'),g=cv.getContext('2d'),W=cv.width,H=cv.height;
+const gA=rng('w_A',v=>fx(v*100,0)+' %'),gf=rng('w_f',v=>fx(v,1)+' Hz');
+let pol='+',ph=0,ch=-1,hist=[],A=0,F=0;
+$('w_plus').onclick=()=>{pol='+';toggle(['w_plus','w_cross'],'w_plus');};$('w_cross').onclick=()=>{pol='x';toggle(['w_plus','w_cross'],'w_cross');};
+function sound(){try{const ac=new(window.AudioContext||window.webkitAudioContext)(),o=ac.createOscillator(),gn=ac.createGain(),n=200,fr=new Float32Array(n),am=new Float32Array(n);
+ for(let i=0;i<n;i++){const q=i/(n-1)*3.98,f=Math.pow(1-q/4,-3/8);fr[i]=40*f;am[i]=0.04+0.22*Math.min(1,Math.pow(f,2/3)/4);}
+ o.type='sine';o.frequency.setValueCurveAtTime(fr,ac.currentTime,4);gn.gain.setValueCurveAtTime(am,ac.currentTime,4);gn.gain.setTargetAtTime(0,ac.currentTime+4.01,0.06);
+ o.connect(gn);gn.connect(ac.destination);o.start();o.stop(ac.currentTime+4.6);o.onended=()=>ac.close();}catch(e){}}
+$('w_chirp').onclick=()=>{ch=0;hist=[];sound();};
+mods.welle={step(dt){
+ if(ch>=0){ch+=dt;const tau=4;if(ch<tau-0.02){F=0.5*Math.pow(1-ch/tau,-3/8);A=Math.min(0.45,0.08*Math.pow(F/0.5,2/3));}else{F=Math.min(F,4);A*=Math.exp(-dt*7);}if(ch>tau+1.2){ch=-1;}}
+ else{F=gf();A=gA();}
+ ph+=2*Math.PI*F*dt;const hc=A*Math.cos(ph);hist.push(hc);if(hist.length>400)hist.shift();
+ g.clearRect(0,0,W,H);
+ txt(g,'Ring aus frei schwebenden Teilchen',30,26,'#e6edf3',B15);
+ const cx=230,cy=225,R=130;g.strokeStyle='rgba(230,237,243,.15)';g.setLineDash([4,5]);g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.stroke();g.setLineDash([]);
+ for(let i=0;i<24;i++){const a=i*Math.PI/12,x0=R*Math.cos(a),y0=R*Math.sin(a);let x,y;
+  if(pol==='+'){x=x0*(1+hc/2);y=y0*(1-hc/2);}else{x=x0+hc/2*y0;y=y0+hc/2*x0;}dot(g,cx+x,cy+y,6,i===0||i===6||i===12||i===18?'#f0b429':'#58a6ff');}
+ dot(g,cx,cy,3,'#8b949e');txt(g,'⊙ Welle läuft auf dich zu',cx,cy+R+50,'#8b949e',S12,'center');
+ line(g,480,0,480,H,'#2a313c',2);
+ txt(g,'LIGO-Detektor (Michelson-Interferometer)',500,26,'#e6edf3',B15);
+ const ox=560,oy=310,Lr=220,fxA=pol==='+'?1+hc/2:1,fyA=pol==='+'?1-hc/2:1;
+ const ex=ox+Lr*fxA,ey=oy-Lr*fyA;
+ line(g,ox,oy,ex,oy,'rgba(255,90,90,.85)',3);line(g,ox,oy,ox,ey,'rgba(255,90,90,.85)',3);
+ g.fillStyle='#9aa4b2';g.fillRect(ex,oy-14,7,28);g.fillRect(ox-14,ey-7,28,7);
+ g.save();g.translate(ox,oy);g.rotate(-Math.PI/4);g.fillStyle='#58a6ff';g.fillRect(-14,-2,28,4);g.restore();
+ g.fillStyle='#3b4553';g.fillRect(ox-70,oy-9,40,18);txt(g,'Laser',ox-50,oy+24,'#8b949e',S12,'center');line(g,ox-30,oy,ox,oy,'rgba(255,90,90,.85)',3);
+ txt(g,'Arm x: '+fx(fxA*100,1)+' %',ex-6,oy+30,'#e6edf3',S13,'right');txt(g,'Arm y: '+fx(fyA*100,1)+' %',ox+16,ey+4,'#e6edf3',S13);
+ const bx=520,by=395,bw=420;line(g,bx,by,bx+bw,by,'#2a313c');
+ const pts=hist.map((v,i)=>[bx+i*bw/400,by-v*70]);poly(g,pts,'#7ee787',1.6);txt(g,'Messsignal',bx,by-38,'#7ee787',S12);
+ if(ch>=4)txt(g,'Verschmolzen!',bx+bw,by-38,'#f0b429',B15,'right');
+}};})();
+
+let lastT=performance.now();
+function loop(now){const dt=Math.min(0.05,Math.max(0,(now-lastT)/1000));lastT=now;const m=mods[active];if(m)m.step(dt);requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
