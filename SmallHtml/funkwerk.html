@@ -1,0 +1,1599 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Funkwerk – SDR-Empfänger</title>
+<style>
+:root{
+  --bg:#0d1117; --panel:#161b22; --panel2:#1c2330; --line:#2a3342; --text:#d6dde6; --dim:#8b97a8;
+  --acc:#3ddc97; --acc2:#ffb347; --red:#ff5c5c; --blue:#5aa9ff;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:14px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif}
+a{color:var(--blue)}
+header{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+header h1{font-size:18px;margin:0 12px 0 0;letter-spacing:.5px}
+header h1 span{color:var(--acc)}
+button,select,input{font:inherit;color:var(--text);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:5px 9px}
+button{cursor:pointer}
+button:hover{border-color:var(--dim)}
+button.on{background:var(--acc);color:#05140d;border-color:var(--acc);font-weight:600}
+button.warn.on{background:var(--red);border-color:var(--red);color:#fff}
+input[type=number],input[type=text]{width:110px}
+input[type=range]{padding:0;width:130px;accent-color:var(--acc)}
+#status{color:var(--dim);font-size:13px;flex:1;min-width:200px}
+#status.err{color:var(--red)}
+main{padding:12px 16px;display:flex;flex-direction:column;gap:12px}
+.row{display:flex;flex-wrap:wrap;gap:12px;align-items:stretch}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.box h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);font-weight:600}
+.ctl{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.ctl label{color:var(--dim);font-size:12px}
+#freqbox{min-width:300px}
+#freq{font:600 38px/1 ui-monospace,"Cascadia Mono",Consolas,monospace;color:var(--acc);letter-spacing:1px;cursor:ns-resize;user-select:none}
+#freq small{font-size:15px;color:var(--dim);margin-left:6px}
+#modes button{min-width:52px}
+.meter{position:relative;height:14px;width:220px;background:#0a0e14;border:1px solid var(--line);border-radius:4px;overflow:hidden}
+.meter i{position:absolute;left:0;top:0;bottom:0;background:linear-gradient(90deg,#2b8a5e,var(--acc),var(--acc2),var(--red));width:0}
+.meter b{position:absolute;top:-2px;bottom:-2px;width:2px;background:#fff;opacity:.8}
+#lvl{font:12px ui-monospace,monospace;color:var(--dim);min-width:120px}
+#sqled{display:inline-block;width:10px;height:10px;border-radius:50%;background:#333;margin-right:4px;vertical-align:middle}
+#sqled.open{background:var(--acc);box-shadow:0 0 6px var(--acc)}
+#scope{position:relative;background:#06090d;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+#spec{display:block;width:100%;height:170px;cursor:crosshair}
+#wf{display:block;width:100%;height:300px;cursor:crosshair;border-top:1px solid var(--line)}
+#scopebar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:6px 10px;background:var(--panel);border-top:1px solid var(--line);font-size:12px;color:var(--dim)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap}
+.tabs button{border-radius:6px 6px 0 0;border-bottom:none}
+.tab{display:none}
+.tab.show{display:block}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}
+th{color:var(--dim);font-weight:600;font-size:12px}
+tbody tr{cursor:pointer}
+tbody tr:hover{background:var(--panel2)}
+td.num{font-family:ui-monospace,monospace}
+.scroll{max-height:300px;overflow:auto}
+#scanstat{font:13px ui-monospace,monospace;color:var(--acc2);min-height:18px}
+.help{max-width:900px;color:var(--text)}
+.help code,.help pre{background:#0a0e14;border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:12px}
+.help pre{padding:8px;overflow:auto}
+.hint{color:var(--dim);font-size:12px}
+footer{padding:14px 16px;color:var(--dim);font-size:12px;border-top:1px solid var(--line)}
+.x{color:var(--red);background:none;border:none;padding:0 4px}
+@media (max-width:700px){#freq{font-size:28px}.meter{width:150px}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Funk<span>werk</span></h1>
+  <button id="bConnect">Stick verbinden</button>
+  <button id="bDemo">Demo</button>
+  <button id="bStop">Stopp</button>
+  <div id="status">Nicht verbunden. „Stick verbinden“ für einen RTL-SDR, „Demo“ zum Ausprobieren ohne Hardware.</div>
+</header>
+
+<main>
+  <div class="row">
+    <div class="box" id="freqbox">
+      <h3>Frequenz</h3>
+      <div id="freq" title="Mausrad: abstimmen">145.500.000<small>Hz</small></div>
+      <div class="ctl" style="margin-top:8px">
+        <button id="bDown">◀</button>
+        <input type="text" id="fIn" placeholder="MHz" title="Frequenz in MHz, Enter">
+        <button id="bUp">▶</button>
+        <label>Raster</label>
+        <select id="step">
+          <option value="100">100 Hz</option><option value="500">500 Hz</option><option value="1000">1 kHz</option>
+          <option value="5000">5 kHz</option><option value="6250">6,25 kHz</option><option value="12500">12,5 kHz</option>
+          <option value="25000">25 kHz</option><option value="100000">100 kHz</option><option value="1000000">1 MHz</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Modus</h3>
+      <div class="ctl" id="modes"></div>
+      <div class="ctl" style="margin-top:8px">
+        <label>Bandbreite</label><input type="range" id="bw"><span id="bwv" class="hint"></span>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Signal</h3>
+      <div class="ctl"><span id="sqled"></span><div class="meter"><i id="mbar"></i><b id="msq"></b></div><span id="lvl">–</span></div>
+      <div class="ctl" style="margin-top:8px">
+        <label>Rauschsperre</label><input type="range" id="sq" min="-120" max="0" value="-120"><span id="sqv" class="hint">aus</span>
+      </div>
+      <div class="ctl" style="margin-top:6px">
+        <label>Lautstärke</label><input type="range" id="vol" min="0" max="100" value="70">
+        <button id="bMute">Stumm</button>
+        <button id="bRec" class="warn">● Aufnahme</button>
+      </div>
+    </div>
+
+    <div class="box">
+      <h3>Empfänger</h3>
+      <div class="ctl"><label>Verstärkung</label><select id="gain"></select></div>
+      <div class="ctl" style="margin-top:8px"><label>Kurzwelle (&lt;24 MHz)</label>
+        <select id="dsMode" title="Für Sticks ohne Aufwärtsmischer: Antenne wird unter 24 MHz direkt vom ADC abgetastet">
+          <option value="2">Direktabtastung Q (NESDR SMArt v5, Blog V3)</option>
+          <option value="1">Direktabtastung I</option>
+          <option value="0">aus</option>
+        </select></div>
+      <div class="ctl" style="margin-top:8px"><label>Korrektur (ppm)</label><input type="number" id="ppm" value="0" step="1" style="width:70px"></div>
+      <div class="hint" id="hwinfo" style="margin-top:8px">Abtastrate 1,92 MHz</div>
+    </div>
+  </div>
+
+  <div id="scope">
+    <canvas id="spec"></canvas>
+    <canvas id="wf"></canvas>
+    <div id="scopebar">
+      <label>Ausschnitt</label>
+      <select id="span">
+        <option value="1920000">1,92 MHz</option><option value="960000">960 kHz</option>
+        <option value="480000">480 kHz</option><option value="240000">240 kHz</option>
+      </select>
+      <label>Dynamik</label><input type="range" id="dyn" min="20" max="90" value="50">
+      <label>Grundlinie</label><input type="range" id="base" min="-20" max="20" value="-6">
+      <span id="hover"></span>
+      <span style="flex:1"></span>
+      <span>Klick: abstimmen · Mausrad: Raster · ←/→ Tasten</span>
+    </div>
+  </div>
+
+  <div>
+    <div class="tabs">
+      <button data-tab="tScan" class="on">Suchlauf</button>
+      <button data-tab="tMem">Speicher</button>
+      <button data-tab="tAct">Aktivität</button>
+      <button data-tab="tHelp">Hilfe</button>
+    </div>
+    <div class="box">
+      <div class="tab show" id="tScan">
+        <div class="ctl">
+          <label>Quelle</label>
+          <select id="scSrc"><option value="range">Frequenzbereich</option><option value="list">Kanalliste der Vorlage</option><option value="mem">Speicherkanäle</option></select>
+          <label>Vorlage</label><select id="scPreset"></select>
+        </div>
+        <div class="ctl" style="margin-top:8px" id="scRange">
+          <label>von (MHz)</label><input type="number" id="scFrom" step="0.0125" value="145.0">
+          <label>bis (MHz)</label><input type="number" id="scTo" step="0.0125" value="145.8">
+          <label>Raster (kHz)</label><input type="number" id="scStep" step="0.25" value="12.5" style="width:80px">
+          <label>Modus</label><select id="scMode"></select>
+        </div>
+        <div class="ctl" style="margin-top:8px">
+          <label>Schwelle (dB über Rauschen)</label><input type="number" id="scThr" value="12" style="width:70px">
+          <label>Nachlauf (s)</label><input type="number" id="scHang" value="2" step="0.5" style="width:70px">
+        </div>
+        <div class="ctl" style="margin-top:10px">
+          <button id="scStart">▶ Suchlauf starten</button>
+          <button id="scStop">■ Stopp</button>
+          <button id="scNext" title="Kanal 10 s überspringen">⏭ Weiter</button>
+          <button id="scLock" title="Kanal für diese Sitzung sperren">⛔ Sperren</button>
+          <button id="scUnlock">Sperrliste leeren (<span id="scLockN">0</span>)</button>
+        </div>
+        <div id="scanstat" style="margin-top:8px"></div>
+        <div class="hint">Der Suchlauf wertet das ganze Spektrum aus: Alle Kanäle in einem 1,7-MHz-Fenster werden gleichzeitig geprüft, erst danach wird weitergestimmt. Gefundene Signale landen unter „Aktivität“.</div>
+      </div>
+
+      <div class="tab" id="tMem">
+        <div class="ctl">
+          <input type="text" id="memName" placeholder="Name" style="width:200px">
+          <button id="memAdd">+ Aktuelle Frequenz speichern</button>
+          <button id="memExp">Exportieren (JSON)</button>
+          <input type="file" id="memImp" accept=".json,application/json" style="display:none"><button id="memImpB">Importieren</button>
+        </div>
+        <div class="scroll" style="margin-top:8px">
+          <table><thead><tr><th>Name</th><th>Frequenz (MHz)</th><th>Modus</th><th></th></tr></thead><tbody id="memBody"></tbody></table>
+        </div>
+        <div class="hint" style="margin-top:6px">Die Liste wird nicht im Browser gespeichert – zum Aufheben exportieren und beim nächsten Mal importieren.</div>
+      </div>
+
+      <div class="tab" id="tAct">
+        <div class="ctl"><button id="actCsv">Als CSV speichern</button><button id="actClr">Leeren</button></div>
+        <div class="scroll" style="margin-top:8px">
+          <table><thead><tr><th>Zuletzt</th><th>Frequenz (MHz)</th><th>Modus</th><th>SNR</th><th>Anzahl</th><th>Name</th></tr></thead><tbody id="actBody"></tbody></table>
+        </div>
+      </div>
+
+      <div class="tab help" id="tHelp">
+        <h3>Hardware</h3>
+        <p>Ein RTL-SDR-Stick mit R820T/R820T2-Tuner (ca. 24–1766 MHz) oder der <b>RTL-SDR Blog V4</b> (R828D, zusätzlich Kurzwelle ab ca. 0,5 MHz über den eingebauten Aufwärtsmischer). Sticks wie der <b>Nooelec NESDR SMArt v5</b> oder RTL-SDR Blog V3 empfangen Kurzwelle per <b>Direktabtastung</b> (Einstellung „Kurzwelle“, meist Q-Zweig): Unter 24 MHz wird dann automatisch umgeschaltet. Über 14,4 MHz ist das Spektrum dabei gespiegelt, die Seite gleicht das aus; starke Sender um 14,4 MHz und Rundfunk können als Spiegel durchschlagen – ein Tiefpass vor dem Eingang hilft. Die Verstärkung wirkt bei Direktabtastung nicht. Für 2 m/70 cm reicht der Teleskop-Dipol, für Kurzwelle braucht es einen Langdraht draußen.</p>
+        <h3>Browser und Start</h3>
+        <p>Nur Chrome oder Edge (WebUSB). Die Seite muss über <code>https://</code> oder <code>http://localhost</code> laufen, z. B.:</p>
+        <pre>python -m http.server 8000
+# dann http://localhost:8000/funkwerk.html öffnen</pre>
+        <h3>Treiber</h3>
+        <p><b>Windows:</b> Mit <a href="https://zadig.akeo.ie/" target="_blank" rel="noopener">Zadig</a> für „Bulk-In, Interface (Interface 0)“ den Treiber <b>WinUSB</b> installieren.</p>
+        <p><b>Linux:</b> Den DVB-Fernsehtreiber sperren und den Zugriff erlauben:</p>
+        <pre>echo 'blacklist dvb_usb_rtl28xxu' | sudo tee /etc/modprobe.d/blacklist-rtlsdr.conf
+echo 'SUBSYSTEM=="usb", ATTRS{idVendor}=="0bda", ATTRS{idProduct}=="2838", MODE="0666"' | sudo tee /etc/udev/rules.d/20-rtlsdr.rules
+sudo udevadm control --reload-rules
+# Stick neu einstecken (oder: sudo rmmod dvb_usb_rtl28xxu)</pre>
+        <p><b>Android:</b> Chrome und ein USB-OTG-Adapter.</p>
+        <p>Programme wie SDR++ oder SDR# dürfen nicht gleichzeitig auf den Stick zugreifen.</p>
+        <h3>Bedienung</h3>
+        <ul>
+          <li>Klick ins Spektrum oder in den Wasserfall stimmt dorthin ab, das Mausrad bewegt um ein Raster, ←/→ ebenso (mit Umschalt ×10).</li>
+          <li>Zum Einstellen der Rauschsperre den Pegel ohne Signal ablesen und den Regler ein paar dB darüber setzen.</li>
+          <li><b>Korrektur (ppm):</b> Liegt ein bekannter Sender im Wasserfall neben seiner Sollfrequenz, hier ausgleichen.</li>
+          <li>Ein Test mit einem UKW-Rundfunksender im Modus WFM zeigt am schnellsten, ob Stick und Antenne funktionieren.</li>
+          <li>Aufnahmen werden als WAV-Datei (48 kHz, mono) heruntergeladen.</li>
+        </ul>
+        <h3>Zahlensender</h3>
+        <p>Aktuelle Sendepläne gibt es bei <a href="https://priyom.org/number-stations" target="_blank" rel="noopener">Priyom</a> und im <a href="https://sigidwiki.com/wiki/Number_Stations" target="_blank" rel="noopener">Sigidwiki</a>. Hinweis: Funk, der nicht für die Allgemeinheit bestimmt ist, darf in Deutschland grundsätzlich nicht mitgehört bzw. weitergegeben werden – Amateurfunk und Rundfunk sind ausgenommen.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Funkwerk – SDR-Empfänger im Browser (WebUSB, RTL2832U mit R820T/R828D). Mehr Projekte: <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a>
+</footer>
+
+<!-- ================= Signalverarbeitung (läuft im Web Worker) ================= -->
+<script id="dspSrc" type="text/plain">
+'use strict';
+const FS = 1920000, IF2 = 240000, AFS = 48000, NFFT = 2048, TAU = 2 * Math.PI;
+
+function blackman(n) {
+  const w = new Float64Array(n);
+  for (let i = 0; i < n; i++) w[i] = 0.42 - 0.5 * Math.cos(TAU * i / (n - 1)) + 0.08 * Math.cos(2 * TAU * i / (n - 1));
+  return w;
+}
+// Tiefpass (gefensterte sinc), fc = Grenzfrequenz / Abtastrate
+function lowpass(n, fc) {
+  const w = blackman(n), h = new Float64Array(n), m = (n - 1) / 2;
+  let s = 0;
+  for (let i = 0; i < n; i++) {
+    const x = i - m;
+    h[i] = (x === 0 ? 2 * fc : Math.sin(TAU * fc * x) / (Math.PI * x)) * w[i];
+    s += h[i];
+  }
+  for (let i = 0; i < n; i++) h[i] /= s;
+  return h;
+}
+// Filter um f0 (normiert) verschieben -> komplexe Koeffizienten
+function shiftTaps(h, f0) {
+  const n = h.length, m = (n - 1) / 2, re = new Float64Array(n), im = new Float64Array(n);
+  for (let i = 0; i < n; i++) { const p = TAU * f0 * (i - m); re[i] = h[i] * Math.cos(p); im[i] = h[i] * Math.sin(p); }
+  return [re, im];
+}
+
+// Dezimierendes FIR für komplexe Signale (reelle oder komplexe Koeffizienten)
+class DFIR {
+  constructor(hr, hi, D) {
+    this.N = hr.length; this.D = D; this.pos = 0; this.cap = 0; this.wr = null;
+    this.hr = Float32Array.from(hr).reverse();
+    this.hi = hi ? Float32Array.from(hi).reverse() : null;
+    this.grow(4096);
+  }
+  grow(n) {
+    const N = this.N, wr = new Float32Array(N - 1 + n), wi = new Float32Array(N - 1 + n);
+    if (this.wr) { wr.set(this.wr.subarray(0, N - 1)); wi.set(this.wi.subarray(0, N - 1)); }
+    this.wr = wr; this.wi = wi;
+    this.or = new Float32Array(Math.ceil(n / this.D) + 1); this.oi = new Float32Array(this.or.length);
+    this.cap = n;
+  }
+  run(xr, xi, n) {
+    if (n > this.cap) this.grow(n);
+    const N = this.N, D = this.D, wr = this.wr, wi = this.wi, hr = this.hr, hi = this.hi, or = this.or, oi = this.oi;
+    wr.set(xr.subarray(0, n), N - 1); wi.set(xi.subarray(0, n), N - 1);
+    const M = N - 1 + n;
+    let k = this.pos, c = 0;
+    if (hi) {
+      for (; k + N <= M; k += D) {
+        let sr = 0, si = 0;
+        for (let j = 0; j < N; j++) { const a = wr[k + j], b = wi[k + j], p = hr[j], q = hi[j]; sr += a * p - b * q; si += a * q + b * p; }
+        or[c] = sr; oi[c++] = si;
+      }
+    } else {
+      for (; k + N <= M; k += D) {
+        let sr = 0, si = 0;
+        for (let j = 0; j < N; j++) { const p = hr[j]; sr += wr[k + j] * p; si += wi[k + j] * p; }
+        or[c] = sr; oi[c++] = si;
+      }
+    }
+    this.pos = k - n;
+    wr.copyWithin(0, n, n + N - 1); wi.copyWithin(0, n, n + N - 1);
+    return c;
+  }
+}
+// Dezimierendes FIR für reelle Signale
+class RFIR {
+  constructor(h, D) { this.N = h.length; this.D = D; this.pos = 0; this.h = Float32Array.from(h).reverse(); this.w = null; this.grow(4096); }
+  grow(n) {
+    const w = new Float32Array(this.N - 1 + n);
+    if (this.w) w.set(this.w.subarray(0, this.N - 1));
+    this.w = w; this.o = new Float32Array(Math.ceil(n / this.D) + 1); this.cap = n;
+  }
+  run(x, n) {
+    if (n > this.cap) this.grow(n);
+    const N = this.N, D = this.D, w = this.w, h = this.h, o = this.o;
+    w.set(x.subarray(0, n), N - 1);
+    const M = N - 1 + n;
+    let k = this.pos, c = 0;
+    for (; k + N <= M; k += D) { let s = 0; for (let j = 0; j < N; j++) s += w[k + j] * h[j]; o[c++] = s; }
+    this.pos = k - n;
+    w.copyWithin(0, n, n + N - 1);
+    return c;
+  }
+}
+
+class FFT {
+  constructor(n) {
+    this.n = n; const bits = Math.round(Math.log2(n));
+    this.rev = new Uint32Array(n);
+    for (let i = 0; i < n; i++) { let r = 0; for (let b = 0; b < bits; b++) r |= ((i >> b) & 1) << (bits - 1 - b); this.rev[i] = r; }
+    this.cs = new Float64Array(n / 2); this.sn = new Float64Array(n / 2);
+    for (let i = 0; i < n / 2; i++) { this.cs[i] = Math.cos(TAU * i / n); this.sn[i] = -Math.sin(TAU * i / n); }
+  }
+  run(re, im) {
+    const n = this.n, rev = this.rev, cs = this.cs, sn = this.sn;
+    for (let i = 0; i < n; i++) { const j = rev[i]; if (j > i) { let t = re[i]; re[i] = re[j]; re[j] = t; t = im[i]; im[i] = im[j]; im[j] = t; } }
+    for (let size = 2; size <= n; size <<= 1) {
+      const half = size >> 1, step = n / size;
+      for (let i = 0; i < n; i += size) {
+        for (let j = 0; j < half; j++) {
+          const k = j * step, a = i + j, b = a + half;
+          const tr = re[b] * cs[k] - im[b] * sn[k], ti = re[b] * sn[k] + im[b] * cs[k];
+          re[b] = re[a] - tr; im[b] = im[a] - ti; re[a] += tr; im[a] += ti;
+        }
+      }
+    }
+  }
+}
+
+// ---------------- Empfänger ----------------
+class Rx {
+  constructor() {
+    this.center = 145300000; this.listen = 145500000; this.mode = 'nfm'; this.bw = 12000;
+    this.sq = -200; this.mute = false; this.gen = 0;
+    this.onSpec = null; this.onAudio = null; this.onLevel = null;
+    this.fft = new FFT(NFFT); this.win = blackman(NFFT);
+    let s = 0; for (let i = 0; i < NFFT; i++) s += this.win[i];
+    this.wnorm = 1 / (s * s);
+    this.fr = new Float64Array(NFFT); this.fi = new Float64Array(NFFT); this.acc = new Float64Array(NFFT);
+    // Dezimierung 1,92 MHz -> 480 kHz -> 240 kHz -> 48 kHz
+    this.stA = new DFIR(lowpass(48, 240000 / FS), null, 4);
+    this.stB = new DFIR(lowpass(72, 120000 / 480000), null, 2);
+    this.stC = new DFIR(lowpass(64, 24000 / IF2), null, 5);
+    this.wfmDec = new RFIR(lowpass(64, 15000 / IF2), 5);
+    this.nr = 1; this.ni = 0;
+    this.mr = new Float32Array(0); this.mi = new Float32Array(0);
+    this.tmp = new Float32Array(0); this.aud = new Float32Array(0);
+    this.setChannel();
+  }
+  cfg(m) {
+    let ch = false;
+    if (m.center !== undefined) this.center = m.center;
+    if (m.listen !== undefined) this.listen = m.listen;
+    if (m.gen !== undefined) this.gen = m.gen;
+    if (m.sq !== undefined) this.sq = m.sq;
+    if (m.mute !== undefined) this.mute = m.mute;
+    if (m.mode !== undefined && m.mode !== this.mode) { this.mode = m.mode; ch = true; }
+    if (m.bw !== undefined && m.bw !== this.bw) { this.bw = m.bw; ch = true; }
+    if (ch) this.setChannel();
+  }
+  setChannel() {
+    const m = this.mode, bw = this.bw;
+    let hr, hi = null;
+    if (m === 'nfm' || m === 'am') hr = lowpass(96, Math.min(bw / 2, 20000) / AFS);
+    else if (m === 'usb' || m === 'lsb') {
+      const f0 = (300 + bw / 2) * (m === 'usb' ? 1 : -1);
+      [hr, hi] = shiftTaps(lowpass(160, bw / 2 / AFS), f0 / AFS);
+    } else if (m === 'cw') {
+      [hr, hi] = shiftTaps(lowpass(256, bw / 2 / AFS), 700 / AFS);
+    } else hr = [1];
+    this.ch = new DFIR(hr, hi, 1);
+    this.alp = new RFIR(lowpass(64, 3400 / AFS), 1);
+    // Hochpass 250 Hz (Biquad) gegen Subaudiotöne bei FM
+    const w0 = TAU * 250 / AFS, al = Math.sin(w0) / (2 * 0.707), c = Math.cos(w0), a0 = 1 + al;
+    this.hp = { b0: (1 + c) / 2 / a0, b1: -(1 + c) / a0, b2: (1 + c) / 2 / a0, a1: -2 * c / a0, a2: (1 - al) / a0, x1: 0, x2: 0, y1: 0, y2: 0 };
+    this.pr = 1; this.pi = 0; this.env = 0; this.dcx = 0; this.dcy = 0; this.de = 0;
+  }
+  ensure(n) {
+    if (this.mr.length < n) { this.mr = new Float32Array(n); this.mi = new Float32Array(n); }
+    if (this.tmp.length < n / 4 + 8) this.tmp = new Float32Array((n >> 2) + 8);
+    if (this.aud.length < n / 4 + 8) this.aud = new Float32Array((n >> 2) + 8);
+  }
+  agc(buf, n) {
+    let env = this.env;
+    const rel = Math.exp(-1 / (0.4 * AFS));
+    for (let i = 0; i < n; i++) {
+      const v = Math.abs(buf[i]);
+      env = v > env ? env + (v - env) * 0.05 : env * rel;
+      let g = 0.3 / (env + 1e-7); if (g > 1500) g = 1500;
+      buf[i] *= g;
+    }
+    this.env = env;
+  }
+  spectrum(re, im, n) {
+    if (n < NFFT) return;
+    const S = 4, fr = this.fr, fi = this.fi, acc = this.acc, w = this.win;
+    acc.fill(0);
+    for (let s = 0; s < S; s++) {
+      const o = Math.floor(s * (n - NFFT) / (S - 1));
+      for (let i = 0; i < NFFT; i++) { fr[i] = re[o + i] * w[i]; fi[i] = im[o + i] * w[i]; }
+      this.fft.run(fr, fi);
+      for (let i = 0; i < NFFT; i++) acc[i] += fr[i] * fr[i] + fi[i] * fi[i];
+    }
+    const db = new Float32Array(NFFT), h = NFFT >> 1, k = this.wnorm / S;
+    for (let i = 0; i < NFFT; i++) db[i] = 10 * Math.log10(acc[(i + h) & (NFFT - 1)] * k + 1e-20);
+    if (this.onSpec) this.onSpec({ type: 'spec', db, center: this.center, gen: this.gen });
+  }
+  process(re, im, n) {
+    this.ensure(n);
+    this.spectrum(re, im, n);
+    // Auf die Hörfrequenz mischen
+    const w = -TAU * (this.listen - this.center) / FS, cr = Math.cos(w), ci = Math.sin(w);
+    let nr = this.nr, ni = this.ni;
+    const mr = this.mr, mi = this.mi;
+    for (let i = 0; i < n; i++) {
+      const a = re[i], b = im[i];
+      mr[i] = a * nr - b * ni; mi[i] = a * ni + b * nr;
+      const t = nr * cr - ni * ci; ni = nr * ci + ni * cr; nr = t;
+    }
+    const g = 1 / Math.hypot(nr, ni); this.nr = nr * g; this.ni = ni * g;
+    const a = this.stA.run(mr, mi, n);
+    const b = this.stB.run(this.stA.or, this.stA.oi, a);
+    let pow = 0, cnt = 0, out;
+    const mode = this.mode;
+    if (mode === 'wfm') {
+      const r = this.stB.or, q = this.stB.oi, t = this.tmp, k = IF2 / (TAU * 75000) * 0.7;
+      let pr = this.pr, pi = this.pi;
+      for (let i = 0; i < b; i++) {
+        const x = r[i], y = q[i]; pow += x * x + y * y;
+        t[i] = Math.atan2(y * pr - x * pi, x * pr + y * pi) * k; pr = x; pi = y;
+      }
+      this.pr = pr; this.pi = pi; pow /= b || 1;
+      cnt = this.wfmDec.run(t, b); out = this.wfmDec.o;
+      const al = 1 - Math.exp(-1 / (AFS * 50e-6));  // Deemphase 50 µs
+      let de = this.de;
+      for (let i = 0; i < cnt; i++) { de += al * (out[i] - de); out[i] = de; }
+      this.de = de;
+    } else {
+      const c = this.stC.run(this.stB.or, this.stB.oi, b);
+      const d = this.ch.run(this.stC.or, this.stC.oi, c);
+      const r = this.ch.or, q = this.ch.oi, au = this.aud;
+      for (let i = 0; i < d; i++) pow += r[i] * r[i] + q[i] * q[i];
+      pow /= d || 1;
+      if (mode === 'nfm') {
+        let pr = this.pr, pi = this.pi; const k = AFS / (TAU * 5000) * 0.5;
+        for (let i = 0; i < d; i++) { const x = r[i], y = q[i]; au[i] = Math.atan2(y * pr - x * pi, x * pr + y * pi) * k; pr = x; pi = y; }
+        this.pr = pr; this.pi = pi;
+        cnt = this.alp.run(au, d); out = this.alp.o;
+        const h = this.hp;
+        for (let i = 0; i < cnt; i++) {
+          const x = out[i], y = h.b0 * x + h.b1 * h.x1 + h.b2 * h.x2 - h.a1 * h.y1 - h.a2 * h.y2;
+          h.x2 = h.x1; h.x1 = x; h.y2 = h.y1; h.y1 = y; out[i] = y;
+        }
+      } else if (mode === 'am') {
+        let dx = this.dcx, dy = this.dcy;
+        for (let i = 0; i < d; i++) { const e = Math.sqrt(r[i] * r[i] + q[i] * q[i]); dy = e - dx + 0.995 * dy; dx = e; au[i] = dy; }
+        this.dcx = dx; this.dcy = dy;
+        this.agc(au, d); out = au; cnt = d;
+      } else {
+        for (let i = 0; i < d; i++) au[i] = r[i];
+        this.agc(au, d); out = au; cnt = d;
+      }
+    }
+    const level = 10 * Math.log10(pow + 1e-20);
+    const open = level > this.sq && !this.mute;
+    const o = new Float32Array(cnt);
+    if (open) for (let i = 0; i < cnt; i++) { const v = out[i]; o[i] = v > 1 ? 1 : v < -1 ? -1 : v; }
+    if (this.onLevel) this.onLevel(level, open);
+    if (this.onAudio) this.onAudio(o);
+  }
+}
+
+// ---------------- Demo-Signalquelle ----------------
+class Demo {
+  constructor() {
+    const T = 4096; this.T = T; this.t = 0;
+    this.cs = new Float32Array(T); this.sn = new Float32Array(T);
+    for (let i = 0; i < T; i++) { this.cs[i] = Math.cos(TAU * i / T); this.sn[i] = Math.sin(TAU * i / T); }
+    const voice = f1 => t => {
+      const e = Math.max(0, Math.sin(TAU * 3.1 * t)) * (0.55 + 0.45 * Math.sin(TAU * 0.37 * t));
+      return e * (0.6 * Math.sin(TAU * f1 * t) + 0.3 * Math.sin(TAU * 2.7 * f1 * t) + 0.1 * Math.sin(TAU * 4.1 * f1 * t));
+    };
+    let ap = 0;
+    const afsk = t => { const bit = (Math.imul(Math.floor(t * 1200), 2654435761) >>> 16) & 1; ap += (bit ? 1200 : 2200) / AFS; ap -= Math.floor(ap); return Math.sin(TAU * ap); };
+    this.sig = [
+      { f: 145500000, k: 'fm', a: 0.08, dev: 3000, au: voice(190), g: t => t % 9 < 4 },
+      { f: 145637500, k: 'fm', a: 0.03, dev: 3000, au: voice(240), g: t => t % 13 > 5 && t % 13 < 10 },
+      { f: 145025000, k: 'fm', a: 0.006, dev: 0, au: () => 0, g: t => t % 20 < 3 },
+      { f: 144800000, k: 'fm', a: 0.06, dev: 3500, au: afsk, g: t => t % 6 < 0.7 },
+      { f: 433500000, k: 'fm', a: 0.05, dev: 3000, au: voice(170), g: t => t % 17 < 6 },
+      { f: 439125000, k: 'fm', a: 0.04, dev: 3000, au: voice(210), g: t => t % 11 > 2 && t % 11 < 8 },
+      { f: 99500000, k: 'fm', a: 0.25, dev: 60000, g: () => true,
+        au: t => 0.35 * Math.sin(TAU * 261.6 * t) + 0.3 * Math.sin(TAU * 329.6 * t) + 0.3 * Math.sin(TAU * 392 * t) * Math.sin(TAU * 0.5 * t) },
+      { f: 4625000, k: 'am', a: 0.05, au: t => ((t * 24) % 1 < 0.5 ? 0.7 : -0.7) * (t % 1.3 < 1.0 ? 1 : 0) },
+      { f: 3756000, k: 'usb', a: 0.04, tones: [1000], env: t => ((t * 1.6) % 1 < 0.12 ? 1 : 0) },
+      { f: 7100000, k: 'lsb', a: 0.04, tones: [400, 950, 1600], env: t => Math.max(0, Math.sin(TAU * 2.9 * t)) * (t % 8 < 5 ? 1 : 0) },
+      { f: 14200000, k: 'usb', a: 0.03, tones: [350, 800, 1400], env: t => Math.max(0, Math.sin(TAU * 3.3 * t)) * (t % 7 < 4 ? 1 : 0) }
+    ];
+    for (const s of this.sig) { s.ph = 0; s.tp = (s.tones || []).map(() => 0); }
+  }
+  gen(n, center, re, im) {
+    const T = this.T, cs = this.cs, sn = this.sn, dt = 1 / FS;
+    for (let i = 0; i < n; i++) { re[i] = (Math.random() + Math.random() - 1) * 0.02; im[i] = (Math.random() + Math.random() - 1) * 0.02; }
+    for (const s of this.sig) {
+      const df = s.f - center;
+      if (Math.abs(df) > FS / 2 - 20000) continue;
+      let ph = s.ph;
+      for (let i0 = 0; i0 < n; i0 += 40) {
+        const t = this.t + i0 * dt, end = Math.min(n, i0 + 40);
+        if (s.k === 'fm') {
+          if (!s.g(t)) { ph += (end - i0) * df / FS; ph -= Math.floor(ph); continue; }
+          const inc = (df + s.dev * s.au(t)) / FS, A = s.a;
+          for (let i = i0; i < end; i++) { ph += inc; ph -= Math.floor(ph); const x = (ph * T) | 0; re[i] += A * cs[x]; im[i] += A * sn[x]; }
+        } else if (s.k === 'am') {
+          const A = s.a * (1 + 0.8 * s.au(t)), inc = df / FS;
+          for (let i = i0; i < end; i++) { ph += inc; ph -= Math.floor(ph); const x = (ph * T) | 0; re[i] += A * cs[x]; im[i] += A * sn[x]; }
+        } else {
+          const A = s.env(t) * s.a, sg = s.k === 'usb' ? 1 : -1;
+          for (let q = 0; q < s.tones.length; q++) {
+            let p = s.tp[q]; const inc = (df + sg * s.tones[q]) / FS;
+            if (A > 0) for (let i = i0; i < end; i++) { p += inc; p -= Math.floor(p); const x = (p * T) | 0; re[i] += A * cs[x]; im[i] += A * sn[x]; }
+            else { p += inc * (end - i0); p -= Math.floor(p); }
+            s.tp[q] = p;
+          }
+        }
+      }
+      s.ph = ph;
+    }
+    this.t += n * dt;
+  }
+}
+
+function workerMain() {
+  let port = null, rec = false, demo = null, timer = null, done = 0, t0 = 0;
+  let re = new Float32Array(65536), im = new Float32Array(65536);
+  const rx = new Rx();
+  rx.onSpec = m => self.postMessage(m, [m.db.buffer]);
+  rx.onLevel = (db, open) => self.postMessage({ type: 'level', db, open });
+  rx.onAudio = a => {
+    if (rec) { const c = a.slice(); self.postMessage({ type: 'rec', data: c }, [c.buffer]); }
+    if (port) port.postMessage(a, [a.buffer]);
+  };
+  self.onmessage = e => {
+    const m = e.data;
+    if (m.type === 'iq') {
+      const u = new Uint8Array(m.buf), n = u.length >> 1;
+      if (re.length < n) { re = new Float32Array(n); im = new Float32Array(n); }
+      for (let i = 0; i < n; i++) { re[i] = (u[2 * i] - 127.4) / 128; im[i] = (u[2 * i + 1] - 127.4) / 128; }
+      rx.process(re, im, n);
+    } else if (m.type === 'cfg') rx.cfg(m);
+    else if (m.type === 'port') port = m.port;
+    else if (m.type === 'rec') rec = m.on;
+    else if (m.type === 'demo') {
+      clearInterval(timer); timer = null;
+      if (m.on) {
+        demo = demo || new Demo(); t0 = performance.now(); done = 0;
+        timer = setInterval(() => {
+          const due = (performance.now() - t0) / 1000 * FS;
+          if (due - done > FS * 0.5) done = due - 65536;
+          while (due - done >= 65536) {
+            if (re.length < 65536) { re = new Float32Array(65536); im = new Float32Array(65536); }
+            demo.gen(65536, rx.center, re, im); rx.process(re, im, 65536); done += 65536;
+          }
+        }, 15);
+      }
+    }
+  };
+}
+</script>
+
+<!-- ================= Audioausgabe (AudioWorklet) ================= -->
+<script id="workletSrc" type="text/plain">
+class FunkOut extends AudioWorkletProcessor {
+  constructor() {
+    super();
+    this.L = 96000; this.b = new Float32Array(this.L); this.w = 0; this.r = 0; this.n = 0; this.play = false;
+    this.port.onmessage = e => { const p = e.data && e.data.port; if (p) p.onmessage = ev => this.push(ev.data); };
+  }
+  push(a) {
+    const L = this.L, b = this.b;
+    for (let i = 0; i < a.length; i++) { b[this.w] = a[i]; this.w = (this.w + 1) % L; }
+    this.n += a.length;
+    if (this.n > 24000) { const drop = this.n - 7200; this.r = (this.r + drop) % L; this.n -= drop; }
+  }
+  process(_in, outs) {
+    const o = outs[0][0]; if (!o) return true;
+    if (!this.play && this.n >= 4800) this.play = true;
+    for (let i = 0; i < o.length; i++) {
+      if (this.play && this.n > 0) { o[i] = this.b[this.r]; this.r = (this.r + 1) % this.L; this.n--; }
+      else { o[i] = 0; this.play = false; }
+    }
+    return true;
+  }
+}
+registerProcessor('funk-out', FunkOut);
+</script>
+
+<!-- ================= Treiber RTL2832U + R820T/R828D (WebUSB) ================= -->
+<script>
+'use strict';
+const SDR_RATE = 1920000;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const BITREV = [0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe, 0x1, 0x9, 0x5, 0xd, 0x3, 0xb, 0x7, 0xf];
+const bitrev = b => (BITREV[b & 15] << 4) | BITREV[b >> 4];
+
+const R82_INIT = [0x83, 0x32, 0x75, 0xc0, 0x40, 0xd6, 0x6c, 0xf5, 0x63, 0x75, 0x68, 0x6c, 0x83, 0x80, 0x00,
+  0x0f, 0x00, 0xc0, 0x30, 0x48, 0xcc, 0x60, 0x00, 0x54, 0xae, 0x4a, 0xc0];
+// MHz, open_d, rf_mux_ploy, tf_c, xtal_cap20p, xtal_cap10p, xtal_cap0p
+const R82_RANGES = [
+  [0, 0x08, 0x02, 0xdf, 0x02, 0x01, 0x00], [50, 0x08, 0x02, 0xbe, 0x02, 0x01, 0x00], [55, 0x08, 0x02, 0x8b, 0x02, 0x01, 0x00],
+  [60, 0x08, 0x02, 0x7b, 0x02, 0x01, 0x00], [65, 0x08, 0x02, 0x69, 0x02, 0x01, 0x00], [70, 0x08, 0x02, 0x58, 0x02, 0x01, 0x00],
+  [75, 0x00, 0x02, 0x44, 0x02, 0x01, 0x00], [80, 0x00, 0x02, 0x44, 0x02, 0x01, 0x00], [90, 0x00, 0x02, 0x34, 0x01, 0x01, 0x00],
+  [100, 0x00, 0x02, 0x34, 0x01, 0x01, 0x00], [110, 0x00, 0x02, 0x24, 0x01, 0x01, 0x00], [120, 0x00, 0x02, 0x24, 0x01, 0x01, 0x00],
+  [140, 0x00, 0x02, 0x14, 0x01, 0x01, 0x00], [180, 0x00, 0x02, 0x13, 0x00, 0x00, 0x00], [220, 0x00, 0x02, 0x13, 0x00, 0x00, 0x00],
+  [250, 0x00, 0x02, 0x11, 0x00, 0x00, 0x00], [280, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00], [310, 0x00, 0x41, 0x00, 0x00, 0x00, 0x00],
+  [450, 0x00, 0x41, 0x00, 0x00, 0x00, 0x00], [588, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00], [650, 0x00, 0x40, 0x00, 0x00, 0x00, 0x00]];
+const R82_LNA = [0, 9, 13, 40, 38, 13, 31, 22, 26, 31, 26, 14, 19, 5, 35, 13];
+const R82_MIX = [0, 5, 10, 10, 19, 9, 10, 25, 17, 10, 8, 16, 13, 6, 3, -8];
+const GAINS = [0, 9, 14, 27, 37, 77, 87, 125, 144, 157, 166, 197, 207, 229, 254, 280, 297, 328, 338, 364, 372, 386, 402, 421, 434, 439, 445, 480, 496];
+
+class R82xx {
+  constructor(rtl, addr, chip, xtal, isV4) {
+    Object.assign(this, { rtl, addr, chip, xtal, isV4 });
+    this.regs = new Uint8Array(32); this.input = -1; this.ifreq = 3570000; this.hasLock = false; this.filCal = 0;
+  }
+  async write(reg, vals) {
+    for (let i = 0; i < vals.length; i++) { const r = reg + i; if (r >= 5 && r < 32) this.regs[r] = vals[i]; }
+    for (let p = 0; p < vals.length; p += 7) await this.rtl.i2cW(this.addr, [reg + p, ...vals.slice(p, p + 7)]);
+  }
+  wreg(reg, v) { return this.write(reg, [v & 255]); }
+  wmask(reg, v, m) { return this.wreg(reg, (this.regs[reg] & ~m) | (v & m)); }
+  async read(len) {
+    await this.rtl.i2cW(this.addr, [0]);
+    const d = await this.rtl.i2cR(this.addr, len);
+    return Array.from(d, bitrev);
+  }
+  async init() {
+    await this.write(5, R82_INIT);
+    await this.tvStandard();
+    await this.sysfreq();
+    this.input = -1;
+  }
+  async tvStandard() {
+    const hpCor = 0x6b;
+    await this.wmask(0x0c, 0x00, 0x0f);
+    await this.wmask(0x13, 49, 0x3f);
+    await this.wmask(0x1d, 0x00, 0x38);
+    await sleep(2);
+    this.ifreq = 3570000;
+    for (let i = 0; i < 2; i++) {               // Filterkalibrierung
+      await this.wmask(0x0b, hpCor, 0x60);
+      await this.wmask(0x0f, 0x04, 0x04);
+      await this.wmask(0x10, 0x00, 0x03);
+      await this.setPll(56000000);
+      if (!this.hasLock) break;
+      await this.wmask(0x0b, 0x10, 0x10);
+      await sleep(2);
+      await this.wmask(0x0b, 0x00, 0x10);
+      await this.wmask(0x0f, 0x00, 0x04);
+      const d = await this.read(5);
+      this.filCal = d[4] & 0x0f;
+      if (this.filCal && this.filCal !== 0x0f) break;
+    }
+    if (this.filCal === 0x0f) this.filCal = 0;
+    await this.wmask(0x0a, 0x10 | this.filCal, 0x1f);
+    await this.wmask(0x0b, hpCor, 0xef);
+    await this.wmask(0x07, 0x00, 0x80);
+    await this.wmask(0x06, 0x10, 0x30);
+    await this.wmask(0x1e, 0x60, 0x60);
+    await this.wmask(0x05, 0x01, 0x80);
+    await this.wmask(0x1f, 0x00, 0x80);
+    await this.wmask(0x0f, 0x00, 0x80);
+    await this.wmask(0x19, 0x60, 0x60);
+  }
+  async sysfreq() {
+    const mixerTop = 0x24;
+    await this.wmask(0x1d, 0xe5, 0xc7);
+    await this.wmask(0x1c, mixerTop, 0xf8);
+    await this.wreg(0x0d, 0x53);
+    await this.wreg(0x0e, 0x75);
+    await this.wmask(0x05, 0x00, 0x60);
+    await this.wmask(0x06, 0x00, 0x08);
+    await this.wmask(0x11, 0x38, 0x38);
+    await this.wmask(0x17, 0x30, 0x30);
+    await this.wmask(0x0a, 0x40, 0x60);
+    await this.wmask(0x1d, 0, 0x38);
+    await this.wmask(0x1c, 0, 0x04);
+    await this.wmask(0x06, 0, 0x40);
+    await this.wmask(0x1a, 0x30, 0x30);
+    await sleep(250);
+    await this.wmask(0x1d, 0x18, 0x38);
+    await this.wmask(0x1c, mixerTop, 0x04);
+    await this.wmask(0x1e, 14, 0x1f);
+    await this.wmask(0x1a, 0x20, 0x30);
+  }
+  async setMux(lo) {
+    const mhz = Math.floor(lo / 1e6);
+    let i = 0;
+    for (; i < R82_RANGES.length - 1; i++) if (mhz < R82_RANGES[i + 1][0]) break;
+    const r = R82_RANGES[i];
+    await this.wmask(0x17, r[1], 0x08);
+    await this.wmask(0x1a, r[2], 0xc3);
+    await this.wreg(0x1b, r[3]);
+    await this.wmask(0x10, r[6], 0x0b);
+    await this.wmask(0x08, 0x00, 0x3f);
+    await this.wmask(0x09, 0x00, 0x3f);
+  }
+  async setPll(freq) {
+    const vcoMin = 1770000, vcoMax = vcoMin * 2, fk = Math.floor((freq + 500) / 1000), ref = this.xtal;
+    await this.wmask(0x10, 0, 0x10);
+    await this.wmask(0x1a, 0x00, 0x0c);
+    await this.wmask(0x12, 0x80, 0xe0);
+    let mixDiv = 2, divNum = 0;
+    while (mixDiv <= 64) {
+      if (fk * mixDiv >= vcoMin && fk * mixDiv < vcoMax) { let db = mixDiv; while (db > 2) { db >>= 1; divNum++; } break; }
+      mixDiv <<= 1;
+    }
+    const d = await this.read(5);
+    const pwrRef = this.chip === 'R828D' ? 1 : 2, fine = (d[4] & 0x30) >> 4;
+    if (fine > pwrRef) divNum--; else if (fine < pwrRef) divNum++;
+    await this.wmask(0x10, divNum << 5, 0xe0);
+    const vco = freq * mixDiv;
+    const vcoDiv = Math.floor((ref + 65536 * vco) / (2 * ref));
+    const nint = Math.floor(vcoDiv / 65536), sdm = vcoDiv % 65536;
+    if (nint < 13 || nint > (this.chip === 'R828D' ? 127 : 76)) { this.hasLock = false; throw new Error('PLL kann ' + (freq / 1e6).toFixed(3) + ' MHz nicht erzeugen'); }
+    const ni = Math.floor((nint - 13) / 4), si = nint - 4 * ni - 13;
+    await this.wreg(0x14, ni + (si << 6));
+    await this.wmask(0x12, sdm === 0 ? 0x08 : 0x00, 0x08);
+    await this.wreg(0x16, sdm >> 8);
+    await this.wreg(0x15, sdm & 0xff);
+    let locked = false;
+    for (let i = 0; i < 2; i++) {
+      await sleep(10);
+      const s = await this.read(3);
+      if (s[2] & 0x40) { locked = true; break; }
+      if (!i) await this.wmask(0x12, 0x60, 0xe0);
+    }
+    this.hasLock = locked;
+    if (locked) await this.wmask(0x1a, 0x08, 0x08);
+  }
+  async setFreq(f) {
+    if (this.isV4) {                 // RTL-SDR Blog V4: Aufwärtsmischer für KW, Eingangsumschaltung
+      const up = f < 28.8e6 ? f + 28.8e6 : f, lo = up + this.ifreq;
+      await this.setMux(lo);
+      await this.setPll(lo);
+      const open = (f <= 2.2e6 || (f >= 85e6 && f <= 112e6) || (f >= 172e6 && f <= 242e6)) ? 0x00 : 0x08;
+      await this.wmask(0x17, open, 0x08);
+      const band = f <= 28.8e6 ? 1 : f < 250e6 ? 2 : 3;
+      if (band !== this.input) {
+        this.input = band;
+        const c2 = band === 1 ? 0x08 : 0x00;
+        await this.wmask(0x06, c2, 0x08);
+        await this.rtl.gpioOut(5);
+        await this.rtl.gpioBit(5, c2 ? 0 : 1);
+        await this.wmask(0x05, band === 2 ? 0x40 : 0x00, 0x40);
+        await this.wmask(0x05, band === 3 ? 0x00 : 0x20, 0x20);
+      }
+    } else {
+      const lo = f + this.ifreq;
+      await this.setMux(lo);
+      await this.setPll(lo);
+      if (this.chip === 'R828D') {
+        const a = f > 345e6 ? 0x00 : 0x60;
+        if (a !== this.input) { this.input = a; await this.wmask(0x05, a, 0x60); }
+      }
+    }
+    return this.hasLock;
+  }
+  async setGain(auto, g) {
+    if (auto) {
+      await this.wmask(0x05, 0, 0x10);
+      await this.wmask(0x07, 0x10, 0x10);
+      await this.wmask(0x0c, 0x0b, 0x9f);
+    } else {
+      await this.wmask(0x05, 0x10, 0x10);
+      await this.wmask(0x07, 0, 0x10);
+      await this.wmask(0x0c, 0x08, 0x9f);
+      let tot = 0, li = 0, mi = 0;
+      for (let i = 0; i < 15; i++) {
+        if (tot >= g) break; tot += R82_LNA[++li];
+        if (tot >= g) break; tot += R82_MIX[++mi];
+      }
+      await this.wmask(0x05, li, 0x0f);
+      await this.wmask(0x07, mi, 0x0f);
+    }
+  }
+}
+
+class RtlSdr {
+  constructor(dev) { this.dev = dev; this.q = Promise.resolve(); this.ppm = 0; this.freq = 0; this.running = false; this.isV4 = false; this.ds = 0; this.dsPref = 2; }
+  enqueue(fn) { const p = this.q.then(fn); this.q = p.catch(() => {}); return p; }
+  async co(value, index, data) {
+    const r = await this.dev.controlTransferOut({ requestType: 'vendor', recipient: 'device', request: 0, value, index }, data);
+    if (r.status !== 'ok') throw new Error('USB-Schreibfehler (' + r.status + ')');
+  }
+  async ci(value, index, len) {
+    const r = await this.dev.controlTransferIn({ requestType: 'vendor', recipient: 'device', request: 0, value, index }, len);
+    if (r.status !== 'ok' || !r.data) throw new Error('USB-Lesefehler (' + r.status + ')');
+    return new Uint8Array(r.data.buffer, r.data.byteOffset, r.data.byteLength);
+  }
+  wr(block, addr, val, len) { return this.co(addr, (block << 8) | 0x10, len === 1 ? Uint8Array.of(val & 255) : Uint8Array.of((val >> 8) & 255, val & 255)); }
+  async rd(block, addr, len) { const d = await this.ci(addr, block << 8, len); return len === 1 ? d[0] : (d[1] << 8) | d[0]; }
+  async dw(page, addr, val, len) {
+    await this.co((addr << 8) | 0x20, 0x10 | page, len === 1 ? Uint8Array.of(val & 255) : Uint8Array.of((val >> 8) & 255, val & 255));
+    await this.dr(0x0a, 0x01, 1);
+  }
+  async dr(page, addr, len) { const d = await this.ci((addr << 8) | 0x20, page, len); return len === 1 ? d[0] : (d[1] << 8) | d[0]; }
+  i2cW(addr, bytes) { return this.co(addr, (6 << 8) | 0x10, Uint8Array.from(bytes)); }
+  i2cR(addr, len) { return this.ci(addr, 6 << 8, len); }
+  async i2cReg(addr, reg) { try { await this.i2cW(addr, [reg]); return (await this.i2cR(addr, 1))[0]; } catch (e) { return -1; } }
+  rep(on) { return this.dw(1, 0x01, on ? 0x18 : 0x10, 1); }
+  async gpioOut(g) {
+    let r = await this.rd(2, 0x3004, 1); await this.wr(2, 0x3004, r & ~(1 << g), 1);
+    r = await this.rd(2, 0x3003, 1); await this.wr(2, 0x3003, r | (1 << g), 1);
+  }
+  async gpioBit(g, v) { let r = await this.rd(2, 0x3001, 1); r = v ? r | (1 << g) : r & ~(1 << g); await this.wr(2, 0x3001, r, 1); }
+
+  async initBaseband() {
+    await this.wr(1, 0x2000, 0x09, 1);      // USB_SYSCTL
+    await this.wr(1, 0x2158, 0x0002, 2);    // USB_EPA_MAXPKT
+    await this.wr(1, 0x2148, 0x1002, 2);    // USB_EPA_CTL
+    await this.wr(2, 0x300b, 0x22, 1);      // DEMOD_CTL_1
+    await this.wr(2, 0x3000, 0xe8, 1);      // DEMOD_CTL
+    await this.dw(1, 0x01, 0x14, 1); await this.dw(1, 0x01, 0x10, 1);
+    await this.dw(1, 0x15, 0x00, 1); await this.dw(1, 0x16, 0x0000, 2);
+    for (let i = 0; i < 6; i++) await this.dw(1, 0x16 + i, 0x00, 1);
+    const F = [-54, -36, -41, -40, -32, -14, 14, 53, 101, 156, 215, 273, 327, 372, 404, 421], b = new Array(20);
+    for (let i = 0; i < 8; i++) b[i] = F[i] & 0xff;
+    for (let i = 0; i < 8; i += 2) {
+      const v0 = F[8 + i], v1 = F[9 + i], j = 8 + i * 3 / 2;
+      b[j] = (v0 >> 4) & 0xff; b[j + 1] = ((v0 << 4) | ((v1 >> 8) & 0x0f)) & 0xff; b[j + 2] = v1 & 0xff;
+    }
+    for (let i = 0; i < 20; i++) await this.dw(1, 0x1c + i, b[i], 1);
+    await this.dw(0, 0x19, 0x05, 1);
+    await this.dw(1, 0x93, 0xf0, 1); await this.dw(1, 0x94, 0x0f, 1);
+    await this.dw(1, 0x11, 0x00, 1); await this.dw(1, 0x04, 0x00, 1);
+    await this.dw(0, 0x61, 0x60, 1); await this.dw(0, 0x06, 0x80, 1);
+    await this.dw(1, 0xb1, 0x1b, 1); await this.dw(0, 0x0d, 0x83, 1);
+  }
+  async open() {
+    const d = this.dev;
+    await d.open();
+    if (!d.configuration) await d.selectConfiguration(1);
+    await d.claimInterface(0);
+    await this.initBaseband();
+    await this.rep(1);
+    let chip = null, addr = 0;
+    if (await this.i2cReg(0x34, 0) === 0x69) { chip = 'R820T'; addr = 0x34; }
+    else if (await this.i2cReg(0x74, 0) === 0x69) { chip = 'R828D'; addr = 0x74; }
+    if (!chip) { await this.rep(0); throw new Error('Kein R820T/R828D-Tuner gefunden – andere Tuner (E4000, FC0013 …) werden nicht unterstützt'); }
+    this.chip = chip;
+    this.isV4 = chip === 'R828D' && /V4/i.test(d.productName || '');
+    this.baseXtal = (chip === 'R828D' && !this.isV4) ? 16e6 : 28.8e6;
+    await this.dw(1, 0xb1, 0x1a, 1);   // Zero-IF aus
+    await this.dw(0, 0x08, 0x4d, 1);   // nur I-ADC
+    await this.setIf(3570000);
+    await this.dw(1, 0x15, 0x01, 1);   // Spektrum-Inversion
+    this.tuner = new R82xx(this, addr, chip, this.baseXtal, this.isV4);
+    await this.tuner.init();
+    await this.rep(0);
+    await this.setRate(SDR_RATE);
+    return ((d.manufacturerName || '') + ' ' + (d.productName || '')).trim() || 'RTL-SDR';
+  }
+  async setIf(f) {
+    const xt = 28.8e6 * (1 + this.ppm / 1e6), v = Math.trunc(-(f * 4194304 / xt));
+    await this.dw(1, 0x19, (v >> 16) & 0x3f, 1); await this.dw(1, 0x1a, (v >> 8) & 0xff, 1); await this.dw(1, 0x1b, v & 0xff, 1);
+  }
+  async corr() {
+    const o = Math.trunc(-this.ppm * 16777216 / 1e6);
+    await this.dw(1, 0x3f, o & 0xff, 1); await this.dw(1, 0x3e, (o >> 8) & 0x3f, 1);
+  }
+  async setRate(rate) {
+    const ratio = Math.floor(28.8e6 * 4194304 / rate) & 0x0ffffffc;
+    await this.dw(1, 0x9f, (ratio >>> 16) & 0xffff, 2);
+    await this.dw(1, 0xa1, ratio & 0xffff, 2);
+    await this.corr();
+    await this.dw(1, 0x01, 0x14, 1); await this.dw(1, 0x01, 0x10, 1);
+  }
+  // Direktabtastung: 0 = aus (Tuner), 1 = I-Zweig, 2 = Q-Zweig (Kurzwelle bei NESDR SMArt v5, RTL-SDR Blog V3)
+  async setDirect(m) {
+    if (m === this.ds) return;
+    this.ds = m;
+    if (m) {
+      await this.dw(1, 0xb1, 0x1a, 1);             // Zero-IF aus
+      await this.dw(1, 0x15, 0x00, 1);             // keine Spektrum-Inversion
+      await this.dw(0, 0x08, 0x4d, 1);             // nur ein ADC
+      await this.dw(0, 0x06, m > 1 ? 0x90 : 0x80, 1);  // I/Q tauschen = Eingang wählen
+    } else {
+      await this.dw(0, 0x06, 0x80, 1);
+      await this.dw(1, 0x15, 0x01, 1);
+      await this.setIf(3570000);
+      this.tuner.input = -1;
+    }
+  }
+  usesDirect(f) { return !!(this.dsPref && !this.isV4 && f < 24e6); }
+  async applyFreq(f) {
+    const want = this.usesDirect(f) ? this.dsPref : 0;
+    await this.setDirect(want);
+    if (want) {
+      // ADC tastet mit 28,8 MHz ab: über 14,4 MHz erscheint das Signal gespiegelt
+      const alias = f > 14.4e6;
+      await this.setIf(alias ? 28.8e6 - f : f);
+      await this.dw(1, 0x15, alias ? 0x01 : 0x00, 1);
+      return true;
+    }
+    await this.rep(1);
+    try { return await this.tuner.setFreq(f); } finally { await this.rep(0); }
+  }
+  setFreq(f) { return this.enqueue(() => { this.freq = f; return this.applyFreq(f); }); }
+  setDirectPref(m) { return this.enqueue(async () => { this.dsPref = m; if (this.freq) await this.applyFreq(this.freq); }); }
+  setGain(auto, g) {
+    return this.enqueue(async () => { await this.rep(1); try { await this.tuner.setGain(auto, g); } finally { await this.rep(0); } });
+  }
+  setPpm(p) {
+    return this.enqueue(async () => {
+      this.ppm = p; this.tuner.xtal = this.baseXtal * (1 + p / 1e6);
+      if (!this.ds) await this.setIf(3570000);
+      await this.corr();
+      if (this.freq) await this.applyFreq(this.freq);
+    });
+  }
+  async start(onData, onErr) {
+    await this.enqueue(async () => { await this.wr(1, 0x2148, 0x1002, 2); await this.wr(1, 0x2148, 0x0000, 2); });
+    this.running = true;
+    const LEN = 131072;
+    const pump = async () => {
+      while (this.running) {
+        let r;
+        try { r = await this.dev.transferIn(1, LEN); }
+        catch (e) { if (this.running) { this.running = false; onErr(e); } return; }
+        if (r.status === 'ok' && r.data) onData(r.data);
+        else if (r.status === 'stall') { try { await this.dev.clearHalt('in', 1); } catch (e) {} }
+      }
+    };
+    for (let i = 0; i < 4; i++) pump();
+  }
+  async close() {
+    this.running = false;
+    await sleep(150);
+    try { await this.dev.releaseInterface(0); } catch (e) {}
+    try { await this.dev.close(); } catch (e) {}
+  }
+}
+</script>
+
+<!-- ================= Oberfläche ================= -->
+<script>
+'use strict';
+const FS = SDR_RATE, NFFT = 2048, BIN = FS / NFFT;
+const $ = id => document.getElementById(id);
+const MODES = {
+  wfm: { n: 'WFM', bw: 180000, step: 100000, min: 180000, max: 180000, inc: 1000 },
+  nfm: { n: 'NFM', bw: 12000, step: 12500, min: 6000, max: 25000, inc: 500 },
+  am:  { n: 'AM',  bw: 6000, step: 5000, min: 3000, max: 12000, inc: 500 },
+  usb: { n: 'USB', bw: 2400, step: 1000, min: 1200, max: 4000, inc: 100 },
+  lsb: { n: 'LSB', bw: 2400, step: 1000, min: 1200, max: 4000, inc: 100 },
+  cw:  { n: 'CW',  bw: 500, step: 100, min: 100, max: 1500, inc: 50 }
+};
+const S = { center: 0, listen: 145500000, mode: 'nfm', bw: {}, sq: -200, step: 12500, span: FS, gen: 0, src: null, mute: false, gainAuto: true, gain: 297, ppm: 0 };
+for (const k in MODES) S.bw[k] = MODES[k].bw;
+
+let worker = null, actx = null, gainNode = null, rtl = null, discard = 0;
+let specQueue = [], lastSpec = null, level = { db: -200, open: false }, floorDb = -60, hoverF = null;
+const rec = { on: false, chunks: [], len: 0, t0: null };
+
+// ---------- Hilfen ----------
+const blobUrl = (txt, type) => URL.createObjectURL(new Blob([txt], { type }));
+function setStatus(t, err) { const s = $('status'); s.textContent = t; s.className = err ? 'err' : ''; }
+function fmtMHz(f, d = 4) { return (f / 1e6).toFixed(d); }
+function fmtBig(f) {
+  const s = Math.round(f).toString().padStart(7, '0');
+  return s.slice(0, -6) + '.' + s.slice(-6, -3) + '.' + s.slice(-3);
+}
+function median(a) { const c = Float32Array.from(a).sort(); return c[c.length >> 1]; }
+function download(blob, name) {
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+function stamp() { const d = new Date(), p = n => String(n).padStart(2, '0'); return `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}-${p(d.getHours())}${p(d.getMinutes())}${p(d.getSeconds())}`; }
+
+// Durchlassbereich relativ zur Hörfrequenz
+function passband(mode, bw) {
+  if (mode === 'usb') return [300, 300 + bw];
+  if (mode === 'lsb') return [-300 - bw, -300];
+  if (mode === 'cw') return [700 - bw / 2, 700 + bw / 2];
+  return [-bw / 2, bw / 2];
+}
+function winLimits(mode) {
+  const bw = Math.min(S.bw[mode], 200000);
+  return { max: FS / 2 * 0.88 - bw / 2, dc: Math.max(15000, bw / 2 + 10000) };
+}
+function inWindow(f, mode = S.mode) {
+  if (!S.center) return false;
+  const o = Math.abs(f - S.center), L = winLimits(mode);
+  return o <= L.max && o >= L.dc;
+}
+function centerFor(f, mode = S.mode) {
+  const off = winLimits(mode).dc + 180000;
+  let c = f - off;
+  if (c < 300000) c = f + off;
+  return Math.round(c);
+}
+
+// ---------- Worker und Audio ----------
+function initWorker() {
+  worker = new Worker(blobUrl($('dspSrc').textContent + '\nworkerMain();', 'text/javascript'));
+  worker.onmessage = e => {
+    const m = e.data;
+    if (m.type === 'spec') { lastSpec = m; specQueue.push(m); if (specQueue.length > 12) specQueue.shift(); scanOnSpec(m); }
+    else if (m.type === 'level') level = m;
+    else if (m.type === 'rec') { if (rec.on) { rec.chunks.push(m.data); rec.len += m.data.length; } }
+  };
+  postCfg();
+}
+async function ensureAudio() {
+  if (actx) { if (actx.state !== 'running') await actx.resume(); return; }
+  actx = new AudioContext({ sampleRate: 48000 });
+  await actx.audioWorklet.addModule(blobUrl($('workletSrc').textContent, 'text/javascript'));
+  const node = new AudioWorkletNode(actx, 'funk-out', { numberOfInputs: 0, outputChannelCount: [1] });
+  gainNode = actx.createGain(); gainNode.gain.value = $('vol').value / 100;
+  node.connect(gainNode).connect(actx.destination);
+  const mc = new MessageChannel();
+  node.port.postMessage({ port: mc.port1 }, [mc.port1]);
+  worker.postMessage({ type: 'port', port: mc.port2 }, [mc.port2]);
+  if (actx.sampleRate !== 48000) setStatus('Achtung: Audiogerät läuft nicht mit 48 kHz – Ton kann verzerrt sein', true);
+  await actx.resume();
+}
+function postCfg() {
+  if (!worker) return;
+  worker.postMessage({ type: 'cfg', center: S.center, listen: S.listen, mode: S.mode, bw: S.bw[S.mode], sq: S.sq,
+    mute: S.mute || (scan.active && scan.state !== 'hold'), gen: S.gen });
+}
+
+// ---------- Abstimmen ----------
+function retune(c) {
+  S.center = c; S.gen++;
+  postCfg();
+  if (S.src === 'usb' && rtl) {
+    if (!rtl.isV4 && c < 24e6 && !rtl.dsPref) setStatus('Unter 24 MHz: „Kurzwelle“ auf Direktabtastung stellen (NESDR SMArt v5, Blog V3) – oder Blog V4 / Aufwärtsmischer verwenden.', true);
+    showHw();
+    discard = 1e9;
+    rtl.setFreq(c).then(lock => { discard = 4; if (!lock) setStatus('PLL rastet bei ' + fmtMHz(c, 3) + ' MHz nicht ein (außerhalb des Tunerbereichs?)', true); })
+      .catch(e => { discard = 4; setStatus('Abstimmfehler: ' + e.message, true); });
+  }
+}
+function tune(f, opt = {}) {
+  f = Math.round(Math.max(100000, Math.min(1766000000, f)));
+  if (scan.active && !opt.keepScan) stopScan();
+  S.listen = f;
+  if (!inWindow(f)) retune(centerFor(f)); else postCfg();
+  showFreq();
+}
+function setStep(st) { S.step = st; const sel = $('step'); if (![...sel.options].some(o => +o.value === st)) sel.add(new Option(st + ' Hz', st)); sel.value = st; }
+function setMode(m, opt = {}) {
+  S.mode = m;
+  for (const b of $('modes').children) b.classList.toggle('on', b.dataset.m === m);
+  if (!opt.keepStep) setStep(MODES[m].step);
+  const M = MODES[m], r = $('bw');
+  r.min = M.min; r.max = M.max; r.step = M.inc; r.value = S.bw[m]; r.disabled = M.min === M.max;
+  showBw();
+  if (S.center && !inWindow(S.listen)) retune(centerFor(S.listen)); else postCfg();
+}
+function showBw() { const v = S.bw[S.mode]; $('bwv').textContent = v >= 10000 ? (v / 1000).toFixed(1).replace('.', ',') + ' kHz' : v + ' Hz'; }
+function showFreq() {
+  $('freq').innerHTML = fmtBig(S.listen) + '<small>Hz</small>';
+  if (document.activeElement !== $('fIn')) $('fIn').value = fmtMHz(S.listen, 6).replace(/0+$/, '').replace(/\.$/, '');
+}
+
+// ---------- Quellen ----------
+async function connectStick() {
+  if (!navigator.usb) { setStatus('WebUSB nicht verfügbar – Chrome oder Edge verwenden und die Seite über https:// oder http://localhost öffnen.', true); return; }
+  let dev;
+  try {
+    dev = await navigator.usb.requestDevice({ filters: [{ vendorId: 0x0bda, productId: 0x2838 }, { vendorId: 0x0bda, productId: 0x2832 }] });
+  } catch (e) { return; }
+  await stopSource();
+  await ensureAudio();
+  rtl = new RtlSdr(dev);
+  setStatus('Stick wird eingerichtet …');
+  try {
+    const name = await rtl.open();
+    S.src = 'usb';
+    rtl.dsPref = +$('dsMode').value;
+    await rtl.setGain(S.gainAuto, S.gain);
+    if (S.ppm) await rtl.setPpm(S.ppm);
+    S.center = 0; tune(S.listen, { keepScan: true });
+    await rtl.q;
+    await rtl.start(onIq, onUsbErr);
+    $('bConnect').classList.add('on');
+    setStatus(`${name} · Tuner ${rtl.chip}${rtl.isV4 ? ' · Blog V4 (Kurzwelle über Aufwärtsmischer)' : ''}`);
+    showHw();
+  } catch (e) {
+    let hint = '';
+    if (/claim|access|denied|security/i.test(e.message)) hint = ' – Treiber prüfen (Windows: WinUSB per Zadig, Linux: dvb_usb_rtl28xxu sperren), siehe „Hilfe“.';
+    setStatus('Fehler: ' + e.message + hint, true);
+    try { await rtl.close(); } catch (x) {}
+    rtl = null; S.src = null;
+  }
+}
+function showHw() {
+  if (S.src !== 'usb' || !rtl) return;
+  let t = `Abtastrate 1,92 MHz · ${rtl.chip}`;
+  if (rtl.isV4) t += ' · KW ab 0,5 MHz';
+  else if (rtl.dsPref) t += rtl.usesDirect(S.center) ? ` · Direktabtastung ${rtl.dsPref > 1 ? 'Q' : 'I'} aktiv` : ' · KW per Direktabtastung';
+  else t += ' · ca. 24–1766 MHz';
+  $('hwinfo').textContent = t;
+}
+function onIq(dv) {
+  if (discard > 0) { discard--; return; }
+  const u = new Uint8Array(dv.buffer, dv.byteOffset, dv.byteLength).slice();
+  worker.postMessage({ type: 'iq', buf: u.buffer }, [u.buffer]);
+}
+function onUsbErr(e) { setStatus('Verbindung zum Stick verloren: ' + e.message, true); $('bConnect').classList.remove('on'); S.src = null; }
+async function startDemo() {
+  await stopSource();
+  await ensureAudio();
+  S.src = 'demo';
+  worker.postMessage({ type: 'demo', on: true });
+  S.center = 0; tune(S.listen, { keepScan: true });
+  $('bDemo').classList.add('on');
+  setStatus('Demo: simulierte Signale u. a. auf 145,500 / 145,6375 / 144,800 / 433,500 / 439,125 / 99,5 MHz sowie 4,625 / 3,756 / 7,100 / 14,200 MHz.');
+  $('hwinfo').textContent = 'Demo-Signalquelle, Abtastrate 1,92 MHz';
+}
+async function stopSource() {
+  if (scan.active) stopScan();
+  if (rec.on) toggleRec();
+  worker.postMessage({ type: 'demo', on: false });
+  if (rtl) { const r = rtl; rtl = null; await r.close(); }
+  S.src = null;
+  $('bConnect').classList.remove('on'); $('bDemo').classList.remove('on');
+}
+
+// ---------- Anzeige: Spektrum und Wasserfall ----------
+const spec = $('spec'), wf = $('wf'), sctx = spec.getContext('2d'), wctx = wf.getContext('2d');
+let rowImg = null;
+const PAL = (() => {
+  const st = [[0, [2, 4, 20]], [0.2, [20, 30, 110]], [0.45, [150, 40, 150]], [0.7, [255, 120, 40]], [0.9, [255, 230, 90]], [1, [255, 255, 230]]];
+  const p = new Uint8Array(256 * 3);
+  for (let i = 0; i < 256; i++) {
+    const x = i / 255; let k = 0; while (k < st.length - 2 && x > st[k + 1][0]) k++;
+    const [x0, c0] = st[k], [x1, c1] = st[k + 1], t = (x - x0) / (x1 - x0);
+    for (let j = 0; j < 3; j++) p[i * 3 + j] = Math.round(c0[j] + (c1[j] - c0[j]) * t);
+  }
+  return p;
+})();
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  for (const c of [spec, wf]) {
+    const w = Math.round(c.clientWidth * dpr), h = Math.round(c.clientHeight * dpr);
+    if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+  }
+  rowImg = wctx.createImageData(wf.width, 1);
+  wctx.fillStyle = '#06090d'; wctx.fillRect(0, 0, wf.width, wf.height);
+}
+function viewRange(center) {
+  const span = Math.min(S.span, FS), lo = center - FS / 2 + span / 2, hi = center + FS / 2 - span / 2;
+  const vc = Math.max(lo, Math.min(hi, S.listen));
+  return [vc - span / 2, vc + span / 2];
+}
+function pixelsFor(m, W) {
+  const [a, b] = viewRange(m.center), base = m.center - FS / 2, out = new Float32Array(W), db = m.db;
+  for (let x = 0; x < W; x++) {
+    const f0 = a + (b - a) * x / W, f1 = a + (b - a) * (x + 1) / W;
+    let b0 = Math.floor((f0 - base) / BIN), b1 = Math.floor((f1 - base) / BIN);
+    if (b1 < b0) b1 = b0;
+    b0 = Math.max(0, Math.min(NFFT - 1, b0)); b1 = Math.max(0, Math.min(NFFT - 1, b1));
+    let v = -200; for (let k = b0; k <= b1; k++) if (db[k] > v) v = db[k];
+    out[x] = v;
+  }
+  return out;
+}
+function dbRange() { const lo = floorDb + (+$('base').value); return [lo, lo + (+$('dyn').value)]; }
+function drawWaterfall() {
+  if (!specQueue.length || !rowImg) return;
+  const W = wf.width, H = wf.height, n = Math.min(specQueue.length, H);
+  wctx.drawImage(wf, 0, 0, W, H - n, 0, n, W, H - n);
+  const [lo, hi] = dbRange(), d = rowImg.data, k = 255 / (hi - lo);
+  for (let r = 0; r < n; r++) {
+    const px = pixelsFor(specQueue[specQueue.length - 1 - r], W);
+    for (let x = 0; x < W; x++) {
+      let c = ((px[x] - lo) * k) | 0; c = c < 0 ? 0 : c > 255 ? 255 : c;
+      d[x * 4] = PAL[c * 3]; d[x * 4 + 1] = PAL[c * 3 + 1]; d[x * 4 + 2] = PAL[c * 3 + 2]; d[x * 4 + 3] = 255;
+    }
+    wctx.putImageData(rowImg, 0, r);
+  }
+  specQueue.length = 0;
+}
+function drawSpectrum() {
+  const W = spec.width, H = spec.height, c = sctx, dpr = window.devicePixelRatio || 1;
+  c.fillStyle = '#06090d'; c.fillRect(0, 0, W, H);
+  const center = lastSpec ? lastSpec.center : (S.center || S.listen);
+  const [a, b] = viewRange(center), fx = f => (f - a) / (b - a) * W;
+  const [lo, hi] = dbRange(), fy = v => H - (v - lo) / (hi - lo) * H;
+  // Raster
+  const span = b - a, tick = span > 1.5e6 ? 200000 : span > 700000 ? 100000 : span > 350000 ? 50000 : 25000;
+  c.font = `${11 * dpr}px ui-monospace,monospace`; c.textBaseline = 'top';
+  c.strokeStyle = '#1b2533'; c.fillStyle = '#6b7889'; c.lineWidth = 1;
+  for (let f = Math.ceil(a / tick) * tick; f <= b; f += tick) {
+    const x = Math.round(fx(f)) + 0.5; c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H); c.stroke();
+    c.fillText(fmtMHz(f, tick < 100000 ? 3 : 2), x + 3 * dpr, 3 * dpr);
+  }
+  for (let v = Math.ceil(lo / 10) * 10; v < hi; v += 10) {
+    const y = Math.round(fy(v)) + 0.5; c.beginPath(); c.moveTo(0, y); c.lineTo(W, y); c.stroke();
+    c.fillText(v + ' dB', 3 * dpr, y - 13 * dpr);
+  }
+  // Durchlassbereich
+  const [p0, p1] = passband(S.mode, S.bw[S.mode]);
+  c.fillStyle = 'rgba(61,220,151,0.13)';
+  const x0 = fx(S.listen + p0), x1 = fx(S.listen + p1);
+  c.fillRect(x0, 0, Math.max(1, x1 - x0), H);
+  // Spektrum
+  if (lastSpec) {
+    const px = pixelsFor(lastSpec, W);
+    const g = c.createLinearGradient(0, 0, 0, H); g.addColorStop(0, 'rgba(61,220,151,0.35)'); g.addColorStop(1, 'rgba(61,220,151,0.02)');
+    c.beginPath(); c.moveTo(0, H);
+    for (let x = 0; x < W; x++) c.lineTo(x, fy(px[x]));
+    c.lineTo(W, H); c.closePath(); c.fillStyle = g; c.fill();
+    c.beginPath(); for (let x = 0; x < W; x++) { const y = fy(px[x]); x ? c.lineTo(x, y) : c.moveTo(x, y); }
+    c.strokeStyle = '#3ddc97'; c.lineWidth = 1.2 * dpr; c.stroke();
+  }
+  // Hörfrequenz
+  c.strokeStyle = '#ff5c5c'; c.lineWidth = 1.5 * dpr;
+  const xl = Math.round(fx(S.listen)) + 0.5; c.beginPath(); c.moveTo(xl, 0); c.lineTo(xl, H); c.stroke();
+  if (hoverF !== null) {
+    c.strokeStyle = 'rgba(255,255,255,0.35)'; c.lineWidth = 1;
+    const xh = Math.round(fx(hoverF)) + 0.5; c.beginPath(); c.moveTo(xh, 0); c.lineTo(xh, H); c.stroke();
+  }
+}
+function drawMeter() {
+  const db = level.db, w = Math.max(0, Math.min(1, (db + 110) / 110));
+  $('mbar').style.width = (w * 100) + '%';
+  $('msq').style.left = (Math.max(0, Math.min(1, (S.sq + 110) / 110)) * 100) + '%';
+  $('msq').style.display = S.sq > -200 ? 'block' : 'none';
+  $('lvl').textContent = S.src ? `${db.toFixed(1)} dB` + (lastSpec ? ` · Rauschen ${floorDb.toFixed(0)}` : '') : '–';
+  $('sqled').classList.toggle('open', !!(S.src && level.open));
+}
+function frame() {
+  if (lastSpec) floorDb += (median(lastSpec.db) - floorDb) * 0.05;
+  drawWaterfall(); drawSpectrum(); drawMeter();
+  if (rec.on) $('bRec').textContent = '● ' + (rec.len / 48000).toFixed(0) + ' s';
+  requestAnimationFrame(frame);
+}
+function freqAt(ev, canvas) {
+  const r = canvas.getBoundingClientRect(), center = lastSpec ? lastSpec.center : (S.center || S.listen);
+  const [a, b] = viewRange(center);
+  return a + (ev.clientX - r.left) / r.width * (b - a);
+}
+
+// ---------- Suchlauf ----------
+const scan = { active: false, state: 'idle', list: [], idx: 0, settle: 0, cur: null, low: 0, lock: new Set(), skip: new Map(), thr: 12, hang: 2000, curSnr: 0, cycles: 0 };
+// Kanallisten: [MHz, Name] oder [MHz, Name, Modus]
+const CB_FREQ = [26.965, 26.975, 26.985, 27.005, 27.015, 27.025, 27.035, 27.055, 27.065, 27.075, 27.085, 27.105, 27.115, 27.125,
+  27.135, 27.155, 27.165, 27.175, 27.185, 27.205, 27.215, 27.225, 27.255, 27.235, 27.245, 27.265, 27.275, 27.285, 27.295, 27.305,
+  27.315, 27.325, 27.335, 27.345, 27.355, 27.365, 27.375, 27.385, 27.395, 27.405];
+const cbList = mode => {
+  const L = CB_FREQ.map((f, i) => [f, 'CB K' + (i + 1), mode]);
+  if (mode === 'nfm') for (let k = 41; k <= 80; k++) L.push([26.565 + (k - 41) * 0.01, 'CB K' + k + ' (nur DE)', mode]);
+  return L;
+};
+const PRESETS = [
+  { g: 'Amateurfunk Kurzwelle (KW unter 24 MHz per Direktabtastung)' },
+  { n: '160 m (1,810–2,000) LSB', a: 1.81, b: 2.0, s: 1, m: 'lsb' },
+  { n: '80 m SSB (3,600–3,800) LSB', a: 3.6, b: 3.8, s: 1, m: 'lsb' },
+  { n: '60 m (5,3515–5,3665) USB', a: 5.3515, b: 5.3665, s: 0.5, m: 'usb' },
+  { n: '40 m SSB (7,050–7,200) LSB', a: 7.05, b: 7.2, s: 1, m: 'lsb' },
+  { n: '30 m CW (10,100–10,140)', a: 10.1, b: 10.14, s: 0.5, m: 'cw' },
+  { n: '20 m SSB (14,100–14,350) USB', a: 14.1, b: 14.35, s: 1, m: 'usb' },
+  { n: '17 m SSB (18,110–18,168) USB', a: 18.11, b: 18.168, s: 1, m: 'usb' },
+  { n: '15 m SSB (21,150–21,450) USB', a: 21.15, b: 21.45, s: 1, m: 'usb' },
+  { n: '12 m SSB (24,930–24,990) USB', a: 24.93, b: 24.99, s: 1, m: 'usb' },
+  { n: '10 m SSB (28,300–29,000) USB', a: 28.3, b: 29.0, s: 1, m: 'usb' },
+  { n: '10 m FM (29,510–29,700)', a: 29.51, b: 29.7, s: 10, m: 'nfm' },
+  { g: 'Amateurfunk UKW' },
+  { n: '6 m SSB (50,100–50,500) USB', a: 50.1, b: 50.5, s: 1, m: 'usb' },
+  { n: '2 m FM (145,000–145,800)', a: 145.0, b: 145.8, s: 12.5, m: 'nfm' },
+  { n: '2 m komplett FM (144–146)', a: 144.0, b: 146.0, s: 12.5, m: 'nfm' },
+  { n: '2 m SSB (144,150–144,400) USB', a: 144.15, b: 144.4, s: 1, m: 'usb' },
+  { n: '70 cm Relais (438,650–439,425)', a: 438.65, b: 439.425, s: 12.5, m: 'nfm' },
+  { n: '70 cm FM (430–440)', a: 430.0, b: 440.0, s: 12.5, m: 'nfm' },
+  { g: 'CB-Funk und Jedermannfunk' },
+  { n: 'CB-Funk FM (K1–80)', list: cbList('nfm') },
+  { n: 'CB-Funk AM (K1–40)', list: cbList('am') },
+  { n: 'PMR446 (16 Kanäle)', list: Array.from({ length: 16 }, (_, i) => [446.00625 + i * 0.0125, 'PMR K' + (i + 1), 'nfm']) },
+  { n: 'Freenet (6 Kanäle)', list: [149.025, 149.0375, 149.05, 149.0875, 149.1, 149.1125].map((f, i) => [f, 'Freenet K' + (i + 1), 'nfm']) },
+  { n: 'LPD433 (69 Kanäle)', list: Array.from({ length: 69 }, (_, i) => [433.075 + i * 0.025, 'LPD K' + (i + 1), 'nfm']) },
+  { g: 'Funksteuerungen (ISM/SRD)' },
+  { n: '433 MHz ISM (433,05–434,79) AM', a: 433.05, b: 434.775, s: 25, m: 'am' },
+  { n: '868 MHz SRD (868,0–870,0) AM', a: 868.0, b: 870.0, s: 25, m: 'am' },
+  { g: 'Rundfunk' },
+  { n: 'UKW-Rundfunk (87,5–108)', a: 87.5, b: 108.0, s: 100, m: 'wfm' },
+  { n: 'Mittelwelle (531–1602 kHz) AM', a: 0.531, b: 1.602, s: 9, m: 'am' },
+  { n: 'KW 49 m (5,900–6,200) AM', a: 5.9, b: 6.2, s: 5, m: 'am' },
+  { n: 'KW 41 m (7,200–7,450) AM', a: 7.2, b: 7.45, s: 5, m: 'am' },
+  { n: 'KW 31 m (9,400–9,900) AM', a: 9.4, b: 9.9, s: 5, m: 'am' },
+  { n: 'KW 25 m (11,600–12,100) AM', a: 11.6, b: 12.1, s: 5, m: 'am' },
+  { n: 'KW 22 m (13,570–13,870) AM', a: 13.57, b: 13.87, s: 5, m: 'am' },
+  { n: 'KW 19 m (15,100–15,800) AM', a: 15.1, b: 15.8, s: 5, m: 'am' },
+  { n: 'KW 16 m (17,480–17,900) AM', a: 17.48, b: 17.9, s: 5, m: 'am' },
+  { n: 'KW 13 m (21,450–21,850) AM', a: 21.45, b: 21.85, s: 5, m: 'am' },
+  { g: 'Zahlensender und Sonderlinge (Zeiten wechseln, siehe Priyom)' },
+  { n: 'Dauersender (Buzzer, Pip, Squeaky Wheel)', list: [
+    [4.625, 'UVB-76 „The Buzzer“', 'usb'], [3.756, '„The Pip“ (nachts)', 'usb'], [5.448, '„The Pip“ (tags)', 'usb'],
+    [3.828, '„Squeaky Wheel“ (nachts)', 'usb'], [5.473, '„Squeaky Wheel“ (tags)', 'usb']] },
+  { n: 'Zahlensender (Beispiele Mai/Juni 2026)', list: [
+    [4.783, 'E11a', 'usb'], [5.231, 'E11a', 'usb'], [8.274, 'E11a', 'usb'], [8.68, 'E11a', 'usb'], [11.116, 'E11a', 'usb'],
+    [9.322, 'S06', 'am'], [11.616, 'S06', 'am'],
+    [16.132, 'E07', 'am'], [18.232, 'E07', 'am'], [19.432, 'E07', 'am'],
+    [10.597, 'M12 (Morse)', 'cw'], [12.201, 'M12 (Morse)', 'cw'], [13.961, 'M12 (Morse)', 'cw']] }
+];
+function chanSnr(m, f, mode, noise) {
+  const [p0, p1] = passband(mode, S.bw[mode]), base = m.center - FS / 2;
+  let b0 = Math.floor((f + p0 - base) / BIN), b1 = Math.floor((f + p1 - base) / BIN);
+  if (b1 < b0) b1 = b0;
+  b0 = Math.max(0, b0); b1 = Math.min(NFFT - 1, b1);
+  let v = -200; for (let k = b0; k <= b1; k++) if (m.db[k] > v) v = m.db[k];
+  return v - noise;
+}
+function buildScanList() {
+  if ($('scSrc').value === 'mem') return mem.slice().sort((x, y) => x.f - y.f).map(c => ({ f: c.f, mode: c.m, name: c.n }));
+  if ($('scSrc').value === 'list') {
+    const p = PRESETS[$('scPreset').value];
+    return p && p.list ? p.list.map(([f, n, m]) => ({ f: Math.round(f * 1e6), name: n, mode: m || 'nfm' })).sort((x, y) => x.f - y.f) : [];
+  }
+  const a = parseFloat($('scFrom').value) * 1e6, b = parseFloat($('scTo').value) * 1e6, st = parseFloat($('scStep').value) * 1e3, mode = $('scMode').value;
+  const L = [];
+  if (!(a > 0 && b >= a && st > 0)) return L;
+  for (let f = a; f <= b + 0.5 && L.length < 20000; f += st) L.push({ f: Math.round(f), mode });
+  return L;
+}
+function startScan() {
+  if (!S.src) { setScanStat('Erst Stick verbinden oder Demo starten.'); return; }
+  const L = buildScanList();
+  if (!L.length) { setScanStat('Keine Kanäle – Bereich bzw. Speicherliste prüfen.'); return; }
+  scan.list = L; scan.idx = 0; scan.active = true; scan.cur = null; scan.cycles = 0;
+  scan.thr = parseFloat($('scThr').value) || 12; scan.hang = (parseFloat($('scHang').value) || 2) * 1000;
+  if (L[0].mode !== S.mode) setMode(L[0].mode);
+  $('scStart').classList.add('on');
+  if (!inWindow(L[0].f, L[0].mode)) scanMove(L[0]); else { scan.state = 'settle'; scan.settle = 0; postCfg(); }
+}
+function stopScan() {
+  scan.active = false; scan.state = 'idle'; $('scStart').classList.remove('on');
+  setScanStat(''); postCfg();
+}
+function scanMove(ch) {
+  S.listen = ch.f;
+  const L = winLimits(ch.mode);
+  let c = Math.round(ch.f + L.max * 0.95);
+  if (c - FS / 2 < 0) c = ch.f + L.dc + 50000;
+  scan.state = 'settle'; scan.settle = 0;
+  retune(c); showFreq();
+}
+function scanHold(ch, i, snr) {
+  scan.state = 'hold'; scan.cur = ch; scan.idx = i; scan.low = 0; scan.curSnr = snr;
+  if (ch.mode !== S.mode) setMode(ch.mode, { keepStep: true });
+  S.listen = ch.f; postCfg(); showFreq();
+  logActivity(ch, snr);
+}
+function scanResume(skipMs) {
+  if (!scan.cur) return;
+  if (skipMs) scan.skip.set(scan.cur.f, performance.now() + skipMs);
+  scan.idx = (scan.idx + 1) % scan.list.length;
+  scan.state = 'search'; scan.cur = null; postCfg();
+}
+function scanOnSpec(m) {
+  if (!scan.active || m.gen !== S.gen) return;
+  if (scan.state === 'settle') { if (++scan.settle >= 3) scan.state = 'search'; return; }
+  const noise = median(m.db), now = performance.now();
+  if (scan.state === 'search') {
+    const L = scan.list; let i = scan.idx;
+    while (i < L.length && inWindow(L[i].f, L[i].mode)) {
+      const ch = L[i];
+      if (!scan.lock.has(ch.f) && !((scan.skip.get(ch.f) || 0) > now)) {
+        const snr = chanSnr(m, ch.f, ch.mode, noise);
+        if (snr >= scan.thr) { scanHold(ch, i, snr); return; }
+      }
+      i++;
+    }
+    if (i >= L.length) { i = 0; scan.cycles++; }
+    scan.idx = i;
+    if (!inWindow(L[i].f, L[i].mode)) scanMove(L[i]);
+    setScanStat(`Suche … ${fmtMHz(L[i].f)} MHz  (Durchlauf ${scan.cycles + 1}, ${L.length} Kanäle)`);
+  } else if (scan.state === 'hold') {
+    const snr = chanSnr(m, scan.cur.f, scan.cur.mode, noise);
+    if (snr >= scan.thr - 3) { scan.low = 0; scan.curSnr = snr; }
+    else if (!scan.low) scan.low = now;
+    else if (now - scan.low > scan.hang) { scanResume(0); return; }
+    setScanStat(`Signal: ${fmtMHz(scan.cur.f)} MHz ${MODES[scan.cur.mode].n}${scan.cur.name ? ' – ' + scan.cur.name : ''}  ·  SNR ${scan.curSnr.toFixed(0)} dB`);
+  }
+}
+function setScanStat(t) { $('scanstat').textContent = t; }
+
+// ---------- Aktivität ----------
+const act = [];
+function logActivity(ch, snr) {
+  const now = new Date();
+  const e = act.find(a => a.f === ch.f && now - a.last < 60000);
+  if (e) { e.last = now; e.count++; e.snr = Math.max(e.snr, snr); act.splice(act.indexOf(e), 1); act.unshift(e); }
+  else { act.unshift({ first: now, last: now, f: ch.f, mode: ch.mode, snr, count: 1, name: ch.name || '' }); if (act.length > 500) act.pop(); }
+  renderAct();
+}
+function renderAct() {
+  const tb = $('actBody'); tb.innerHTML = '';
+  for (const a of act) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td class="num">${a.last.toLocaleTimeString('de-DE')}</td><td class="num">${fmtMHz(a.f)}</td><td>${MODES[a.mode].n}</td><td class="num">${a.snr.toFixed(0)} dB</td><td class="num">${a.count}</td><td></td>`;
+    tr.lastChild.textContent = a.name;
+    tr.onclick = () => { if (a.mode !== S.mode) setMode(a.mode); tune(a.f); };
+    tb.appendChild(tr);
+  }
+}
+
+// ---------- Speicher ----------
+let mem = [
+  { n: '2 m Anruf FM', f: 145500000, m: 'nfm' },
+  { n: '2 m APRS', f: 144800000, m: 'nfm' },
+  { n: '70 cm Anruf FM', f: 433500000, m: 'nfm' },
+  { n: 'UKW-Rundfunk (anpassen)', f: 99500000, m: 'wfm' },
+  { n: '80 m SSB', f: 3700000, m: 'lsb' },
+  { n: '40 m SSB', f: 7100000, m: 'lsb' },
+  { n: '20 m SSB', f: 14200000, m: 'usb' },
+  { n: 'UVB-76 „The Buzzer“', f: 4625000, m: 'am' },
+  { n: '„The Pip“', f: 3756000, m: 'usb' }
+];
+function renderMem() {
+  const tb = $('memBody'); tb.innerHTML = '';
+  mem.forEach((c, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td></td><td class="num">${fmtMHz(c.f, 4)}</td><td>${MODES[c.m] ? MODES[c.m].n : c.m}</td><td><button class="x" title="Löschen">✕</button></td>`;
+    tr.firstChild.textContent = c.n;
+    tr.onclick = () => { if (MODES[c.m] && c.m !== S.mode) setMode(c.m); tune(c.f); };
+    tr.querySelector('.x').onclick = ev => { ev.stopPropagation(); mem.splice(i, 1); renderMem(); };
+    tb.appendChild(tr);
+  });
+}
+
+// ---------- Aufnahme ----------
+function toggleRec() {
+  if (!rec.on) {
+    if (!S.src) return;
+    rec.on = true; rec.chunks = []; rec.len = 0; rec.t0 = stamp(); rec.f = S.listen;
+    worker.postMessage({ type: 'rec', on: true }); $('bRec').classList.add('on');
+  } else {
+    rec.on = false; worker.postMessage({ type: 'rec', on: false });
+    $('bRec').classList.remove('on'); $('bRec').textContent = '● Aufnahme';
+    if (!rec.len) return;
+    const b = new ArrayBuffer(44 + rec.len * 2), v = new DataView(b);
+    const ws = (o, s) => { for (let i = 0; i < s.length; i++) v.setUint8(o + i, s.charCodeAt(i)); };
+    ws(0, 'RIFF'); v.setUint32(4, 36 + rec.len * 2, true); ws(8, 'WAVE'); ws(12, 'fmt ');
+    v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 48000, true);
+    v.setUint32(28, 96000, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); ws(36, 'data'); v.setUint32(40, rec.len * 2, true);
+    let o = 44;
+    for (const c of rec.chunks) for (let i = 0; i < c.length; i++) { v.setInt16(o, Math.max(-1, Math.min(1, c[i])) * 32767, true); o += 2; }
+    download(new Blob([b], { type: 'audio/wav' }), `funkwerk_${fmtMHz(rec.f, 4)}MHz_${rec.t0}.wav`);
+    rec.chunks = []; rec.len = 0;
+  }
+}
+
+// ---------- Bedienelemente ----------
+function initUi() {
+  for (const k in MODES) {
+    const b = document.createElement('button'); b.textContent = MODES[k].n; b.dataset.m = k;
+    b.onclick = () => setMode(k); $('modes').appendChild(b);
+    $('scMode').add(new Option(MODES[k].n, k));
+  }
+  $('scMode').value = 'nfm';
+  {
+    let grp = null; const sel = $('scPreset');
+    sel.add(new Option('– Vorlage wählen –', ''));
+    PRESETS.forEach((p, i) => {
+      if (p.g) { grp = document.createElement('optgroup'); grp.label = p.g; sel.appendChild(grp); return; }
+      (grp || sel).appendChild(new Option(p.n + (p.list ? ' · ' + p.list.length + ' Kanäle' : ''), i));
+    });
+  }
+  $('scPreset').onchange = () => {
+    const p = PRESETS[$('scPreset').value];
+    if (!p) return;
+    if (p.list) { $('scSrc').value = 'list'; $('scRange').style.opacity = 0.4; return; }
+    $('scFrom').value = p.a; $('scTo').value = p.b; $('scStep').value = p.s; $('scMode').value = p.m; $('scSrc').value = 'range'; $('scRange').style.opacity = 1;
+  };
+  $('scSrc').onchange = () => { $('scRange').style.opacity = $('scSrc').value === 'range' ? 1 : 0.4; };
+  const gs = $('gain'); gs.add(new Option('Automatisch', 'auto'));
+  for (const g of GAINS) gs.add(new Option((g / 10).toFixed(1).replace('.', ',') + ' dB', g));
+  gs.value = 'auto';
+  gs.onchange = () => {
+    S.gainAuto = gs.value === 'auto'; if (!S.gainAuto) S.gain = +gs.value;
+    if (rtl) rtl.setGain(S.gainAuto, S.gain).catch(e => setStatus('Verstärkung: ' + e.message, true));
+  };
+  $('dsMode').onchange = () => {
+    if (!rtl) return;
+    discard = 1e9;
+    rtl.setDirectPref(+$('dsMode').value).then(() => { discard = 4; showHw(); }).catch(e => setStatus('Direktabtastung: ' + e.message, true));
+  };
+  $('ppm').onchange = () => {
+    S.ppm = parseInt($('ppm').value, 10) || 0;
+    if (rtl) { discard = 1e9; rtl.setPpm(S.ppm).then(() => discard = 4).catch(e => setStatus('ppm: ' + e.message, true)); }
+  };
+  $('bConnect').onclick = connectStick;
+  $('bDemo').onclick = startDemo;
+  $('bStop').onclick = async () => { await stopSource(); setStatus('Gestoppt.'); };
+  $('step').onchange = () => S.step = +$('step').value;
+  $('bUp').onclick = () => tune(S.listen + S.step);
+  $('bDown').onclick = () => tune(S.listen - S.step);
+  $('fIn').onkeydown = e => {
+    if (e.key !== 'Enter') return;
+    const v = parseFloat($('fIn').value.replace(',', '.'));
+    if (v > 0) tune(v * 1e6);
+    $('fIn').blur();
+  };
+  $('freq').onwheel = e => { e.preventDefault(); tune(S.listen + (e.deltaY < 0 ? 1 : -1) * S.step); };
+  $('bw').oninput = () => { S.bw[S.mode] = +$('bw').value; showBw(); postCfg(); };
+  $('sq').oninput = () => {
+    const v = +$('sq').value; S.sq = v <= -120 ? -200 : v;
+    $('sqv').textContent = S.sq <= -200 ? 'aus' : v + ' dB'; postCfg();
+  };
+  $('vol').oninput = () => { if (gainNode) gainNode.gain.value = $('vol').value / 100; };
+  $('bMute').onclick = () => { S.mute = !S.mute; $('bMute').classList.toggle('on', S.mute); postCfg(); };
+  $('bRec').onclick = toggleRec;
+  $('span').onchange = () => { S.span = +$('span').value; resize(); };
+  for (const c of [spec, wf]) {
+    c.onclick = e => { const f = freqAt(e, c); tune(Math.round(f / S.step) * S.step); };
+    c.onwheel = e => { e.preventDefault(); tune(Math.round(S.listen / S.step) * S.step + (e.deltaY < 0 ? 1 : -1) * S.step); };
+    c.onmousemove = e => { hoverF = freqAt(e, c); $('hover').textContent = fmtMHz(hoverF, 4) + ' MHz'; };
+    c.onmouseleave = () => { hoverF = null; $('hover').textContent = ''; };
+  }
+  document.onkeydown = e => {
+    if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
+    const k = e.shiftKey ? 10 : 1;
+    if (e.key === 'ArrowRight') { tune(S.listen + S.step * k); e.preventDefault(); }
+    if (e.key === 'ArrowLeft') { tune(S.listen - S.step * k); e.preventDefault(); }
+  };
+  document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+    document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('on', x === b));
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('show', t.id === b.dataset.tab));
+  });
+  $('scStart').onclick = startScan;
+  $('scStop').onclick = stopScan;
+  $('scNext').onclick = () => { if (scan.active && scan.state === 'hold') scanResume(10000); };
+  $('scLock').onclick = () => {
+    if (scan.active && scan.state === 'hold') { scan.lock.add(scan.cur.f); scanResume(0); }
+    else scan.lock.add(S.listen);
+    $('scLockN').textContent = scan.lock.size;
+  };
+  $('scUnlock').onclick = () => { scan.lock.clear(); $('scLockN').textContent = 0; };
+  $('memAdd').onclick = () => {
+    const n = $('memName').value.trim() || (fmtMHz(S.listen) + ' ' + MODES[S.mode].n);
+    mem.push({ n, f: S.listen, m: S.mode }); mem.sort((a, b) => a.f - b.f); $('memName').value = ''; renderMem();
+  };
+  $('memExp').onclick = () => download(new Blob([JSON.stringify(mem, null, 1)], { type: 'application/json' }), 'funkwerk-speicher.json');
+  $('memImpB').onclick = () => $('memImp').click();
+  $('memImp').onchange = async () => {
+    const f = $('memImp').files[0]; if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (!Array.isArray(d)) throw new Error('keine Liste');
+      mem = d.filter(c => c && +c.f > 0).map(c => ({ n: String(c.n || ''), f: Math.round(+c.f), m: MODES[c.m] ? c.m : 'nfm' }));
+      renderMem(); setStatus(`${mem.length} Speicherkanäle geladen.`);
+    } catch (e) { setStatus('Import fehlgeschlagen: ' + e.message, true); }
+    $('memImp').value = '';
+  };
+  $('actCsv').onclick = () => {
+    const rows = [['erstmals', 'zuletzt', 'frequenz_mhz', 'modus', 'snr_db', 'anzahl', 'name'].join(';')];
+    for (const a of act) rows.push([a.first.toLocaleString('de-DE'), a.last.toLocaleString('de-DE'), fmtMHz(a.f, 6), MODES[a.mode].n, a.snr.toFixed(1), a.count, '"' + a.name.replace(/"/g, '""') + '"'].join(';'));
+    download(new Blob(['﻿' + rows.join('\n')], { type: 'text/csv' }), `funkwerk-aktivitaet_${stamp()}.csv`);
+  };
+  $('actClr').onclick = () => { act.length = 0; renderAct(); };
+  window.addEventListener('resize', resize);
+  if (!navigator.usb) $('bConnect').title = 'WebUSB nicht verfügbar (Chrome/Edge, https oder localhost nötig)';
+}
+
+initWorker();
+initUi();
+setMode('nfm');
+renderMem();
+showFreq();
+resize();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
