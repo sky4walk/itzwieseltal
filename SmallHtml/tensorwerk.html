@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tensorwerk – Tensorrechnung zum Ausprobieren</title>
+<style>
+:root{--bg:#121417;--panel:#1c2026;--panel2:#242a32;--line:#343c47;--text:#e6e9ee;--dim:#9aa4b2;--acc:#f2b33d;--acc2:#4fc3f7;--acc3:#7ee08f;--ok:#6bd68a;--bad:#ff6b6b;--hl:#5a4520}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 system-ui,"Segoe UI",Roboto,sans-serif}
+header{padding:18px 22px 10px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;align-items:baseline;gap:14px}
+header h1{margin:0;font-size:24px;letter-spacing:.5px}
+header h1 span{color:var(--acc)}
+header .sub{color:var(--dim)}
+header a{margin-left:auto;color:var(--acc2)}
+nav{display:flex;flex-wrap:wrap;gap:4px;padding:10px 22px;border-bottom:1px solid var(--line);background:#16191d;position:sticky;top:0;z-index:5}
+nav button{background:var(--panel);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit}
+nav button.on{background:var(--acc);color:#111;border-color:var(--acc)}
+main{padding:18px 22px;max-width:1240px}
+section{display:none}
+section.on{display:block}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+h2{margin:0 0 6px;font-size:19px;color:var(--acc)}
+h3{margin:12px 0 6px;font-size:16px;color:var(--acc2)}
+p.hint{color:var(--dim);margin:4px 0 10px}
+.row{display:flex;flex-wrap:wrap;gap:18px;align-items:flex-start}
+.col{flex:1 1 340px;min-width:280px}
+label{color:var(--dim);margin-right:10px}
+select,input[type=number],input[type=text],textarea{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font:inherit}
+textarea{width:100%;font-family:ui-monospace,Consolas,monospace;font-size:14px}
+button.act{background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px 12px;cursor:pointer;font:inherit;margin:2px 4px 2px 0}
+button.act:hover{border-color:var(--acc)}
+button.pri{background:var(--acc);color:#111;border-color:var(--acc)}
+.mono{font-family:ui-monospace,Consolas,monospace}
+table.t{border-collapse:collapse;margin:4px 0}
+table.t td{border:1px solid var(--line);min-width:42px;height:34px;text-align:center;font-family:ui-monospace,Consolas,monospace;padding:0 5px}
+table.t td input{width:46px;background:transparent;border:0;color:var(--text);text-align:center;font:inherit;padding:4px 0}
+table.t td.hl{background:var(--hl);outline:2px solid var(--acc)}
+table.t td.click{cursor:pointer}
+table.t td.click:hover{background:#2c3440}
+table.t td.sel{background:#1f4256;outline:2px solid var(--acc2)}
+table.info{border-collapse:collapse;margin:6px 0}
+table.info th,table.info td{border:1px solid var(--line);padding:4px 10px;text-align:left;font-family:ui-monospace,Consolas,monospace}
+table.info th{color:var(--dim);font-weight:normal;font-family:inherit}
+.tens{display:inline-block;vertical-align:top;margin:4px 16px 8px 0}
+.tens .nm{color:var(--acc2);font-family:ui-monospace,Consolas,monospace;margin-bottom:2px}
+.layer{display:inline-block;vertical-align:top;margin-right:12px}
+.layer .ll{color:var(--dim);font-size:12px}
+.explain{background:#15181c;border:1px dashed var(--line);border-radius:8px;padding:10px 12px;font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap;line-height:1.7;overflow-x:auto;margin-top:8px}
+canvas{background:#0e1013;border:1px solid var(--line);border-radius:8px;max-width:100%;touch-action:none;display:block}
+.ok{color:var(--ok)} .bad{color:var(--bad)}
+.pill{display:inline-block;padding:1px 9px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);margin:2px 4px 2px 0;font-size:13px}
+.err{color:var(--bad);font-family:ui-monospace,Consolas,monospace;white-space:pre-wrap}
+input[type=range]{width:210px;vertical-align:middle}
+.sl{display:flex;align-items:center;gap:8px;margin:4px 0}
+.sl span.v{font-family:ui-monospace,Consolas,monospace;min-width:52px;color:var(--acc)}
+.q{font-size:16px;margin:6px 0 10px}
+.q table.t td{min-width:34px;height:28px}
+footer{padding:16px 22px;color:var(--dim);border-top:1px solid var(--line)}
+footer a{color:var(--acc2)}
+sub,sup{font-size:75%}
+.legend span{margin-right:14px}
+</style>
+</head>
+<body>
+<header>
+  <h1><span>Tensor</span>werk</h1>
+  <div class="sub">Tensorrechnung zum Anfassen – Indizes, Summenkonvention, Drehungen, Metrik</div>
+  <a href="https://itzwieseltal.wordpress.com/" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a>
+</header>
+<nav id="nav">
+  <button data-s="stufen" class="on">1 · Stufen</button>
+  <button data-s="summe">2 · Summenkonvention</button>
+  <button data-s="dreh">3 · Drehung</button>
+  <button data-s="maschine">4 · Tensor als Maschine</button>
+  <button data-s="metrik">5 · Oben &amp; unten</button>
+  <button data-s="rechner">6 · Freier Rechner</button>
+  <button data-s="ueben">7 · Üben</button>
+</nav>
+<main>
+
+<!-- 1 STUFEN -->
+<section id="s-stufen" class="on">
+<div class="card">
+<h2>1 · Die Stufe eines Tensors</h2>
+<p class="hint">Ein Tensor ist ein Zahlengebilde, in dem jede Zahl eine Adresse aus Indizes hat – wie ein Sitzplatz im Kino (Reihe, Platz). Die Anzahl der Indizes heißt <b>Stufe</b>. Klicke auf eine Zahl, um ihre Adresse zu sehen.</p>
+<label>Stufe <select id="st-rank">
+  <option value="0">0 – Skalar (eine Zahl)</option>
+  <option value="1">1 – Vektor (Liste)</option>
+  <option value="2" selected>2 – Matrix (Tabelle)</option>
+  <option value="3">3 – Würfel aus Zahlen</option>
+</select></label>
+<label>Dimension <select id="st-dim"><option>2</option><option selected>3</option><option>4</option></select></label>
+<button class="act" id="st-new">Neue Zahlen</button>
+<div id="st-info" style="margin:10px 0"></div>
+<div id="st-view"></div>
+<div id="st-addr" class="explain">Klicke auf eine Zahl.</div>
+</div>
+<div class="card">
+<h3>Wie viele Zahlen hat ein Tensor?</h3>
+<p class="hint">Jeder Index kann so viele Werte annehmen, wie der Raum Dimensionen hat. Bei Stufe n und Dimension d sind es d<sup>n</sup> Zahlen.</p>
+<div id="st-table"></div>
+</div>
+</section>
+
+<!-- 2 SUMMENKONVENTION -->
+<section id="s-summe">
+<div class="card">
+<h2>2 · Die Einsteinsche Summenkonvention</h2>
+<p class="hint">Regel: Kommt ein Index in einem Produkt <b>zweimal</b> vor, wird über ihn summiert (alle Werte 1, 2, 3 einsetzen und addieren). Ein Index, der nur <b>einmal</b> vorkommt, ist frei – er bleibt im Ergebnis stehen. Klicke im Ergebnis auf eine Zahl: Die beteiligten Zahlen leuchten auf, und die Summe wird ausgeschrieben. Die Eingabezahlen kannst du ändern.</p>
+<label>Rechnung <select id="su-tpl"></select></label>
+<button class="act" id="su-new">Neue Zahlen würfeln</button>
+<div id="su-desc" style="margin:8px 0"></div>
+<div class="row">
+  <div class="col"><h3>Eingaben</h3><div id="su-in"></div></div>
+  <div class="col"><h3>Ergebnis</h3><div id="su-out"></div></div>
+</div>
+<div id="su-exp" class="explain"></div>
+</div>
+</section>
+
+<!-- 3 DREHUNG -->
+<section id="s-dreh">
+<div class="card">
+<h2>3 · Was einen Tensor ausmacht: Er verträgt Drehungen</h2>
+<p class="hint">Der Pfeil bleibt, wo er ist – nur das Koordinatensystem (gelb) dreht sich. Seine <b>Komponenten</b> ändern sich dabei, seine <b>Länge</b> und das Skalarprodukt zweier Pfeile nicht. Ziehe die Pfeilspitzen mit der Maus.</p>
+<div class="row">
+  <div><canvas id="dr-cv" width="480" height="480"></canvas>
+    <div class="sl"><label>Drehwinkel θ</label><input type="range" id="dr-th" min="0" max="360" value="25"><span class="v" id="dr-thv"></span></div>
+    <div class="legend"><span style="color:#8a94a3">— altes System x₁, x₂</span><span style="color:var(--acc)">— neues System x₁′, x₂′</span><span style="color:var(--acc2)">→ v</span><span style="color:var(--acc3)">→ w</span></div>
+  </div>
+  <div class="col">
+    <h3>Vektoren (Stufe 1)</h3>
+    <div id="dr-vec"></div>
+    <div id="dr-R" class="explain"></div>
+    <h3>Ein Tensor der Stufe 2</h3>
+    <p class="hint">Ein Stufe-2-Tensor braucht <b>zwei</b> Drehmatrizen: T′<sub>ij</sub> = R<sub>ik</sub> R<sub>jl</sub> T<sub>kl</sub>. Ändere T und drehe: Spur und Determinante bleiben gleich.</p>
+    <div class="row"><div id="dr-T"></div><div id="dr-T2"></div></div>
+    <div id="dr-Tinv" class="explain"></div>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- 4 MASCHINE -->
+<section id="s-maschine">
+<div class="card">
+<h2>4 · Ein Tensor als Maschine</h2>
+<p class="hint">Ein Stufe-2-Tensor ist eine Maschine: Oben steckt man einen Pfeil hinein, unten kommt ein anderer Pfeil heraus (w<sub>i</sub> = M<sub>ij</sub> u<sub>j</sub>). Grau: Pfeile auf dem Einheitskreis. Gelb: was die Maschine daraus macht. Gestrichelt: die <b>Hauptachsen</b> – Richtungen, die nur gestreckt oder gestaucht werden. Den blauen Testpfeil kannst du ziehen.</p>
+<div class="row">
+  <div><canvas id="ma-cv" width="480" height="480"></canvas></div>
+  <div class="col">
+    <div id="ma-sl"></div>
+    <div style="margin:8px 0">
+      <button class="act" data-p="1,0,0,1">Nichts tun</button>
+      <button class="act" data-p="2,0,0,0.5">Strecken</button>
+      <button class="act" data-p="1,1,0,1">Scheren</button>
+      <button class="act" data-p="0.7,-0.7,0.7,0.7">Drehen</button>
+      <button class="act" data-p="1,0,0,-1">Spiegeln</button>
+      <button class="act" data-p="1.5,0.6,0.6,0.8">Symmetrisch</button>
+    </div>
+    <div id="ma-M"></div>
+    <div id="ma-info" class="explain"></div>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- 5 METRIK -->
+<section id="s-metrik">
+<div class="card">
+<h2>5 · Oben und unten: ko- und kontravariante Komponenten</h2>
+<p class="hint">Bei schiefen Achsen kann man einen Pfeil auf zwei Arten in Zahlen fassen: <b>oben</b> (v<sup>i</sup>, kontravariant) = „wie viele Schritte entlang jeder Achse“ (Parallelogramm, blau gestrichelt), <b>unten</b> (v<sub>i</sub>, kovariant) = „wie weit reicht der Schatten senkrecht auf jede Achse“ (grün gepunktet). Die <b>Metrik</b> g<sub>ij</sub> rechnet das eine ins andere um. Stelle den Achsenwinkel ein und ziehe die Pfeilspitze.</p>
+<div class="row">
+  <div><canvas id="me-cv" width="480" height="420"></canvas>
+    <div class="sl"><label>Winkel zwischen den Achsen α</label><input type="range" id="me-al" min="30" max="150" value="60"><span class="v" id="me-alv"></span></div>
+  </div>
+  <div class="col"><div id="me-info" class="explain"></div></div>
+</div>
+</div>
+<div class="card">
+<h2>Raumzeit: die Minkowski-Metrik</h2>
+<p class="hint">In der Relativitätstheorie hat ein Ereignis vier Koordinaten x<sup>μ</sup> = (ct, x, y, z), μ = 0…3. Die Metrik η = diag(1, −1, −1, −1) senkt den Index: x<sub>μ</sub> = (ct, −x, −y, −z). Der „Abstand“ s² = x<sup>μ</sup>x<sub>μ</sub> ist für alle Beobachter gleich – egal wie schnell sie fliegen. Hier mit y = z = 0.</p>
+<div class="row">
+  <div><canvas id="mk-cv" width="420" height="420"></canvas>
+    <div class="sl"><label>Geschwindigkeit v/c</label><input type="range" id="mk-b" min="-90" max="90" value="40"><span class="v" id="mk-bv"></span></div>
+  </div>
+  <div class="col">
+    <label>ct = <input type="number" id="mk-ct" value="3" step="0.5" style="width:80px"></label>
+    <label>x = <input type="number" id="mk-x" value="1" step="0.5" style="width:80px"></label>
+    <div id="mk-info" class="explain"></div>
+    <p class="hint">Gelb: Achsen des bewegten Beobachters (ct′, x′). Grau gestrichelt: Lichtkegel. Blau: alle Ereignisse mit demselben s² (Hyperbel) – der Punkt bleibt beim Ändern der Geschwindigkeit immer darauf.</p>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- 6 RECHNER -->
+<section id="s-rechner">
+<div class="card">
+<h2>6 · Freier Tensor-Rechner</h2>
+<p class="hint">Lege links eigene Tensoren an (Zahl, Liste, Liste von Listen …) und schreibe rechts einen Ausdruck in Index-Schreibweise, z. B. <span class="mono">A_ij*v_j</span>. Doppelte Indizes werden summiert. Eingebaut sind <span class="mono">δ</span> (auch <span class="mono">delta</span>) und <span class="mono">ε</span> (auch <span class="mono">eps</span>). Optional legt <span class="mono">-&gt; ki</span> die Reihenfolge der freien Indizes im Ergebnis fest.</p>
+<div class="row">
+  <div class="col"><h3>Tensoren</h3><textarea id="re-defs" rows="12"></textarea></div>
+  <div class="col"><h3>Ausdruck</h3>
+    <input type="text" id="re-expr" value="A_ij*a_j" style="width:100%" class="mono">
+    <div style="margin:6px 0" id="re-ex"></div>
+    <label><input type="checkbox" id="re-b0"> Indizes ab 0 zählen</label>
+    <button class="act pri" id="re-go">Rechnen</button>
+    <div id="re-err" class="err"></div>
+    <div id="re-meta" style="margin:8px 0"></div>
+  </div>
+</div>
+<h3>Ergebnis <span class="hint" style="font-size:13px">(auf eine Zahl klicken für den Rechenweg)</span></h3>
+<div id="re-out"></div>
+<div id="re-exp" class="explain"></div>
+</div>
+</section>
+
+<!-- 7 UEBEN -->
+<section id="s-ueben">
+<div class="card">
+<h2>7 · Üben</h2>
+<p class="hint">Zufällige Aufgaben mit Lösungsweg. Indizes zählen hier ab 1, nur bei der Raumzeit ab 0.</p>
+<label>Aufgabentyp <select id="ue-type"></select></label>
+<button class="act" id="ue-next">Neue Aufgabe</button>
+<span class="pill" id="ue-score">0 / 0 richtig</span>
+<div class="q" id="ue-q"></div>
+<input type="text" id="ue-a" style="width:120px" placeholder="Antwort"> <button class="act pri" id="ue-check">Prüfen</button>
+<div id="ue-fb" class="explain" style="display:none"></div>
+</div>
+</section>
+
+</main>
+<footer>
+Tensorwerk · gehört zum Artikel „Tensorrechnung – einfach erklärt“ auf <a href="https://itzwieseltal.wordpress.com/" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a> · alles läuft lokal im Browser, nichts wird gespeichert.
+</footer>
+
+<script>
+"use strict";
+const $=id=>document.getElementById(id);
+const SUBN='₀₁₂₃₄₅₆₇₈₉';
+const sub=s=>String(s).replace(/[0-9]/g,c=>SUBN[c]);
+function ri(a,b){return a+Math.floor(Math.random()*(b-a+1));}
+function strides(shape){const s=new Array(shape.length);let m=1;for(let k=shape.length-1;k>=0;k--){s[k]=m;m*=shape[k];}return s;}
+function size(shape){return shape.reduce((a,b)=>a*b,1);}
+function unflat(f,shape){const r=[];for(let k=shape.length-1;k>=0;k--){r[k]=f%shape[k];f=Math.floor(f/shape[k]);}return r;}
+function fmt(x){if(Math.abs(x)<1e-9)x=0;return Number.isInteger(x)?String(x):String(+x.toFixed(3));}
+function randT(shape,a,b){return {shape,data:Array.from({length:size(shape)},()=>ri(a,b))};}
+function esc(s){return String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));}
+
+/* ---------- Navigation ---------- */
+$('nav').addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b)return;
+  document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+  document.querySelectorAll('section').forEach(s=>s.classList.toggle('on',s.id==='s-'+b.dataset.s));
+  redrawAll();
+});
+
+/* ---------- Tensor-Darstellung ---------- */
+function nestedStr(t){
+  const st=strides(t.shape);
+  const rec=(d,base)=>{if(d===t.shape.length)return fmt(t.data[base]);const p=[];for(let i=0;i<t.shape[d];i++)p.push(rec(d+1,base+i*st[d]));return '['+p.join(', ')+']';};
+  return rec(0,0);
+}
+function renderTensor(t,o){
+  o=o||{};
+  const wrap=document.createElement('div');wrap.className='tens';
+  if(o.name){const n=document.createElement('div');n.className='nm';n.innerHTML=o.name;wrap.appendChild(n);}
+  const r=t.shape.length;
+  const mkCell=flat=>{
+    const td=document.createElement('td');
+    if(o.editable){
+      const inp=document.createElement('input');inp.type='text';inp.value=fmt(t.data[flat]);
+      inp.addEventListener('change',()=>{const x=parseFloat(inp.value.replace(',','.'));if(!isNaN(x)){t.data[flat]=x;o.oninput&&o.oninput(flat);}else inp.value=fmt(t.data[flat]);});
+      td.appendChild(inp);
+    } else td.textContent=fmt(t.data[flat]);
+    if(o.hl&&o.hl.has(flat))td.classList.add('hl');
+    if(o.sel===flat)td.classList.add('sel');
+    if(o.onclick){td.classList.add('click');td.addEventListener('click',()=>o.onclick(flat));}
+    if(o.title)td.title=o.title(flat);
+    return td;
+  };
+  const mkTable=(rows,cols,base,rs,cs)=>{
+    const tb=document.createElement('table');tb.className='t';
+    for(let i=0;i<rows;i++){const tr=document.createElement('tr');for(let j=0;j<cols;j++)tr.appendChild(mkCell(base+i*rs+j*cs));tb.appendChild(tr);}
+    return tb;
+  };
+  if(r===0)wrap.appendChild(mkTable(1,1,0,0,0));
+  else if(r===1)wrap.appendChild(o.column?mkTable(t.shape[0],1,0,1,0):mkTable(1,t.shape[0],0,0,1));
+  else if(r===2)wrap.appendChild(mkTable(t.shape[0],t.shape[1],0,t.shape[1],1));
+  else if(r===3){
+    const st=strides(t.shape);
+    for(let i=0;i<t.shape[0];i++){
+      const L=document.createElement('div');L.className='layer';
+      const ll=document.createElement('div');ll.className='ll';
+      ll.textContent='Schicht '+(o.letters?o.letters[0]:'i')+' = '+(i+(o.base===0?0:1));
+      L.appendChild(ll);L.appendChild(mkTable(t.shape[1],t.shape[2],i*st[0],st[1],st[2]));wrap.appendChild(L);
+    }
+  } else {const pre=document.createElement('div');pre.className='mono';pre.textContent=nestedStr(t);wrap.appendChild(pre);}
+  return wrap;
+}
+function htmlMat(rows){ // für Aufgaben
+  if(!Array.isArray(rows[0]))rows=[rows];
+  return '<table class="t" style="display:inline-table;vertical-align:middle">'+rows.map(r=>'<tr>'+r.map(v=>'<td>'+fmt(v)+'</td>').join('')+'</tr>').join('')+'</table>';
+}
+
+/* ---------- Index-Rechenmaschine (Einstein-Summen) ---------- */
+const BUILTIN={'δ':'delta','delta':'delta','ε':'eps','eps':'eps'};
+function permSign(a){const n=a.length;let s=1;for(let i=0;i<n;i++)for(let j=i+1;j<n;j++){if(a[i]===a[j])return 0;if(a[i]>a[j])s=-s;}return s;}
+function parseExpr(str){
+  let out=null,s=str.trim();
+  const ar=s.indexOf('->');
+  if(ar>=0){out=s.slice(ar+2).trim();s=s.slice(0,ar).trim();}
+  const parts=s.split(/[\*·\s]+/).filter(x=>x);
+  const factors=parts.map(p=>{
+    const m=p.match(/^([A-Za-zÄÖÜäöüδε][A-Za-z0-9ÄÖÜäöü]*?)(?:_([a-z]+))?$/);
+    if(!m)throw new Error('Kann „'+p+'“ nicht lesen. Schreibweise: Name_indizes, z. B. A_ij (Indizes = kleine Buchstaben)');
+    return {name:m[1],idx:m[2]?m[2].split(''):[]};
+  });
+  return {factors,out};
+}
+function prepare(exprStr,env,defDim){
+  const {factors,out}=parseExpr(exprStr);
+  if(!factors.length)throw new Error('Der Ausdruck ist leer.');
+  const dim={};
+  const setDim=(L,n,who)=>{if(dim[L]===undefined)dim[L]=n;else if(dim[L]!==n)throw new Error('Index '+L+' hat unterschiedliche Längen ('+dim[L]+' und '+n+') bei '+who+'.');};
+  factors.forEach(f=>{
+    const b=BUILTIN[f.name];
+    if(b){f.kind=b;return;}
+    const t=env[f.name];
+    if(!t)throw new Error('Unbekannter Tensor „'+f.name+'“.');
+    if(t.shape.length!==f.idx.length)throw new Error(f.name+' hat Stufe '+t.shape.length+', im Ausdruck stehen aber '+f.idx.length+' Indizes.');
+    f.kind='user';f.t=t;f.st=strides(t.shape);
+    f.idx.forEach((L,k)=>setDim(L,t.shape[k],f.name));
+  });
+  factors.forEach(f=>{if(f.kind==='eps'){if(f.idx.length<2)throw new Error('ε braucht mindestens 2 Indizes.');f.idx.forEach(L=>setDim(L,f.idx.length,'ε'));}});
+  factors.forEach(f=>{if(f.kind==='delta'){if(f.idx.length!==2)throw new Error('δ braucht genau 2 Indizes.');const n=dim[f.idx[0]]??dim[f.idx[1]]??defDim;f.idx.forEach(L=>setDim(L,n,'δ'));}});
+  const count={};factors.forEach(f=>f.idx.forEach(L=>count[L]=(count[L]||0)+1));
+  const letters=Object.keys(count);
+  letters.forEach(L=>{if(count[L]>2)throw new Error('Index '+L+' kommt '+count[L]+'-mal vor – erlaubt ist höchstens zweimal.');});
+  let free=letters.filter(L=>count[L]===1).sort();
+  const summed=letters.filter(L=>count[L]===2).sort();
+  if(out!==null){
+    const o=out.replace(/\s/g,'').split('').filter(x=>x);
+    if(o.length!==free.length||o.some(L=>!free.includes(L))||new Set(o).size!==o.length)
+      throw new Error('Hinter -> müssen genau die freien Indizes stehen: '+(free.join('')||'(keine)'));
+    free=o;
+  }
+  return {factors,free,summed,dim};
+}
+function factorFlat(f,a){let fl=0;for(let k=0;k<f.idx.length;k++)fl+=a[f.idx[k]]*f.st[k];return fl;}
+function factorVal(f,a){
+  if(f.kind==='delta')return a[f.idx[0]]===a[f.idx[1]]?1:0;
+  if(f.kind==='eps')return permSign(f.idx.map(L=>a[L]));
+  return f.t.data[factorFlat(f,a)];
+}
+function evaluate(exprStr,env,defDim){
+  const P=prepare(exprStr,env,defDim||3);
+  const shape=P.free.map(L=>P.dim[L]);
+  const res={shape,data:new Array(size(shape)).fill(0)};
+  const all=[...P.free,...P.summed];
+  const total=size(all.map(L=>P.dim[L]));
+  if(total>400000)throw new Error('Zu viele Rechenschritte ('+total+').');
+  const st=strides(shape),a={};
+  for(let n=0;n<total;n++){
+    let r=n;for(let k=all.length-1;k>=0;k--){const d=P.dim[all[k]];a[all[k]]=r%d;r=Math.floor(r/d);}
+    let p=1;for(const f of P.factors){p*=factorVal(f,a);if(p===0)break;}
+    if(p!==0){let fl=0;P.free.forEach((L,k)=>fl+=a[L]*st[k]);res.data[fl]+=p;}
+  }
+  return {res,P};
+}
+function fname(f){return f.kind==='delta'?'δ':f.kind==='eps'?'ε':f.name;}
+function explainCell(P,freeVals,base){
+  const a={};P.free.forEach((L,k)=>a[L]=freeVals[k]);
+  const S=P.summed,tot=size(S.map(L=>P.dim[L]));
+  const terms=[];let skipped=0,sum=0;const keys=[];
+  for(let n=0;n<tot;n++){
+    let r=n;for(let k=S.length-1;k>=0;k--){const d=P.dim[S[k]];a[S[k]]=r%d;r=Math.floor(r/d);}
+    let zero=false,p=1;const sym=[],num=[],kk=[];
+    for(const f of P.factors){
+      const v=factorVal(f,a);p*=v;
+      const s=f.idx.map(L=>a[L]+base).join('');
+      sym.push(fname(f)+sub(s));num.push(v<0?'('+fmt(v)+')':fmt(v));
+      if(f.kind!=='user'){if(v===0)zero=true;}else kk.push([f.name,factorFlat(f,a)]);
+    }
+    if(zero){skipped++;continue;}
+    keys.push(...kk);sum+=p;terms.push({sym:sym.join('·'),num:num.join('·'),val:p});
+  }
+  // Kopf: Ausdruck mit eingesetzten freien Indizes
+  const head=P.factors.map(f=>fname(f)+f.idx.map(L=>P.free.includes(L)?sub(a2(L)):L).join('')).join('·');
+  function a2(L){return freeVals[P.free.indexOf(L)]+base;}
+  let txt='';
+  if(P.free.length)txt+='Freie Indizes: '+P.free.map((L,k)=>L+' = '+(freeVals[k]+base)).join(', ')+'\n';
+  else txt+='Keine freien Indizes – das Ergebnis ist eine einzelne Zahl (Skalar).\n';
+  txt+=S.length?'Summiert wird über: '+S.join(', ')+'  (kommt jeweils doppelt vor)\n\n':'Kein Index kommt doppelt vor – es wird nichts summiert, nur multipliziert.\n\n';
+  const pad=' '.repeat(head.length);
+  if(!terms.length){txt+=head+' = 0'+(skipped?'   (alle '+skipped+' Terme enthalten δ oder ε = 0)':'');}
+  else{
+    txt+=head+' = '+terms.map(t=>t.sym).join(' + ')+'\n';
+    txt+=pad+' = '+terms.map(t=>t.num).join(' + ')+'\n';
+    if(terms.length>1)txt+=pad+' = '+terms.map(t=>fmt(t.val)).join(' + ').replace(/\+ -/g,'− ')+'\n';
+    txt+=pad+' = '+fmt(sum);
+    if(skipped)txt+='\n\n('+skipped+' Terme weggelassen, weil darin δ oder ε gleich 0 ist.)';
+  }
+  return {txt,keys};
+}
+
+/* ---------- 1 Stufen ---------- */
+let stT=null;
+const STNAMES=['T','v','A','T'];
+function stNew(){const r=+$('st-rank').value,d=+$('st-dim').value;stT=randT(Array(r).fill(d),-5,9);stRender(-1);}
+function stRender(sel){
+  const r=+$('st-rank').value,d=+$('st-dim').value;
+  const ex=['Temperatur, Masse, Energie – eine Zahl ohne Richtung','Geschwindigkeit, Kraft – Pfeil mit Richtung','Spannung im Material, Trägheit, Drehung, Metrik','Piezo-Effekt in Kristallen, Levi-Civita-Symbol ε'][r];
+  $('st-info').innerHTML='<span class="pill">Stufe '+r+'</span><span class="pill">'+r+' Index'+(r===1?'':'e')+'</span><span class="pill">'+d+'<sup>'+r+'</sup> = '+(d**r)+' Zahlen</span> <span style="color:var(--dim)">Beispiele: '+ex+'</span>';
+  const letters=['i','j','k'];
+  const v=$('st-view');v.innerHTML='';
+  v.appendChild(renderTensor(stT,{name:STNAMES[r]+(r?'<sub>'+letters.slice(0,r).join('')+'</sub>':''),sel,letters,onclick:f=>{
+    stRender(f);
+    const id=unflat(f,stT.shape);
+    $('st-addr').textContent=r===0?'Ein Skalar hat keinen Index – er ist einfach die Zahl '+fmt(stT.data[0])+'.':
+      STNAMES[r]+sub(id.map(x=>x+1).join(''))+' = '+fmt(stT.data[f])+'\n'+id.map((x,k)=>letters[k]+' = '+(x+1)).join(', ')+
+      (r===2?'   →  Zeile '+(id[0]+1)+', Spalte '+(id[1]+1):'')+(r===3?'   →  Schicht '+(id[0]+1)+', Zeile '+(id[1]+1)+', Spalte '+(id[2]+1):'');
+  }}));
+  if(sel<0)$('st-addr').textContent='Klicke auf eine Zahl.';
+  let h='<table class="info"><tr><th>Stufe \\ Dimension</th><th>2</th><th>3</th><th>4</th></tr>';
+  for(let n=0;n<=4;n++)h+='<tr><th>'+n+'</th>'+[2,3,4].map(dd=>'<td'+(n===r&&dd===d?' style="color:var(--acc)"':'')+'>'+(dd**n)+'</td>').join('')+'</tr>';
+  $('st-table').innerHTML=h+'</table>';
+}
+$('st-rank').onchange=stNew;$('st-dim').onchange=stNew;$('st-new').onclick=stNew;
+
+/* ---------- 2 Summenkonvention ---------- */
+const SUTPL=[
+ {e:'a_i*b_i',n:'Skalarprodukt  a_i b_i',d:'i kommt doppelt vor → wird summiert. Kein freier Index → Ergebnis ist eine Zahl. Das ist das bekannte Skalarprodukt a·b.'},
+ {e:'A_ij*v_j',n:'Matrix mal Vektor  A_ij v_j',d:'j wird summiert, i bleibt frei → Ergebnis ist ein Vektor. Jede Zeile von A wird mit v „verrechnet“.'},
+ {e:'A_ij*B_jk',n:'Matrix mal Matrix  A_ij B_jk',d:'j wird summiert, i und k bleiben frei → Ergebnis ist wieder eine Matrix (Zeile i von A trifft Spalte k von B).'},
+ {e:'A_ii',n:'Spur  A_ii',d:'Beide Indizes gleich → summiert: A₁₁ + A₂₂ + A₃₃, die Diagonale. Ergebnis ist eine Zahl, die Spur.'},
+ {e:'a_i*b_j',n:'Äußeres Produkt  a_i b_j',d:'Kein Index doppelt → nichts wird summiert! Zwei freie Indizes → aus zwei Vektoren wird eine 3×3-Matrix.'},
+ {e:'δ_ij*v_j',n:'Kronecker-Delta  δ_ij v_j',d:'δ ist 1, wenn i = j, sonst 0. Es „pickt“ also genau v_i heraus: δ_ij v_j = v_i. Das δ benennt nur einen Index um.'},
+ {e:'ε_ijk*a_j*b_k',n:'Kreuzprodukt  ε_ijk a_j b_k',d:'ε ist +1 für 123, 231, 312, −1 für 132, 213, 321 und sonst 0. Ergebnis: das Kreuzprodukt a × b.'},
+ {e:'A_ij*a_i*b_j',n:'Zwei Summen  A_ij a_i b_j',d:'i und j kommen beide doppelt vor → Doppelsumme mit 9 Termen. Ergebnis: eine Zahl.'}
+];
+let suEnv=null,suSel=0;
+function suNew(){suEnv={a:randT([3],-3,5),b:randT([3],-3,5),v:randT([3],-3,5),A:randT([3,3],-3,5),B:randT([3,3],-3,5)};suSel=0;suRender();}
+SUTPL.forEach((t,k)=>{const o=document.createElement('option');o.value=k;o.textContent=t.n;$('su-tpl').appendChild(o);});
+$('su-tpl').onchange=()=>{suSel=0;suRender();};$('su-new').onclick=suNew;
+function suRender(){
+  const T=SUTPL[+$('su-tpl').value];
+  $('su-desc').innerHTML='<span class="pill mono">'+esc(T.e.replace(/\*/g,' '))+'</span> '+T.d;
+  let R,P;
+  try{({res:R,P}=evaluate(T.e,suEnv,3));}catch(e){$('su-exp').textContent=e.message;return;}
+  const ex=explainCell(P,unflat(suSel,R.shape),1);
+  const hl={};ex.keys.forEach(([n,f])=>{(hl[n]=hl[n]||new Set()).add(f);});
+  const inB=$('su-in');inB.innerHTML='';
+  const used=[...new Set(P.factors.filter(f=>f.kind==='user').map(f=>f.name))];
+  used.forEach(n=>{const f=P.factors.find(x=>x.name===n);
+    inB.appendChild(renderTensor(suEnv[n],{name:n+'<sub>'+f.idx.join('')+'</sub>',editable:true,hl:hl[n],oninput:suRender}));});
+  P.factors.filter(f=>f.kind!=='user').forEach(f=>{
+    const d=document.createElement('div');d.className='tens';
+    d.innerHTML='<div class="nm">'+fname(f)+'<sub>'+f.idx.join('')+'</sub></div><div style="color:var(--dim);max-width:220px">'+(f.kind==='delta'?'eingebaut: 1 auf der Diagonale, sonst 0':'eingebaut: ±1 für Vertauschungen von 1,2,3, sonst 0')+'</div>';
+    inB.appendChild(d);});
+  const ob=$('su-out');ob.innerHTML='';
+  const nm='Ergebnis'+(P.free.length?'<sub>'+P.free.join('')+'</sub>':'');
+  ob.appendChild(renderTensor(R,{name:nm,sel:suSel,column:R.shape.length===1,onclick:f=>{suSel=f;suRender();}}));
+  $('su-exp').textContent=ex.txt;
+}
+
+/* ---------- Zeichenhilfe ---------- */
+function Plot(cv,scale){this.cv=cv;this.g=cv.getContext('2d');this.s=scale;this.ox=cv.width/2;this.oy=cv.height/2;}
+Plot.prototype.X=function(x){return this.ox+x*this.s;};
+Plot.prototype.Y=function(y){return this.oy-y*this.s;};
+Plot.prototype.inv=function(px,py){return [(px-this.ox)/this.s,(this.oy-py)/this.s];};
+Plot.prototype.clear=function(){this.g.clearRect(0,0,this.cv.width,this.cv.height);};
+Plot.prototype.line=function(x1,y1,x2,y2,col,w,dash){const g=this.g;g.save();g.strokeStyle=col;g.lineWidth=w||1;g.setLineDash(dash||[]);g.beginPath();g.moveTo(this.X(x1),this.Y(y1));g.lineTo(this.X(x2),this.Y(y2));g.stroke();g.restore();};
+Plot.prototype.arrow=function(x1,y1,x2,y2,col,w){
+  const g=this.g,X1=this.X(x1),Y1=this.Y(y1),X2=this.X(x2),Y2=this.Y(y2);const L=Math.hypot(X2-X1,Y2-Y1);
+  g.save();g.strokeStyle=col;g.fillStyle=col;g.lineWidth=w||2;g.beginPath();g.moveTo(X1,Y1);g.lineTo(X2,Y2);g.stroke();
+  if(L>4){const a=Math.atan2(Y2-Y1,X2-X1),h=Math.min(12,L*.4);g.beginPath();g.moveTo(X2,Y2);g.lineTo(X2-h*Math.cos(a-.4),Y2-h*Math.sin(a-.4));g.lineTo(X2-h*Math.cos(a+.4),Y2-h*Math.sin(a+.4));g.closePath();g.fill();}
+  g.restore();
+};
+Plot.prototype.text=function(t,x,y,col,dx,dy){const g=this.g;g.save();g.fillStyle=col;g.font='14px system-ui,sans-serif';g.fillText(t,this.X(x)+(dx||0),this.Y(y)+(dy||0));g.restore();};
+Plot.prototype.dot=function(x,y,col,r){const g=this.g;g.save();g.fillStyle=col;g.beginPath();g.arc(this.X(x),this.Y(y),r||4,0,7);g.fill();g.restore();};
+Plot.prototype.grid=function(col){const n=Math.ceil(Math.max(this.cv.width,this.cv.height)/this.s);for(let i=-n;i<=n;i++){this.line(i,-n,i,n,col);this.line(-n,i,n,i,col);}};
+function dragger(cv,plot,getPts,onMove){
+  let idx=-1;
+  const pos=e=>{const r=cv.getBoundingClientRect();return plot.inv((e.clientX-r.left)*cv.width/r.width,(e.clientY-r.top)*cv.height/r.height);};
+  cv.addEventListener('pointerdown',e=>{const p=pos(e),pts=getPts();let best=0.6;idx=-1;pts.forEach((q,k)=>{const d=Math.hypot(q[0]-p[0],q[1]-p[1]);if(d<best){best=d;idx=k;}});if(idx>=0){cv.setPointerCapture(e.pointerId);onMove(idx,p);}});
+  cv.addEventListener('pointermove',e=>{if(idx>=0)onMove(idx,pos(e));});
+  const up=()=>{idx=-1;};cv.addEventListener('pointerup',up);cv.addEventListener('pointercancel',up);
+}
+const snap=(p,s)=>[Math.round(p[0]/s)*s,Math.round(p[1]/s)*s];
+
+/* ---------- 3 Drehung ---------- */
+const dr={v:[3,2],w:[-1,3],T:{shape:[2,2],data:[2,1,1,3]}};
+const drP=new Plot($('dr-cv'),40);
+dragger($('dr-cv'),drP,()=>[dr.v,dr.w],(k,p)=>{p=snap(p,0.5);if(k===0)dr.v=p;else dr.w=p;drDraw();});
+$('dr-th').oninput=drDraw;
+function drDraw(){
+  const th=+$('dr-th').value*Math.PI/180,c=Math.cos(th),s=Math.sin(th);
+  $('dr-thv').textContent=$('dr-th').value+'°';
+  const P=drP;P.clear();P.grid('#1a1e24');
+  // gedrehtes Gitter
+  for(let i=-8;i<=8;i++){P.line(i*c-8*(-s),i*s-8*c,i*c+8*(-s),i*s+8*c,'rgba(242,179,61,.10)');P.line(-8*c+i*(-s),-8*s+i*c,8*c+i*(-s),8*s+i*c,'rgba(242,179,61,.10)');}
+  P.line(-6,0,6,0,'#8a94a3',1.5);P.line(0,-6,0,6,'#8a94a3',1.5);P.text('x₁',5.5,0,'#8a94a3',0,-6);P.text('x₂',0,5.6,'#8a94a3',6,0);
+  P.line(-6*c,-6*s,6*c,6*s,'#f2b33d',2);P.line(6*s,-6*c,-6*s,6*c,'#f2b33d',2);
+  P.text('x₁′',5.6*c,5.6*s,'#f2b33d',4,-4);P.text('x₂′',-5.6*s,5.6*c,'#f2b33d',4,-4);
+  const comp=u=>[c*u[0]+s*u[1],-s*u[0]+c*u[1]];
+  const v2=comp(dr.v),w2=comp(dr.w);
+  // Projektionen von v aufs neue System
+  P.line(dr.v[0],dr.v[1],v2[0]*c,v2[0]*s,'rgba(79,195,247,.6)',1,[4,4]);
+  P.line(dr.v[0],dr.v[1],-v2[1]*s,v2[1]*c,'rgba(79,195,247,.6)',1,[4,4]);
+  P.dot(v2[0]*c,v2[0]*s,'#4fc3f7',3);P.dot(-v2[1]*s,v2[1]*c,'#4fc3f7',3);
+  P.arrow(0,0,dr.w[0],dr.w[1],'#7ee08f',2.5);P.text('w',dr.w[0],dr.w[1],'#7ee08f',6,-6);
+  P.arrow(0,0,dr.v[0],dr.v[1],'#4fc3f7',3);P.text('v',dr.v[0],dr.v[1],'#4fc3f7',6,-6);
+  const L=u=>Math.hypot(u[0],u[1]),dot=(a,b)=>a[0]*b[0]+a[1]*b[1];
+  $('dr-vec').innerHTML='<table class="info"><tr><th></th><th>altes System</th><th>neues System</th></tr>'+
+   '<tr><th>v</th><td>('+fmt(dr.v[0])+', '+fmt(dr.v[1])+')</td><td style="color:var(--acc)">('+fmt(v2[0])+', '+fmt(v2[1])+')</td></tr>'+
+   '<tr><th>w</th><td>('+fmt(dr.w[0])+', '+fmt(dr.w[1])+')</td><td style="color:var(--acc)">('+fmt(w2[0])+', '+fmt(w2[1])+')</td></tr>'+
+   '<tr><th>Länge |v|</th><td>'+fmt(L(dr.v))+'</td><td class="ok">'+fmt(L(v2))+'</td></tr>'+
+   '<tr><th>v·w = v<sub>i</sub>w<sub>i</sub></th><td>'+fmt(dot(dr.v,dr.w))+'</td><td class="ok">'+fmt(dot(v2,w2))+'</td></tr></table>';
+  $('dr-R').textContent='Drehmatrix R = ( '+fmt(c)+'   '+fmt(s)+' )\n              ( '+fmt(-s)+'   '+fmt(c)+' )\n\n'+
+   'v′₁ = R₁₁·v₁ + R₁₂·v₂ = '+fmt(c)+'·'+fmt(dr.v[0])+' + '+fmt(s)+'·'+fmt(dr.v[1])+' = '+fmt(v2[0])+'\n'+
+   'v′₂ = R₂₁·v₁ + R₂₂·v₂ = '+fmt(-s)+'·'+fmt(dr.v[0])+' + '+fmt(c)+'·'+fmt(dr.v[1])+' = '+fmt(v2[1])+'\n\nKurz: v′ᵢ = Rᵢⱼ vⱼ';
+  // Stufe 2
+  const R=[[c,s],[-s,c]],T=dr.T.data,T2=[0,0,0,0];
+  for(let i=0;i<2;i++)for(let j=0;j<2;j++){let x=0;for(let k=0;k<2;k++)for(let l=0;l<2;l++)x+=R[i][k]*R[j][l]*T[k*2+l];T2[i*2+j]=x;}
+  const tb=$('dr-T');tb.innerHTML='';tb.appendChild(renderTensor(dr.T,{name:'T (alt)',editable:true,oninput:drDraw}));
+  const tb2=$('dr-T2');tb2.innerHTML='';tb2.appendChild(renderTensor({shape:[2,2],data:T2},{name:'T′ (neu)'}));
+  const tr=T[0]+T[3],de=T[0]*T[3]-T[1]*T[2],tr2=T2[0]+T2[3],de2=T2[0]*T2[3]-T2[1]*T2[2];
+  $('dr-Tinv').textContent='Spur  T₁₁+T₂₂ :  alt '+fmt(tr)+'   neu '+fmt(tr2)+'\nDeterminante :  alt '+fmt(de)+'   neu '+fmt(de2)+'\n\nDie Einträge ändern sich, diese beiden Zahlen nicht – sie gehören zum Tensor selbst, nicht zum Koordinatensystem.';
+}
+
+/* ---------- 4 Maschine ---------- */
+const ma={M:[1.5,0.6,0.6,0.8],u:[1,0.5]};
+const maP=new Plot($('ma-cv'),80);
+const MAN=['M₁₁','M₁₂','M₂₁','M₂₂'];
+(function(){const box=$('ma-sl');MAN.forEach((n,k)=>{const d=document.createElement('div');d.className='sl';d.innerHTML='<label style="width:40px">'+n+'</label><input type="range" min="-2" max="2" step="0.1" id="ma-s'+k+'"><span class="v" id="ma-v'+k+'"></span>';box.appendChild(d);});
+ MAN.forEach((n,k)=>{$('ma-s'+k).oninput=()=>{ma.M[k]=+$('ma-s'+k).value;maDraw();};});
+ document.querySelectorAll('[data-p]').forEach(b=>b.onclick=()=>{ma.M=b.dataset.p.split(',').map(Number);maDraw();});})();
+dragger($('ma-cv'),maP,()=>[ma.u],(k,p)=>{ma.u=snap(p,0.1);maDraw();});
+function maDraw(){
+  const [a,b,c,d]=ma.M,P=maP;
+  MAN.forEach((n,k)=>{$('ma-s'+k).value=ma.M[k];$('ma-v'+k).textContent=fmt(ma.M[k]);});
+  P.clear();P.grid('#1a1e24');P.line(-3,0,3,0,'#3a424d');P.line(0,-3,0,3,'#3a424d');
+  const g=P.g;
+  g.save();g.strokeStyle='#5c6573';g.beginPath();for(let t=0;t<=64;t++){const q=t/64*2*Math.PI;const x=Math.cos(q),y=Math.sin(q);t?g.lineTo(P.X(x),P.Y(y)):g.moveTo(P.X(x),P.Y(y));}g.stroke();g.restore();
+  g.save();g.strokeStyle='#f2b33d';g.lineWidth=2;g.beginPath();for(let t=0;t<=64;t++){const q=t/64*2*Math.PI;const x=Math.cos(q),y=Math.sin(q);const X=a*x+b*y,Y=c*x+d*y;t?g.lineTo(P.X(X),P.Y(Y)):g.moveTo(P.X(X),P.Y(Y));}g.stroke();g.restore();
+  for(let t=0;t<12;t++){const q=t/12*2*Math.PI,x=Math.cos(q),y=Math.sin(q);P.arrow(0,0,x,y,'rgba(140,150,165,.45)',1);P.arrow(0,0,a*x+b*y,c*x+d*y,'rgba(242,179,61,.55)',1.2);}
+  // Eigenrichtungen
+  const tr=a+d,de=a*d-b*c,disc=tr*tr/4-de;let ev='';
+  if(disc>=-1e-12){
+    const s=Math.sqrt(Math.max(0,disc));const ls=[tr/2+s,tr/2-s];
+    const vecs=ls.map(l=>{let v;if(Math.abs(b)>1e-9)v=[b,l-a];else if(Math.abs(c)>1e-9)v=[l-d,c];else v=null;return v;});
+    if(!vecs[0]){vecs[0]=[1,0];vecs[1]=[0,1];if(Math.abs(b)<1e-9&&Math.abs(c)<1e-9){ls[0]=a;ls[1]=d;}}
+    vecs.forEach((v,k)=>{const n=Math.hypot(v[0],v[1])||1;const x=v[0]/n,y=v[1]/n;P.line(-3*x,-3*y,3*x,3*y,k?'#c78bff':'#ff8a65',1.5,[6,5]);});
+    ev='Hauptachsen (Eigenwerte): λ₁ = '+fmt(ls[0])+', λ₂ = '+fmt(ls[1])+'\nPfeile entlang der gestrichelten Linien werden nur um diesen Faktor gestreckt – ihre Richtung bleibt.';
+    if(Math.abs(disc)<1e-9&&Math.abs(b)+Math.abs(c)>1e-9)ev+='\n(Doppelter Eigenwert – es gibt nur eine Hauptachse.)';
+  } else ev='Keine Hauptachsen: Diese Maschine dreht jeden Pfeil ein Stück weiter –\nkeine Richtung bleibt erhalten (die Eigenwerte sind komplex).';
+  const u=ma.u,w=[a*u[0]+b*u[1],c*u[0]+d*u[1]];
+  P.arrow(0,0,w[0],w[1],'#7ee08f',2.5);P.arrow(0,0,u[0],u[1],'#4fc3f7',3);P.text('u',u[0],u[1],'#4fc3f7',6,-6);P.text('M·u',w[0],w[1],'#7ee08f',6,-6);
+  const mb=$('ma-M');mb.innerHTML='';mb.appendChild(renderTensor({shape:[2,2],data:ma.M.slice()},{name:'M<sub>ij</sub>'}));
+  const sym=Math.abs(b-c)<1e-9;
+  $('ma-info').textContent='Testpfeil u = ('+fmt(u[0])+', '+fmt(u[1])+')\n'+
+   'w₁ = M₁₁u₁ + M₁₂u₂ = '+fmt(a)+'·'+fmt(u[0])+' + '+fmt(b)+'·'+fmt(u[1])+' = '+fmt(w[0])+'\n'+
+   'w₂ = M₂₁u₁ + M₂₂u₂ = '+fmt(c)+'·'+fmt(u[0])+' + '+fmt(d)+'·'+fmt(u[1])+' = '+fmt(w[1])+'\n\n'+
+   'Spur = '+fmt(tr)+'     Determinante = '+fmt(de)+'  (Flächen werden ×'+fmt(Math.abs(de))+(de<0?', und gespiegelt':'')+')\n'+
+   (sym?'M ist symmetrisch (M₁₂ = M₂₁): Die Hauptachsen stehen senkrecht aufeinander.\nSo sehen Spannungs- und Trägheitstensoren aus.\n':'M ist nicht symmetrisch.\n')+'\n'+ev;
+}
+
+/* ---------- 5 Metrik ---------- */
+const me={v:[2.5,2]};
+const meP=new Plot($('me-cv'),55);meP.oy=300;meP.ox=170;
+dragger($('me-cv'),meP,()=>[me.v],(k,p)=>{me.v=snap(p,0.1);meDraw();});
+$('me-al').oninput=meDraw;
+function meDraw(){
+  const al=+$('me-al').value*Math.PI/180;$('me-alv').textContent=$('me-al').value+'°';
+  const e1=[1,0],e2=[Math.cos(al),Math.sin(al)],v=me.v,P=meP;
+  const v2u=v[1]/e2[1],v1u=v[0]-v2u*e2[0];      // oben (kontravariant)
+  const v1d=v[0]*e1[0]+v[1]*e1[1],v2d=v[0]*e2[0]+v[1]*e2[1]; // unten (kovariant)
+  const g12=Math.cos(al);
+  P.clear();
+  for(let i=-6;i<=8;i++){P.line(i*e1[0]-6*e2[0],-6*e2[1],i*e1[0]+8*e2[0],8*e2[1],'#1d2229');P.line(-6+i*e2[0],i*e2[1],8+i*e2[0],i*e2[1],'#1d2229');}
+  P.line(-3,0,5,0,'#f2b33d',2);P.line(-3*e2[0],-3*e2[1],5*e2[0],5*e2[1],'#f2b33d',2);
+  P.arrow(0,0,1,0,'#f2b33d',3);P.arrow(0,0,e2[0],e2[1],'#f2b33d',3);
+  P.text('e₁',1,0,'#f2b33d',-4,18);P.text('e₂',e2[0],e2[1],'#f2b33d',-22,0);
+  // Parallelogramm (oben)
+  P.line(v1u,0,v[0],v[1],'#4fc3f7',1.2,[5,4]);P.line(v2u*e2[0],v2u*e2[1],v[0],v[1],'#4fc3f7',1.2,[5,4]);
+  P.dot(v1u,0,'#4fc3f7',4);P.dot(v2u*e2[0],v2u*e2[1],'#4fc3f7',4);
+  // senkrechte Schatten (unten)
+  P.line(v[0],v[1],v1d,0,'#7ee08f',1.2,[2,3]);P.line(v[0],v[1],v2d*e2[0],v2d*e2[1],'#7ee08f',1.2,[2,3]);
+  P.dot(v1d,0,'#7ee08f',4);P.dot(v2d*e2[0],v2d*e2[1],'#7ee08f',4);
+  P.arrow(0,0,v[0],v[1],'#ffffff',3);P.text('v',v[0],v[1],'#fff',6,-6);
+  const len2=v[0]*v[0]+v[1]*v[1];
+  $('me-info').textContent=
+   'Metrik  gᵢⱼ = eᵢ·eⱼ = ( 1        '+fmt(g12)+' )\n                      ( '+fmt(g12)+'    1     )\n\n'+
+   'OBEN  (kontravariant, Schritte entlang der Achsen, blau):\n  v¹ = '+fmt(v1u)+'    v² = '+fmt(v2u)+'\n\n'+
+   'UNTEN (kovariant, senkrechte Schatten, grün):\n  v₁ = '+fmt(v1d)+'    v₂ = '+fmt(v2d)+'\n\n'+
+   'Index senken mit der Metrik:  vᵢ = gᵢⱼ vʲ\n  v₁ = 1·'+fmt(v1u)+' + '+fmt(g12)+'·'+fmt(v2u)+' = '+fmt(v1u+g12*v2u)+'\n  v₂ = '+fmt(g12)+'·'+fmt(v1u)+' + 1·'+fmt(v2u)+' = '+fmt(g12*v1u+v2u)+'\n\n'+
+   'Länge² = vⁱ vᵢ = '+fmt(v1u)+'·'+fmt(v1d)+' + '+fmt(v2u)+'·'+fmt(v2d)+' = '+fmt(v1u*v1d+v2u*v2d)+'\n(zum Vergleich mit dem Lineal: '+fmt(len2)+')\n\n'+
+   (Math.abs(g12)<1e-9?'Bei 90° ist g die Einheitsmatrix: oben und unten sind gleich!':'Stelle α auf 90°: dann fallen oben und unten zusammen.');
+}
+const mkP=new Plot($('mk-cv'),40);
+['mk-b','mk-ct','mk-x'].forEach(id=>$(id).oninput=mkDraw);
+function mkDraw(){
+  const b=+$('mk-b').value/100,ga=1/Math.sqrt(1-b*b),ct=+$('mk-ct').value||0,x=+$('mk-x').value||0;
+  $('mk-bv').textContent=fmt(b);
+  const ct2=ga*(ct-b*x),x2=ga*(x-b*ct),s2=ct*ct-x*x,s22=ct2*ct2-x2*x2;
+  const P=mkP;P.clear();P.grid('#1a1e24');
+  P.line(-6,0,6,0,'#8a94a3',1.5);P.line(0,-6,0,6,'#8a94a3',1.5);P.text('x',4.9,0,'#8a94a3',0,-6);P.text('ct',0,4.9,'#8a94a3',6,0);
+  P.line(-6,-6,6,6,'#5c6573',1,[4,4]);P.line(-6,6,6,-6,'#5c6573',1,[4,4]);
+  P.line(-6*b,-6,6*b,6,'#f2b33d',2);P.line(-6,-6*b,6,6*b,'#f2b33d',2);
+  P.text('ct′',4.6*b,4.6,'#f2b33d',6,0);P.text('x′',4.6,4.6*b,'#f2b33d',0,-6);
+  // Hyperbel
+  const g=P.g;g.save();g.strokeStyle='#4fc3f7';g.lineWidth=1.5;
+  const branch=(f)=>{g.beginPath();let st=false;for(let t=-6;t<=6;t+=0.05){const p=f(t);if(!p){st=false;continue;}st?g.lineTo(P.X(p[0]),P.Y(p[1])):g.moveTo(P.X(p[0]),P.Y(p[1]));st=true;}g.stroke();};
+  if(s2>1e-9){const sg=ct>=0?1:-1;branch(t=>[t,sg*Math.sqrt(s2+t*t)]);}
+  else if(s2<-1e-9){const sg=x>=0?1:-1;branch(t=>[sg*Math.sqrt(-s2+t*t),t]);}
+  g.restore();
+  P.dot(x,ct,'#ffffff',5);P.text('Ereignis',x,ct,'#fff',8,-8);
+  $('mk-info').textContent='γ = 1/√(1−v²/c²) = '+fmt(ga)+'\n\n'+
+   'Ruhender Beobachter:\n  xᵘ = (ct, x) = ('+fmt(ct)+', '+fmt(x)+')\n  xᵤ = ηᵤᵥxᵛ = ('+fmt(ct)+', '+fmt(-x)+')\n  s² = xᵘxᵤ = '+fmt(ct)+'·'+fmt(ct)+' + '+fmt(x)+'·('+fmt(-x)+') = '+fmt(s2)+'\n\n'+
+   'Bewegter Beobachter (Lorentz-Transformation):\n  ct′ = γ(ct − βx) = '+fmt(ct2)+'\n  x′  = γ(x − β·ct) = '+fmt(x2)+'\n  s′² = ct′² − x′² = '+fmt(s22)+'\n\n'+
+   (Math.abs(s2)<1e-9?'s² = 0: Das Ereignis liegt auf dem Lichtkegel.':s2>0?'s² > 0: zeitartig – ein Ursache-Wirkungs-Zusammenhang ist möglich.':'s² < 0: raumartig – nicht einmal Licht kommt rechtzeitig hin.');
+}
+
+/* ---------- 6 Rechner ---------- */
+$('re-defs').value='# Name = Zahl, [Liste] oder [[Tabelle]]\na = [1, 2, 3]\nb = [4, -1, 2]\nA = [[2, 0, 1], [1, 3, 0], [0, 1, 4]]\nB = [[1, 2], [0, 1], [3, 0]]\nT = [[[1, 0], [0, 1]], [[0, 1], [1, 0]]]\nk = 2\n';
+const REX=['a_i*b_i','A_ij*a_j','A_ij*B_jk','A_ii','a_i*b_j','A_ji','ε_ijk*a_j*b_k','δ_ij*a_j','k*a_i','T_ijk*T_kjl','A_ij*A_jk*A_ki','A_ij*B_jk -> ki'];
+REX.forEach(e=>{const b=document.createElement('button');b.className='act mono';b.textContent=e;b.onclick=()=>{$('re-expr').value=e;reRun();};$('re-ex').appendChild(b);});
+function parseDefs(txt){
+  const env={};
+  txt.split('\n').forEach((line,ln)=>{
+    line=line.replace(/#.*$/,'').trim();if(!line)return;
+    const m=line.match(/^([A-Za-zÄÖÜäöü][A-Za-z0-9ÄÖÜäöü]*)\s*=\s*(.+)$/);
+    if(!m)throw new Error('Zeile '+(ln+1)+': erwartet „Name = Wert“.');
+    if(BUILTIN[m[1]])throw new Error('Zeile '+(ln+1)+': Der Name '+m[1]+' ist für das eingebaute Symbol reserviert.');
+    let v;try{v=JSON.parse(m[2].replace(/,\s*\]/g,']'));}catch(e){throw new Error('Zeile '+(ln+1)+': Wert nicht lesbar (Dezimalpunkt statt Komma verwenden).');}
+    env[m[1]]=toTensor(v,ln+1);
+  });
+  return env;
+}
+function toTensor(v,ln){
+  const shape=[];let x=v;while(Array.isArray(x)){if(!x.length)throw new Error('Zeile '+ln+': leere Liste.');shape.push(x.length);x=x[0];}
+  const data=[];
+  const walk=(y,d)=>{if(d===shape.length){if(typeof y!=='number')throw new Error('Zeile '+ln+': nur Zahlen erlaubt.');data.push(y);return;}
+    if(!Array.isArray(y)||y.length!==shape[d])throw new Error('Zeile '+ln+': Die Zeilen sind unterschiedlich lang.');y.forEach(z=>walk(z,d+1));};
+  walk(v,0);return {shape,data};
+}
+let reState=null;
+function reRun(){
+  $('re-err').textContent='';$('re-out').innerHTML='';$('re-exp').textContent='';$('re-meta').innerHTML='';
+  try{
+    const env=parseDefs($('re-defs').value);
+    const {res,P}=evaluate($('re-expr').value,env,3);
+    reState={res,P,sel:0};
+    const used=[...new Set(P.factors.map(fname))];
+    $('re-meta').innerHTML='<span class="pill">freie Indizes: '+(P.free.join(', ')||'keine')+'</span><span class="pill">summiert über: '+(P.summed.join(', ')||'nichts')+'</span><span class="pill">Ergebnis: Stufe '+res.shape.length+(res.shape.length?' ('+res.shape.join('×')+')':' – eine Zahl')+'</span><span class="pill">benutzt: '+esc(used.join(', '))+'</span>';
+    reShow();
+  }catch(e){$('re-err').textContent=e.message;}
+}
+function reShow(){
+  const {res,P,sel}=reState,base=$('re-b0').checked?0:1;
+  const o=$('re-out');o.innerHTML='';
+  o.appendChild(renderTensor(res,{name:'Ergebnis'+(P.free.length?'<sub>'+P.free.join('')+'</sub>':''),sel,letters:P.free,base,column:res.shape.length===1,onclick:f=>{reState.sel=f;reShow();}}));
+  if(res.shape.length>3)o.appendChild(Object.assign(document.createElement('div'),{className:'mono',textContent:nestedStr(res)}));
+  $('re-exp').textContent=explainCell(P,unflat(sel,res.shape),base).txt;
+}
+$('re-go').onclick=reRun;$('re-expr').addEventListener('keydown',e=>{if(e.key==='Enter')reRun();});$('re-b0').onchange=()=>reState&&reShow();
+
+/* ---------- 7 Üben ---------- */
+const v3=()=>[ri(-3,5),ri(-3,5),ri(-3,5)];
+const m3=()=>[v3(),v3(),v3()];
+const pn=x=>x<0?'('+x+')':x;
+const sm=(t)=>t.map((x,k)=>k&&x<0?' − '+(-x):(k?' + ':'')+x).join('');
+const EX={
+ komp:{n:'Komponenten zählen',g(){const n=ri(0,4),d=ri(2,4);return{q:'Ein Tensor der Stufe '+n+' lebt in '+d+' Dimensionen. Wie viele Zahlen (Komponenten) hat er?',a:d**n,s:'Jeder der '+n+' Indizes kann '+d+' Werte annehmen:\n'+d+'^'+n+' = '+(d**n)};}},
+ frei:{n:'Freie Indizes erkennen',g(){const L=[['A_ij B_jk',2],['a_i b_i',0],['A_ij v_j',1],['T_ijk a_k',2],['T_iij',1],['A_ij B_jk C_ki',0],['a_i b_j',2],['ε_ijk a_j b_k',1],['R_ijkl g_jl',2],['A_ii B_jj',0],['T_ijk a_i b_j c_k',0],['δ_ij T_jkl',3]];const [e,a]=L[ri(0,L.length-1)];
+   const cnt={};e.replace(/_([a-z]+)/g,(m,s)=>{s.split('').forEach(c=>cnt[c]=(cnt[c]||0)+1);});const fr=Object.keys(cnt).filter(c=>cnt[c]===1).sort(),su=Object.keys(cnt).filter(c=>cnt[c]===2).sort();
+   return{q:'Welche Stufe hat das Ergebnis von <span class="mono" style="color:var(--acc)">'+e+'</span>? (Anzahl der freien Indizes)',a,s:'Doppelt (wird summiert): '+(su.join(', ')||'keiner')+'\nEinmal (frei): '+(fr.join(', ')||'keiner')+'\n→ Stufe '+a};}},
+ skalar:{n:'Skalarprodukt a_i b_i',g(){const a=v3(),b=v3(),r=a[0]*b[0]+a[1]*b[1]+a[2]*b[2];return{q:'a = '+htmlMat(a)+' &nbsp; b = '+htmlMat(b)+'<br>Berechne a<sub>i</sub> b<sub>i</sub>.',a:r,s:'a₁b₁ + a₂b₂ + a₃b₃ = '+a.map((x,k)=>pn(x)+'·'+pn(b[k])).join(' + ')+' = '+r};}},
+ matvec:{n:'Matrix mal Vektor',g(){const A=m3(),v=v3(),i=ri(0,2);const t=A[i].map((x,k)=>x*v[k]);const r=t[0]+t[1]+t[2];
+   return{q:'A = '+htmlMat(A)+' &nbsp; v = '+htmlMat(v)+'<br>Berechne die Komponente '+(i+1)+' von w<sub>i</sub> = A<sub>ij</sub> v<sub>j</sub>, also w<sub>'+(i+1)+'</sub>.',a:r,
+   s:'w'+sub(i+1)+' = A'+sub(i+1)+'₁v₁ + A'+sub(i+1)+'₂v₂ + A'+sub(i+1)+'₃v₃\n    = '+A[i].map((x,k)=>pn(x)+'·'+pn(v[k])).join(' + ')+'\n    = '+sm(t)+' = '+r+'\n(Zeile '+(i+1)+' von A trifft den Vektor v.)'};}},
+ matmat:{n:'Matrix mal Matrix',g(){const A=m3(),B=m3(),i=ri(0,2),k=ri(0,2);const t=[0,1,2].map(j=>A[i][j]*B[j][k]);const r=t[0]+t[1]+t[2];
+   return{q:'A = '+htmlMat(A)+' &nbsp; B = '+htmlMat(B)+'<br>Berechne C<sub>'+(i+1)+(k+1)+'</sub> mit C<sub>ik</sub> = A<sub>ij</sub> B<sub>jk</sub>.',a:r,
+   s:'C'+sub(''+(i+1)+(k+1))+' = '+[0,1,2].map(j=>'A'+sub(''+(i+1)+(j+1))+'B'+sub(''+(j+1)+(k+1))).join(' + ')+'\n    = '+[0,1,2].map(j=>pn(A[i][j])+'·'+pn(B[j][k])).join(' + ')+' = '+r+'\n(Zeile '+(i+1)+' von A mal Spalte '+(k+1)+' von B.)'};}},
+ spur:{n:'Spur A_ii',g(){const A=m3(),r=A[0][0]+A[1][1]+A[2][2];return{q:'A = '+htmlMat(A)+'<br>Berechne A<sub>ii</sub>.',a:r,s:'A₁₁ + A₂₂ + A₃₃ = '+sm([A[0][0],A[1][1],A[2][2]])+' = '+r+'\n(Die Diagonale wird aufsummiert – das ist die Spur.)'};}},
+ delta:{n:'Kronecker-Delta',g(){if(Math.random()<0.35){const d=ri(2,4);return{q:'Was ergibt δ<sub>ii</sub> in '+d+' Dimensionen?',a:d,s:'δ₁₁ + δ₂₂ + … = 1 + 1 + … ('+d+'-mal) = '+d};}
+   const v=v3(),i=ri(0,2);return{q:'v = '+htmlMat(v)+'<br>Berechne (δ<sub>ij</sub> v<sub>j</sub>) für i = '+(i+1)+'.',a:v[i],s:'δ'+sub(i+1)+'₁v₁ + δ'+sub(i+1)+'₂v₂ + δ'+sub(i+1)+'₃v₃ – nur der Term mit j = '+(i+1)+' überlebt (δ = 1):\n= v'+sub(i+1)+' = '+v[i]};}},
+ eps:{n:'Kreuzprodukt mit ε',g(){const a=v3(),b=v3(),i=ri(0,2);const j=(i+1)%3,k=(i+2)%3;const r=a[j]*b[k]-a[k]*b[j];
+   return{q:'a = '+htmlMat(a)+' &nbsp; b = '+htmlMat(b)+'<br>Berechne c<sub>'+(i+1)+'</sub> mit c<sub>i</sub> = ε<sub>ijk</sub> a<sub>j</sub> b<sub>k</sub>.',a:r,
+   s:'Von den 9 Termen sind nur zwei ungleich null:\nε'+sub(''+(i+1)+(j+1)+(k+1))+' = +1  und  ε'+sub(''+(i+1)+(k+1)+(j+1))+' = −1\nc'+sub(i+1)+' = a'+sub(j+1)+'b'+sub(k+1)+' − a'+sub(k+1)+'b'+sub(j+1)+' = '+pn(a[j])+'·'+pn(b[k])+' − '+pn(a[k])+'·'+pn(b[j])+' = '+r};}},
+ eperm:{n:'Wert von ε_ijk',g(){const p=[ri(1,3),ri(1,3),ri(1,3)];if(Math.random()<0.6){const P=[[1,2,3],[2,3,1],[3,1,2],[1,3,2],[2,1,3],[3,2,1]][ri(0,5)];p[0]=P[0];p[1]=P[1];p[2]=P[2];}
+   const s=permSign(p);return{q:'Welchen Wert hat ε<sub>'+p.join('')+'</sub>?',a:s,s:(s===0?'Zwei Indizes sind gleich → 0.':'Zähle die Vertauschungen bis 123: '+(s>0?'gerade Anzahl → +1':'ungerade Anzahl → −1')+'.\n+1: 123, 231, 312   −1: 132, 213, 321')};}},
+ senken:{n:'Index senken (Raumzeit)',g(){const x=[ri(1,6),ri(-4,4),ri(-4,4),ri(-4,4)],m=ri(0,3);const r=m===0?x[0]:-x[m];
+   return{q:'Ein Ereignis hat x<sup>μ</sup> = (ct, x, y, z) = ('+x.join(', ')+'), μ = 0…3, Metrik η = diag(1, −1, −1, −1).<br>Wie groß ist x<sub>'+m+'</sub>?',a:r,s:'x'+sub(m)+' = η'+sub(''+m+m)+'·x^'+m+' = '+(m===0?'1':'(−1)')+'·'+pn(x[m])+' = '+r+'\n(Nur die Zeitkomponente behält ihr Vorzeichen.)'};}},
+ inv:{n:'Raumzeit-Abstand s²',g(){const x=[ri(1,7),ri(-4,4),ri(-4,4),ri(-3,3)];const r=x[0]*x[0]-x[1]*x[1]-x[2]*x[2]-x[3]*x[3];
+   return{q:'x<sup>μ</sup> = ('+x.join(', ')+'), η = diag(1, −1, −1, −1).<br>Berechne s² = x<sup>μ</sup>x<sub>μ</sub>.',a:r,s:'x_μ = ('+x[0]+', '+x.slice(1).map(v=>-v).join(', ')+')\ns² = '+pn(x[0])+'² − '+pn(x[1])+'² − '+pn(x[2])+'² − '+pn(x[3])+'² = '+(x[0]**2)+' − '+(x[1]**2)+' − '+(x[2]**2)+' − '+(x[3]**2)+' = '+r};}}
+};
+(function(){const s=$('ue-type');s.appendChild(new Option('Gemischt','mix'));Object.keys(EX).forEach(k=>s.appendChild(new Option(EX[k].n,k)));})();
+let ue={cur:null,ok:0,n:0,done:false};
+function ueNext(){
+  let t=$('ue-type').value;if(t==='mix'){const ks=Object.keys(EX);t=ks[ri(0,ks.length-1)];}
+  ue.cur=EX[t].g();ue.done=false;
+  $('ue-q').innerHTML='<span class="pill">'+EX[t].n+'</span><br>'+ue.cur.q;$('ue-a').value='';$('ue-fb').style.display='none';$('ue-a').focus();
+}
+function ueCheck(){
+  if(!ue.cur)return;
+  const x=parseFloat($('ue-a').value.replace(',','.').replace('−','-'));
+  if(isNaN(x)){$('ue-fb').style.display='block';$('ue-fb').innerHTML='<span class="bad">Bitte eine Zahl eingeben.</span>';return;}
+  const right=Math.abs(x-ue.cur.a)<1e-6;
+  if(!ue.done){ue.n++;if(right)ue.ok++;ue.done=true;}
+  $('ue-score').textContent=ue.ok+' / '+ue.n+' richtig';
+  $('ue-fb').style.display='block';
+  $('ue-fb').innerHTML=(right?'<span class="ok">Richtig!</span>':'<span class="bad">Leider nicht – richtig ist '+fmt(ue.cur.a)+'.</span>')+'\n\n'+esc(ue.cur.s);
+}
+$('ue-next').onclick=ueNext;$('ue-check').onclick=ueCheck;$('ue-type').onchange=ueNext;
+$('ue-a').addEventListener('keydown',e=>{if(e.key==='Enter'){ue.done&&$('ue-fb').style.display==='block'?ueNext():ueCheck();}});
+
+/* ---------- Start ---------- */
+function redrawAll(){drDraw();maDraw();meDraw();mkDraw();}
+stNew();suNew();redrawAll();reRun();ueNext();
+</script>
+</body>
+</html>
