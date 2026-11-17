@@ -1,0 +1,2126 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MiniCalc</title>
+<style>
+  :root{
+    --bar-bg:#2f4f4f;
+    --bar-bg2:#26403f;
+    --grid-line:#d7dde1;
+    --header-bg:#eef1f3;
+    --header-bg-active:#dbe6e6;
+    --sel-bg:rgba(47,79,79,0.10);
+    --sel-border:#2f4f4f;
+    --accent:#3d7a6e;
+    --text:#20282a;
+    --cell-h:24px;
+    --cell-w:88px;
+    --head-w:44px;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;
+    color:var(--text); background:#f6f7f8; display:flex; flex-direction:column; height:100vh; overflow:hidden;
+  }
+  /* ---- Toolbar ---- */
+  #toolbar{
+    background:var(--bar-bg); color:#fff; padding:6px 8px; display:flex; align-items:center;
+    gap:4px; flex-wrap:wrap; flex-shrink:0; box-shadow:0 1px 3px rgba(0,0,0,.15);
+  }
+  #toolbar .grp{ display:flex; align-items:center; gap:2px; padding:0 6px; border-right:1px solid rgba(255,255,255,.18); }
+  #toolbar .grp:last-child{ border-right:none; }
+  #toolbar button, #toolbar select, #toolbar label.filebtn{
+    background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.15); color:#fff;
+    border-radius:4px; padding:5px 9px; font-size:12.5px; cursor:pointer; line-height:1.2;
+    white-space:nowrap;
+  }
+  #toolbar button:hover, #toolbar label.filebtn:hover{ background:rgba(255,255,255,.2); }
+  #toolbar button:disabled{ opacity:.4; cursor:default; }
+  #toolbar button.active{ background:var(--accent); border-color:var(--accent); }
+  #toolbar button.iconb{ font-weight:700; width:26px; text-align:center; padding:5px 0; }
+  #toolbar input[type=color]{ width:26px; height:26px; padding:0; border:none; border-radius:4px; cursor:pointer; background:none;}
+  #toolbar select{ padding:5px 4px; }
+  #toolbar .title{ font-weight:700; font-size:14px; letter-spacing:.3px; padding-right:10px;}
+  #toolbar .spacer{flex:1;}
+  #fileInput{ display:none; }
+
+  /* ---- Formula bar ---- */
+  #formulabar{
+    display:flex; align-items:center; gap:0; background:#fff; border-bottom:1px solid var(--grid-line);
+    flex-shrink:0;
+  }
+  #cellAddr{
+    width:78px; text-align:center; font-size:12.5px; font-weight:600; color:#4a5658; border-right:1px solid var(--grid-line);
+    padding:6px 4px; flex-shrink:0; background:#fbfbfb;
+  }
+  #fxLabel{ padding:6px 8px; color:#8b969a; font-style:italic; font-size:13px; border-right:1px solid var(--grid-line); }
+  #formulaInput{
+    flex:1; border:none; outline:none; padding:6px 10px; font-size:13px; font-family:inherit;
+  }
+
+  /* ---- Grid ---- */
+  #gridWrap{ flex:1; overflow:auto; position:relative; background:#fff; }
+  table#grid{ border-collapse:separate; border-spacing:0; table-layout:fixed; }
+  #grid th, #grid td{
+    border-right:1px solid var(--grid-line); border-bottom:1px solid var(--grid-line);
+    overflow:hidden; white-space:nowrap; text-overflow:ellipsis;
+    padding:0 4px; font-size:12.5px;
+  }
+  #grid thead th{ height:var(--cell-h); }
+  #grid th{
+    background:var(--header-bg); color:#54636a; font-weight:600; text-align:center; position:sticky;
+    user-select:none; font-size:11.5px;
+  }
+  #grid thead th{ top:0; z-index:3; }
+  #grid td.rowhead, #grid th.rowhead{
+    position:sticky; left:0; z-index:2; background:var(--header-bg); text-align:center; font-weight:600; color:#54636a;
+  }
+  #grid thead th.corner{ z-index:4; left:0; }
+  #grid td{ background:#fff; cursor:cell; }
+  #grid td.sel{ box-shadow:inset 0 0 0 1000px var(--sel-bg); }
+  #grid td.active{ outline:2px solid var(--sel-border); outline-offset:-2px; z-index:1; position:relative; }
+  #grid td.editing{ outline:2px solid var(--accent); outline-offset:-2px; background:#fff; white-space:normal; overflow:visible; z-index:5; position:relative; cursor:text; }
+  #grid td[data-align="center"]{ text-align:center; }
+  #grid td[data-align="right"]{ text-align:right; }
+  #grid td.errorcell{ color:#c0392b; font-weight:600; }
+  #grid th.hActive{ background:var(--header-bg-active); }
+  #grid tr.vspacer td{ padding:0; border:none; background:transparent; }
+  #grid td.editing{ white-space:pre-wrap; }
+
+  /* ---- Status bar ---- */
+  #statusbar{
+    flex-shrink:0; background:#eef1f3; border-top:1px solid var(--grid-line); font-size:12px; color:#546166;
+    padding:5px 12px; display:flex; gap:18px;
+  }
+  #statusbar b{ color:#20282a; }
+
+  #clipProxy{ position:fixed; top:0; left:0; width:1px; height:1px; opacity:0; border:none; padding:0; resize:none; }
+
+  /* ---- CSV-Dialog ---- */
+  #csvOverlay{ position:fixed; inset:0; background:rgba(20,28,30,.45); display:flex; align-items:center; justify-content:center; z-index:1000; }
+  #csvOverlay[hidden]{ display:none; }
+  #csvOverlay .dlg{ background:#fff; border-radius:8px; box-shadow:0 10px 40px rgba(0,0,0,.3); width:min(560px,92vw); max-height:88vh; overflow:auto; padding:18px 20px; }
+  #csvOverlay h3{ margin:0 0 4px; font-size:16px; color:var(--text); }
+  #csvOverlay .hint{ margin:0 0 12px; font-size:12.5px; color:#6b767a; }
+  #csvOverlay .csvopts{ display:flex; flex-wrap:wrap; gap:8px 18px; margin-bottom:14px; }
+  #csvOverlay .csvopts label{ display:flex; align-items:center; gap:6px; font-size:13px; cursor:pointer; }
+  #csvOverlay .csvopts code{ background:#eef1f3; border-radius:3px; padding:0 5px; font-size:12px; }
+  #csvOverlay .customrow input[type=text]{ width:46px; padding:3px 6px; border:1px solid var(--grid-line); border-radius:4px; font-size:13px; }
+  #csvOverlay .csvPreviewWrap{ border:1px solid var(--grid-line); border-radius:5px; overflow:auto; max-height:220px; background:#fbfcfc; }
+  #csvPreview{ border-collapse:collapse; font-size:12px; width:100%; }
+  #csvPreview td{ border:1px solid var(--grid-line); padding:2px 7px; white-space:pre; max-width:180px; overflow:hidden; text-overflow:ellipsis; color:#2a3335; }
+  #csvPreview tr:first-child td{ background:var(--header-bg); font-weight:600; }
+  #csvOverlay .dlgBtns{ display:flex; justify-content:flex-end; gap:8px; margin-top:16px; }
+  #csvOverlay .dlgBtns button{ border:1px solid var(--grid-line); background:#f2f4f5; color:var(--text); border-radius:5px; padding:7px 16px; font-size:13px; cursor:pointer; }
+  #csvOverlay .dlgBtns button:hover{ background:#e7ebec; }
+  #csvOverlay .dlgBtns button.primary{ background:var(--accent); border-color:var(--accent); color:#fff; }
+  #csvOverlay .dlgBtns button.primary:hover{ background:#356a60; }
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <span class="title">📊 MiniCalc</span>
+
+  <div class="grp">
+    <button id="btnNew" title="Neue Tabelle">Neu</button>
+    <label class="filebtn" title="Datei öffnen (.ods, .csv)">Öffnen<input type="file" id="fileInput" accept=".ods,.csv"></label>
+    <button id="btnSaveOds" title="Als .ods speichern – natives LibreOffice/OpenOffice-Format, inkl. Formeln UND Formatierung">💾 ods</button>
+    <button id="btnUndo" class="iconb" title="Rückgängig (Strg+Z)" disabled>↶</button>
+    <button id="btnRedo" class="iconb" title="Wiederholen (Strg+Y)" disabled>↷</button>
+    <button id="btnSaveCsv" title="Als .csv speichern (nur Werte, keine Formeln/Formatierung; öffnet in LibreOffice/Excel)">💾 csv</button>
+  </div>
+
+  <div class="grp">
+    <button id="btnBold" class="iconb" title="Fett"><b>B</b></button>
+    <button id="btnItalic" class="iconb" title="Kursiv"><i>I</i></button>
+    <button id="btnUnderline" class="iconb" title="Unterstrichen"><u>U</u></button>
+  </div>
+
+  <div class="grp">
+    <button id="btnLeft" class="iconb" title="Links">⯇</button>
+    <button id="btnCenter" class="iconb" title="Zentriert">≡</button>
+    <button id="btnRight" class="iconb" title="Rechts">⯈</button>
+  </div>
+
+  <div class="grp">
+    <label style="font-size:11.5px; opacity:.85;">Text</label>
+    <input type="color" id="fontColor" value="#20282a" title="Textfarbe wählen">
+    <button id="fontColorApply" class="iconb" title="Textfarbe auf Auswahl anwenden (funktioniert auch erneut mit der gleichen Farbe)">✓</button>
+    <label style="font-size:11.5px; opacity:.85;">Füllung</label>
+    <input type="color" id="fillColor" value="#ffffff" title="Füllfarbe wählen">
+    <button id="fillColorApply" class="iconb" title="Füllfarbe auf Auswahl anwenden (funktioniert auch erneut mit der gleichen Farbe)">✓</button>
+    <button id="btnClearFmt" title="Formatierung löschen">⌫ Format</button>
+  </div>
+
+  <div class="grp">
+    <label style="font-size:11.5px; opacity:.85;">Rahmen</label>
+    <button id="btnBorderAll" title="Alle Rahmen – jede ausgewählte Zelle bekommt einen kompletten Rahmen">▦ Alle</button>
+    <button id="btnBorderOutline" title="Außenrahmen – nur um die gesamte Auswahl herum">▢ Außen</button>
+    <button id="btnBorderNone" title="Rahmen entfernen">▧ Kein</button>
+    <input type="color" id="borderColor" value="#333333" title="Rahmenfarbe wählen">
+  </div>
+
+  <div class="grp">
+    <select id="numFmt" title="Zahlenformat">
+      <option value="general">Standard</option>
+      <option value="int">Ganzzahl</option>
+      <option value="num2">0,00</option>
+      <option value="percent">Prozent</option>
+      <option value="currency">Währung (€)</option>
+    </select>
+  </div>
+
+  <div class="grp">
+    <button id="btnAddRow" title="Zeile hinzufügen">+Zeile</button>
+    <button id="btnAddCol" title="Spalte hinzufügen">+Spalte</button>
+    <button id="btnDelRow" title="Aktive Zeile löschen">−Zeile</button>
+    <button id="btnDelCol" title="Aktive Spalte löschen">−Spalte</button>
+  </div>
+
+  <span class="spacer"></span>
+</div>
+
+<div id="formulabar">
+  <div id="cellAddr">A1</div>
+  <div id="fxLabel">fx</div>
+  <input id="formulaInput" type="text" placeholder="Wert oder Formel, z.B. =SUMME(A1:A3) oder =WENN(A1>0;A1;0)  (engl.: =SUM(A1:A3))" autocomplete="off">
+</div>
+
+<div id="gridWrap">
+  <table id="grid">
+    <colgroup id="colgroup"></colgroup>
+    <thead><tr id="headRow"></tr></thead>
+    <tbody id="gridBody"></tbody>
+  </table>
+</div>
+
+<textarea id="clipProxy"></textarea>
+
+<div id="csvOverlay" hidden>
+  <div class="dlg">
+    <h3>CSV öffnen – Spaltentrennung</h3>
+    <p class="hint">Wähle das Zeichen, das die Spalten trennt. Die Vorschau zeigt das Ergebnis.</p>
+    <div class="csvopts">
+      <label><input type="radio" name="csvsep" value=";"> Semikolon <code>;</code></label>
+      <label><input type="radio" name="csvsep" value=","> Komma <code>,</code></label>
+      <label><input type="radio" name="csvsep" value="tab"> Tabulator <code>⇥</code></label>
+      <label><input type="radio" name="csvsep" value="|"> Pipe <code>|</code></label>
+      <label class="customrow"><input type="radio" name="csvsep" value="custom"> Anderes: <input type="text" id="csvCustomSep" maxlength="1" placeholder="z.B. :"></label>
+    </div>
+    <div class="csvPreviewWrap"><table id="csvPreview"></table></div>
+    <div class="dlgBtns">
+      <button id="csvCancel">Abbrechen</button>
+      <button id="csvConfirm" class="primary">Öffnen</button>
+    </div>
+  </div>
+</div>
+
+<div id="statusbar">
+  <span>Zellen: <b id="stCount">0</b></span>
+  <span>Summe: <b id="stSum">0</b></span>
+  <span>Mittelwert: <b id="stAvg">0</b></span>
+  <span style="flex:1"></span>
+  <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener" style="color:#3d7a6e;">itzwieseltal.wordpress.com</a>
+  <span style="opacity:.7" title="ods: natives LibreOffice-Format, Formeln + Formatierung bleiben vollständig erhalten. csv: nur Werte. MiniCalc: eigenes Format, nur hier lesbar.">Doppelklick/F2 = bearbeiten (Pfeile im Feld) · Tippen + Pfeil = übernehmen · Strg+C/V = kopieren/einfügen · Entf = löschen</span>
+</div>
+
+<script>
+/* =========================================================================
+   MiniCalc – Formel-Engine
+   ========================================================================= */
+function colToIndex(letters){ let n=0; for(let i=0;i<letters.length;i++) n=n*26+(letters.charCodeAt(i)-64); return n-1; }
+function indexToCol(n){ n=n+1; let s=''; while(n>0){ const r=(n-1)%26; s=String.fromCharCode(65+r)+s; n=Math.floor((n-1)/26);} return s; }
+const REF_RE=/^(\$?)([A-Z]+)(\$?)(\d+)$/;
+function parseRef(ref){ const m=REF_RE.exec(ref); if(!m) return null; return {col:colToIndex(m[2]), row:parseInt(m[4],10)-1, absC:!!m[1], absR:!!m[3]}; }
+function formatRef(p){ return (p.absC?'$':'')+indexToCol(p.col)+(p.absR?'$':'')+(p.row+1); }
+
+class FormulaError extends Error{ constructor(code){ super(code); this.code=code; } }
+
+/* Tokenizer: liefert Token samt Position im Originaltext (für das Umschreiben von Bezügen).
+   Zellbezüge werden auch klein geschrieben erkannt (a1 -> A1). Argumenttrenner: , oder ; */
+const TOKEN_SRC=String.raw`#REF!|<>|<=|>=|[=<>]|\^|\*|\/|\+|-|&|%|\(|\)|,|;|:|"(?:[^"]|"")*"|\$?[A-Za-z]+\$?\d+(?![A-Za-z0-9_(])|(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?|[A-Za-z_][A-Za-z0-9_]*`;
+const TOKEN_RE=new RegExp(String.raw`\s*(${TOKEN_SRC})\s*`,'y');
+/* Deutsches Dezimalkomma (1,5): erlaubt, wenn ';' der Argumenttrenner ist oder die
+   Formel gar keine Klammern hat (dann kann ',' kein Trenner sein). */
+const TOKEN_RE_DE=new RegExp(String.raw`\s*(\d+,\d+(?:[eE][+-]?\d+)?|${TOKEN_SRC})\s*`,'y');
+function tokenizeEx(str){
+  const out=[]; let pos=0;
+  const noStr=str.replace(/"(?:[^"]|"")*"/g,'');
+  const RE=(noStr.includes(';') || !noStr.includes('(')) ? TOKEN_RE_DE : TOKEN_RE;
+  while(pos<str.length){
+    RE.lastIndex=pos;
+    const m=RE.exec(str);
+    if(!m){
+      if(/\s/.test(str[pos])){ pos++; continue; }
+      throw new FormulaError('#ERROR!');
+    }
+    const lead=m[0].length-m[0].replace(/^\s+/,'').length;
+    let t=m[1];
+    if(/^\$?[A-Za-z]+\$?\d+$/.test(t)) t=t.toUpperCase();
+    else if(/^\d+,\d+/.test(t)) t=t.replace(',','.');
+    out.push({t, s:pos+lead, e:pos+lead+m[1].length});
+    pos=RE.lastIndex;
+  }
+  return out;
+}
+function tokenize(str){ return tokenizeEx(str).map(x=>x.t); }
+
+/* Werte wie in LibreOffice: leere Zelle = 0, WAHR/FALSCH = 1/0, Text -> #VALUE! */
+function toNum(v){
+  if(typeof v==='number') return v;
+  if(v===''||v===null||v===undefined) return 0;
+  if(typeof v==='boolean') return v?1:0;
+  throw new FormulaError('#VALUE!');
+}
+function toText(v){
+  if(Array.isArray(v)) throw new FormulaError('#VALUE!');
+  if(typeof v==='boolean') return v?'WAHR':'FALSCH';
+  if(typeof v==='number') return formatNumber(v,'general');
+  return v==null?'':String(v);
+}
+function cmpVals(a,b){
+  if(Array.isArray(a)||Array.isArray(b)) throw new FormulaError('#VALUE!');
+  const norm=(x,o)=> (x===''||x==null) ? (typeof o==='string'?'':typeof o==='boolean'?false:0) : x;
+  a=norm(a,b); b=norm(b,a);
+  const rank=x=>typeof x==='number'?0:typeof x==='string'?1:2;
+  if(rank(a)!==rank(b)) return rank(a)-rank(b);
+  if(typeof a==='string'){ a=a.toLowerCase(); b=b.toLowerCase(); }
+  return a<b?-1:a>b?1:0;
+}
+
+const FUNCTIONS={
+  SUM:(v)=>v.reduce((a,b)=>a+(typeof b==='number'?b:0),0),
+  SUMME:(v)=>FUNCTIONS.SUM(v),
+  AVERAGE:(v)=>{ const n=v.filter(x=>typeof x==='number'); if(!n.length) throw new FormulaError('#DIV/0!'); return n.reduce((a,b)=>a+b,0)/n.length; },
+  MITTELWERT:(v)=>FUNCTIONS.AVERAGE(v),
+  MIN:(v)=>{ const n=v.filter(x=>typeof x==='number'); return n.length?n.reduce((a,b)=>b<a?b:a):0; },
+  MAX:(v)=>{ const n=v.filter(x=>typeof x==='number'); return n.length?n.reduce((a,b)=>b>a?b:a):0; },
+  COUNT:(v)=>v.filter(x=>typeof x==='number').length,
+  ANZAHL:(v)=>FUNCTIONS.COUNT(v),
+  COUNTA:(v)=>v.filter(x=>x!==''&&x!==null&&x!==undefined).length,
+  ANZAHL2:(v)=>FUNCTIONS.COUNTA(v),
+  ROUND:(v)=>{
+    const n=toNum(v[0]), d=Math.trunc(toNum(v[1]));
+    const f=Math.pow(10,d);
+    const x=Number((Math.abs(n)*f).toPrecision(15));   // 1.005 -> 100.5 statt 100.49999…
+    return Math.sign(n)*Math.round(x)/f;                // kaufmännisch: -2.5 -> -3
+  },
+  RUNDEN:(v)=>FUNCTIONS.ROUND(v),
+  ABS:(v)=>Math.abs(toNum(v[0])),
+  SQRT:(v)=>Math.sqrt(toNum(v[0])),
+  WURZEL:(v)=>FUNCTIONS.SQRT(v),
+  CONCAT:(v)=>v.map(x=>toText(x)).join(''),
+  CONCATENATE:(v)=>FUNCTIONS.CONCAT(v),
+  VERKETTEN:(v)=>FUNCTIONS.CONCAT(v),
+  AND:(v)=>v.filter(x=>x!=='').every(x=>toNum(x)!==0),
+  UND:(v)=>FUNCTIONS.AND(v),
+  OR:(v)=>v.filter(x=>x!=='').some(x=>toNum(x)!==0),
+  ODER:(v)=>FUNCTIONS.OR(v),
+  NOT:(v)=>toNum(v[0])===0,
+  NICHT:(v)=>FUNCTIONS.NOT(v),
+  MOD:(v)=>{ const a=toNum(v[0]), b=toNum(v[1]); if(b===0) throw new FormulaError('#DIV/0!'); return a-b*Math.floor(a/b); },
+  REST:(v)=>FUNCTIONS.MOD(v),
+  POW:(v)=>Math.pow(toNum(v[0]),toNum(v[1])),
+  POWER:(v)=>FUNCTIONS.POW(v),
+  POTENZ:(v)=>FUNCTIONS.POW(v),
+  LEN:(v)=>toText(v[0]).length,
+  UPPER:(v)=>toText(v[0]).toUpperCase(),
+  LOWER:(v)=>toText(v[0]).toLowerCase(),
+  TODAY:()=>new Date().toLocaleDateString('de-DE'),
+  HEUTE:()=>FUNCTIONS.TODAY(),
+  TRUE:()=>true, WAHR:()=>true,
+  FALSE:()=>false, FALSCH:()=>false,
+};
+
+/* Parser mit "Trockenlauf" (dry): Im nicht gewählten WENN-Zweig wird nur die Syntax
+   geprüft, aber nichts ausgewertet – so liefert =WENN(B1=0;0;A1/B1) kein #DIV/0! mehr. */
+class Parser{
+  constructor(tokens,ctx){ this.toks=tokens; this.i=0; this.ctx=ctx; this.dry=0; }
+  peek(){ return this.toks[this.i]; }
+  next(){ return this.toks[this.i++]; }
+  expect(t){ if(this.next()!==t) throw new FormulaError('#ERROR!'); }
+  isSep(t){ return t===','||t===';'; }
+  parse(){ const v=this.parseComparison(); if(this.i<this.toks.length) throw new FormulaError('#ERROR!'); return v; }
+  parseComparison(){
+    let left=this.parseConcat();
+    while(['=','<>','<','>','<=','>='].includes(this.peek())){
+      const op=this.next(); const right=this.parseConcat();
+      if(this.dry){ left=false; continue; }
+      const c=cmpVals(left,right);
+      switch(op){
+        case '=': left=c===0; break;
+        case '<>': left=c!==0; break;
+        case '<': left=c<0; break;
+        case '>': left=c>0; break;
+        case '<=': left=c<=0; break;
+        case '>=': left=c>=0; break;
+      }
+    }
+    return left;
+  }
+  parseConcat(){
+    let left=this.parseAdd();
+    while(this.peek()==='&'){
+      this.next(); const right=this.parseAdd();
+      left = this.dry ? '' : toText(left)+toText(right);
+    }
+    return left;
+  }
+  parseAdd(){
+    let left=this.parseMul();
+    while(this.peek()==='+'||this.peek()==='-'){
+      const op=this.next(); const right=this.parseMul();
+      if(this.dry){ left=0; continue; }
+      const a=toNum(left), b=toNum(right);
+      left = op==='+' ? a+b : a-b;
+    }
+    return left;
+  }
+  parseMul(){
+    let left=this.parsePow();
+    while(this.peek()==='*'||this.peek()==='/'){
+      const op=this.next(); const right=this.parsePow();
+      if(this.dry){ left=0; continue; }
+      const a=toNum(left), b=toNum(right);
+      if(op==='/'){ if(b===0) throw new FormulaError('#DIV/0!'); left=a/b; }
+      else left=a*b;
+    }
+    return left;
+  }
+  parsePow(){
+    let left=this.parseUnary();
+    while(this.peek()==='^'){
+      this.next(); const right=this.parseUnary();
+      left = this.dry ? 0 : Math.pow(toNum(left),toNum(right));
+    }
+    return left;
+  }
+  parseUnary(){
+    if(this.peek()==='-'){ this.next(); const v=this.parseUnary(); return this.dry?0:-toNum(v); }
+    if(this.peek()==='+'){ this.next(); return this.parseUnary(); }
+    return this.parsePostfix();
+  }
+  parsePostfix(){
+    let v=this.parsePrimary();
+    while(this.peek()==='%'){ this.next(); v = this.dry ? 0 : toNum(v)/100; }
+    return v;
+  }
+  isCellRef(tok){ return !!tok && REF_RE.test(tok); }
+  parsePrimary(){
+    const tok=this.peek();
+    if(tok===undefined) throw new FormulaError('#ERROR!');
+    if(tok==='#REF!'){ this.next(); if(this.dry) return 0; throw new FormulaError('#REF!'); }
+    if(tok==='('){ this.next(); const v=this.parseComparison(); this.expect(')'); return v; }
+    if(/^(\d+\.?\d*|\.\d+)([eE][+-]?\d+)?$/.test(tok)){ this.next(); return parseFloat(tok); }
+    if(tok.startsWith('"')){ this.next(); return tok.slice(1,-1).replace(/""/g,'"'); }
+    if(/^[A-Za-z_][A-Za-z0-9_]*$/.test(tok) && this.toks[this.i+1]==='('){
+      const name=this.next().toUpperCase();
+      this.expect('(');
+      if(name==='IF'||name==='WENN') return this.parseIf();
+      const fn=FUNCTIONS[name];
+      if(!fn) throw new FormulaError('#NAME?');
+      const args=this.parseArgs();
+      this.expect(')');
+      if(this.dry) return 0;
+      return fn(args);
+    }
+    if(this.isCellRef(tok)){
+      const first=this.next();
+      if(this.peek()===':'){ this.next(); const second=this.next(); return this.rangeAsList(first,second); }
+      return this.getCellValue(first);
+    }
+    if(/^[A-Za-z_][A-Za-z0-9_]*$/.test(tok)){
+      const u=tok.toUpperCase();
+      if(u==='TRUE'||u==='WAHR'){ this.next(); return true; }
+      if(u==='FALSE'||u==='FALSCH'){ this.next(); return false; }
+      throw new FormulaError('#NAME?');
+    }
+    throw new FormulaError('#ERROR!');
+  }
+  truthy(v){
+    if(Array.isArray(v)) throw new FormulaError('#VALUE!');
+    if(typeof v==='string' && v!=='') throw new FormulaError('#VALUE!');
+    return toNum(v)!==0;
+  }
+  branch(active){
+    const t=this.peek();
+    if(t===')'||this.isSep(t)) return 0;          // leeres Argument: WENN(A1;;5)
+    if(!active) this.dry++;
+    try{ return this.parseComparison(); }
+    finally{ if(!active) this.dry--; }
+  }
+  parseIf(){                                       // '(' ist bereits gelesen
+    const cond=this.parseComparison();
+    const c=this.dry?true:this.truthy(cond);
+    let result=c;
+    if(this.isSep(this.peek())){
+      this.next();
+      const thenV=this.branch(c);
+      let elseV=false;
+      if(this.isSep(this.peek())){ this.next(); elseV=this.branch(!c); }
+      result=c?thenV:elseV;
+    }
+    this.expect(')');
+    return this.dry?0:result;
+  }
+  parseArgs(){
+    const out=[];
+    if(this.peek()===')') return out;
+    while(true){
+      if(this.isCellRef(this.peek()) && this.toks[this.i+1]===':'){
+        const first=this.next(); this.next(); const second=this.next();
+        for(const x of this.rangeAsList(first,second)) out.push(x);
+      } else {
+        out.push(this.parseComparison());
+      }
+      if(this.isSep(this.peek())){ this.next(); continue; }
+      break;
+    }
+    return out;
+  }
+  rangeAsList(a,b){
+    const ra=parseRef(a), rb=parseRef(b);
+    if(!ra||!rb) throw new FormulaError('#REF!');
+    if(this.dry) return [];
+    const r1=Math.min(ra.row,rb.row), r2=Math.max(ra.row,rb.row);
+    const c1=Math.min(ra.col,rb.col), c2=Math.max(ra.col,rb.col);
+    const list=[];
+    for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++) list.push(this.ctx.getCell(r,c));
+    return list;
+  }
+  getCellValue(ref){ const r=parseRef(ref); if(!r) throw new FormulaError('#REF!'); if(this.dry) return 0; return this.ctx.getCell(r.row,r.col); }
+}
+function evalFormula(body,ctx){
+  const tokens=tokenize(body);
+  const v=new Parser(tokens,ctx).parse();
+  if(Array.isArray(v)) throw new FormulaError('#VALUE!');      // =A1:A3 allein ergibt keinen Einzelwert
+  if(typeof v==='number' && !isFinite(v)) throw new FormulaError('#NUM!');  // z.B. WURZEL(-1)
+  return v;
+}
+
+/* Zahl in einer Zelle erkennen: 1.5, .5, 1e3 und deutsches 1,5 */
+function parseCellNumber(raw){
+  const s=String(raw).trim();
+  if(/^[-+]?(\d+\.?\d*|\.\d+)([eE][-+]?\d+)?$/.test(s)) return parseFloat(s);
+  if(/^[-+]?\d+,\d+$/.test(s)) return parseFloat(s.replace(',','.'));
+  return null;
+}
+
+/* Zellbezüge in einer Formel umschreiben (Leerzeichen/Strings bleiben unverändert).
+   mapSingle(p) / mapRange(a,b) liefern den neuen Text. */
+function rewriteFormulaRefs(raw, mapSingle, mapRange){
+  if(typeof raw!=='string' || !raw.trim().startsWith('=')) return raw;
+  let toks;
+  try{ toks=tokenizeEx(raw); } catch(e){ return raw; }
+  const edits=[];
+  for(let i=0;i<toks.length;i++){
+    const t=toks[i].t;
+    if(!REF_RE.test(t) || (toks[i+1] && toks[i+1].t==='(')) continue;
+    if(toks[i+1] && toks[i+1].t===':' && toks[i+2] && REF_RE.test(toks[i+2].t)){
+      edits.push({s:toks[i].s, e:toks[i+2].e, txt:mapRange(parseRef(t),parseRef(toks[i+2].t))});
+      i+=2;
+    } else {
+      edits.push({s:toks[i].s, e:toks[i].e, txt:mapSingle(parseRef(t))});
+    }
+  }
+  let out=raw;
+  for(let k=edits.length-1;k>=0;k--){ const ed=edits[k]; out=out.slice(0,ed.s)+ed.txt+out.slice(ed.e); }
+  return out;
+}
+/* Bezüge nach dem Löschen von Zeile/Spalte idx anpassen (wie LibreOffice, auch absolute) */
+function refsAfterDelete(raw, key, idx){
+  return rewriteFormulaRefs(raw,
+    p=>{ if(p[key]===idx) return '#REF!'; if(p[key]>idx) p[key]--; return formatRef(p); },
+    (a,b)=>{
+      if(a[key]===idx && b[key]===idx) return '#REF!';
+      const lo=a[key]<=b[key]?a:b, hi=lo===a?b:a;
+      if(lo[key]>idx) lo[key]--;
+      if(hi[key]>=idx) hi[key]--;
+      return formatRef(a)+':'+formatRef(b);
+    });
+}
+/* Relative Bezüge beim Einfügen einer Kopie verschieben ($ bleibt fest) */
+function refsShifted(raw, dr, dc){
+  const mv=p=>{ if(!p.absR) p.row+=dr; if(!p.absC) p.col+=dc; return (p.row<0||p.col<0)?null:p; };
+  return rewriteFormulaRefs(raw,
+    p=>{ const q=mv(p); return q?formatRef(q):'#REF!'; },
+    (a,b)=>{ const x=mv(a), y=mv(b); return (x&&y)?formatRef(x)+':'+formatRef(y):'#REF!'; });
+}
+
+/* =========================================================================
+   Pure-JS DEFLATE-Dekompressor (RFC 1951) – zum Lesen von .ods-ZIPs,
+   die von LibreOffice/Excel standardmäßig komprimiert abgelegt werden.
+   ========================================================================= */
+class BitReader{
+  constructor(data){ this.data=data; this.pos=0; this.bitpos=0; }
+  getBit(){ if(this.pos>=this.data.length) return 0; const bit=(this.data[this.pos]>>this.bitpos)&1; this.bitpos++; if(this.bitpos===8){this.bitpos=0;this.pos++;} return bit; }
+  getBits(n){ let v=0; for(let i=0;i<n;i++) v|=this.getBit()<<i; return v; }
+  align(){ if(this.bitpos!==0){ this.bitpos=0; this.pos++; } }
+}
+function buildHuffman(lengths){
+  const MAXBITS=15;
+  const counts=new Array(MAXBITS+1).fill(0);
+  for(const l of lengths) counts[l]++;
+  counts[0]=0;
+  const offs=new Array(MAXBITS+1).fill(0);
+  for(let i=1;i<=MAXBITS;i++) offs[i]=offs[i-1]+counts[i-1];
+  const symbols=new Array(lengths.length).fill(0);
+  for(let i=0;i<lengths.length;i++) if(lengths[i]) symbols[offs[lengths[i]]++]=i;
+  return {counts,symbols};
+}
+function decodeSymbol(reader,huff){
+  let code=0,first=0,index=0;
+  for(let len=1;len<=15;len++){
+    code|=reader.getBit();
+    const count=huff.counts[len];
+    if(code-first<count) return huff.symbols[index+(code-first)];
+    index+=count; first+=count; first<<=1; code<<=1;
+  }
+  throw new Error('inflate: ungültiger Huffman-Code');
+}
+const LEN_BASE=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+const LEN_EXTRA=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+const DIST_BASE=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+const DIST_EXTRA=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+const CLC_ORDER=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+/* Ausgabepuffer für inflate: wächst durch Verdoppeln (schneller und sparsamer als ein JS-Array) */
+class ByteOut{
+  constructor(n){ this.buf=new Uint8Array(Math.max(1024,n||0)); this.length=0; }
+  ensure(n){ if(this.length+n<=this.buf.length) return; let sz=this.buf.length*2; while(sz<this.length+n) sz*=2; const nb=new Uint8Array(sz); nb.set(this.buf.subarray(0,this.length)); this.buf=nb; }
+  push(b){ if(this.length>=this.buf.length) this.ensure(1); this.buf[this.length++]=b; }
+  result(){ return this.buf.slice(0,this.length); }
+}
+function inflateBlock(reader,output,litHuff,distHuff){
+  while(true){
+    const sym=decodeSymbol(reader,litHuff);
+    if(sym<256){ output.push(sym); }
+    else if(sym===256){ return; }
+    else{
+      const lenIdx=sym-257;
+      const len=LEN_BASE[lenIdx]+reader.getBits(LEN_EXTRA[lenIdx]);
+      const distSym=decodeSymbol(reader,distHuff);
+      const dist=DIST_BASE[distSym]+reader.getBits(DIST_EXTRA[distSym]);
+      let start=output.length-dist;
+      output.ensure(len);
+      const buf=output.buf;
+      for(let i=0;i<len;i++) buf[output.length++]=buf[start+i];
+    }
+  }
+}
+function inflateRaw(input, sizeHint){
+  const reader=new BitReader(input);
+  const output=new ByteOut(sizeHint || input.length*4);
+  let final=0;
+  do{
+    final=reader.getBit();
+    const type=reader.getBits(2);
+    if(type===0){
+      reader.align();
+      const len=reader.data[reader.pos]|(reader.data[reader.pos+1]<<8);
+      reader.pos+=4;
+      output.ensure(len);
+      for(let i=0;i<len;i++) output.buf[output.length++]=reader.data[reader.pos++];
+    } else if(type===1){
+      const litLengths=new Array(288);
+      for(let i=0;i<=143;i++) litLengths[i]=8;
+      for(let i=144;i<=255;i++) litLengths[i]=9;
+      for(let i=256;i<=279;i++) litLengths[i]=7;
+      for(let i=280;i<=287;i++) litLengths[i]=8;
+      const distLengths=new Array(30).fill(5);
+      inflateBlock(reader,output,buildHuffman(litLengths),buildHuffman(distLengths));
+    } else if(type===2){
+      const hlit=reader.getBits(5)+257;
+      const hdist=reader.getBits(5)+1;
+      const hclen=reader.getBits(4)+4;
+      const clLengths=new Array(19).fill(0);
+      for(let i=0;i<hclen;i++) clLengths[CLC_ORDER[i]]=reader.getBits(3);
+      const clHuff=buildHuffman(clLengths);
+      const lengths=[];
+      while(lengths.length<hlit+hdist){
+        const sym=decodeSymbol(reader,clHuff);
+        if(sym<16) lengths.push(sym);
+        else if(sym===16){ const rep=reader.getBits(2)+3; const prev=lengths[lengths.length-1]; for(let i=0;i<rep;i++) lengths.push(prev); }
+        else if(sym===17){ const rep=reader.getBits(3)+3; for(let i=0;i<rep;i++) lengths.push(0); }
+        else if(sym===18){ const rep=reader.getBits(7)+11; for(let i=0;i<rep;i++) lengths.push(0); }
+      }
+      const litHuff=buildHuffman(lengths.slice(0,hlit));
+      const distHuff=buildHuffman(lengths.slice(hlit,hlit+hdist));
+      inflateBlock(reader,output,litHuff,distHuff);
+    } else throw new Error('inflate: unbekannter Blocktyp');
+  } while(!final);
+  return output.result();
+}
+
+/* =========================================================================
+   Minimaler ZIP-Writer/-Reader in reinem JS (Container für .ods)
+   ========================================================================= */
+const CRC_TABLE=(()=>{ const t=new Uint32Array(256); for(let n=0;n<256;n++){ let c=n; for(let k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; } return t; })();
+function crc32(bytes){ let c=0xFFFFFFFF; for(let i=0;i<bytes.length;i++) c=CRC_TABLE[(c^bytes[i])&0xFF]^(c>>>8); return (c^0xFFFFFFFF)>>>0; }
+function pushU16(arr,v){ arr.push(v&0xFF,(v>>>8)&0xFF); }
+function pushU32(arr,v){ arr.push(v&0xFF,(v>>>8)&0xFF,(v>>>16)&0xFF,(v>>>24)&0xFF); }
+function strToBytes(s){ return Array.from(new TextEncoder().encode(s)); }
+function buildZip(entries){
+  const out=[], central=[], offsets=[];
+  for(const entry of entries){
+    const nameBytes=strToBytes(entry.name), data=entry.data, crc=crc32(data);
+    offsets.push(out.length);
+    pushU32(out,0x04034b50); pushU16(out,20); pushU16(out,0x0800); pushU16(out,0);
+    pushU16(out,0); pushU16(out,0x21);
+    pushU32(out,crc); pushU32(out,data.length); pushU32(out,data.length);
+    pushU16(out,nameBytes.length); pushU16(out,0);
+    out.push(...nameBytes);
+    for(let i=0;i<data.length;i++) out.push(data[i]);
+  }
+  for(let i=0;i<entries.length;i++){
+    const entry=entries[i], nameBytes=strToBytes(entry.name), data=entry.data, crc=crc32(data);
+    pushU32(central,0x02014b50); pushU16(central,20); pushU16(central,20);
+    pushU16(central,0x0800); pushU16(central,0); pushU16(central,0); pushU16(central,0x21);
+    pushU32(central,crc); pushU32(central,data.length); pushU32(central,data.length);
+    pushU16(central,nameBytes.length); pushU16(central,0); pushU16(central,0);
+    pushU16(central,0); pushU16(central,0); pushU32(central,0); pushU32(central,offsets[i]);
+    central.push(...nameBytes);
+  }
+  const cdOffset=out.length;
+  const full=out.concat(central);
+  pushU32(full,0x06054b50); pushU16(full,0); pushU16(full,0);
+  pushU16(full,entries.length); pushU16(full,entries.length);
+  pushU32(full,central.length); pushU32(full,cdOffset); pushU16(full,0);
+  return new Uint8Array(full);
+}
+function readZip(bytes){
+  let eocd=-1;
+  for(let i=bytes.length-22;i>=0&&i>=bytes.length-22-65536;i--){
+    if(bytes[i]===0x50&&bytes[i+1]===0x4b&&bytes[i+2]===0x05&&bytes[i+3]===0x06){ eocd=i; break; }
+  }
+  if(eocd===-1) throw new Error('Keine gültige ZIP-Datei (EOCD nicht gefunden)');
+  const dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  const total=dv.getUint16(eocd+10,true);
+  let cdOffset=dv.getUint32(eocd+16,true);
+  const result={};
+  for(let i=0;i<total;i++){
+    if(dv.getUint32(cdOffset,true)!==0x02014b50) throw new Error('Ungültiger Central-Directory-Eintrag');
+    const method=dv.getUint16(cdOffset+10,true);
+    const compSize=dv.getUint32(cdOffset+20,true);
+    const uncompSize=dv.getUint32(cdOffset+24,true);
+    const nameLen=dv.getUint16(cdOffset+28,true);
+    const extraLen=dv.getUint16(cdOffset+30,true);
+    const commentLen=dv.getUint16(cdOffset+32,true);
+    const localOffset=dv.getUint32(cdOffset+42,true);
+    const name=new TextDecoder('utf-8').decode(bytes.slice(cdOffset+46,cdOffset+46+nameLen));
+    const lNameLen=dv.getUint16(localOffset+26,true);
+    const lExtraLen=dv.getUint16(localOffset+28,true);
+    const dataStart=localOffset+30+lNameLen+lExtraLen;
+    const raw=bytes.slice(dataStart,dataStart+compSize);
+    let content;
+    if(method===0) content=raw;
+    else if(method===8) content=inflateRaw(raw, uncompSize);
+    else throw new Error('Nicht unterstützte ZIP-Kompression: '+method);
+    result[name]=content;
+    cdOffset+=46+nameLen+extraLen+commentLen;
+  }
+  return result;
+}
+
+/* =========================================================================
+   ODS (OpenDocument Spreadsheet) – Erzeugen & Einlesen von content.xml
+   ========================================================================= */
+function xmlEscape(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+const FN_TO_ODF={SUMME:'SUM',MITTELWERT:'AVERAGE',ANZAHL:'COUNT',ANZAHL2:'COUNTA',RUNDEN:'ROUND',WURZEL:'SQRT',WENN:'IF',
+  POW:'POWER',POTENZ:'POWER',REST:'MOD',UND:'AND',ODER:'OR',NICHT:'NOT',VERKETTEN:'CONCATENATE',HEUTE:'TODAY',WAHR:'TRUE',FALSCH:'FALSE'};
+/* OpenFormula (ODF): Bezüge in [.A1] bzw. [.A1:.B2], Argumenttrenner ist ';' */
+function internalFormulaToOdf(raw){
+  const tokens=tokenize(raw.trim().slice(1));
+  let out='';
+  for(let i=0;i<tokens.length;i++){
+    const tok=tokens[i];
+    if(REF_RE.test(tok) && tokens[i+1]!=='('){
+      if(tokens[i+1]===':' && REF_RE.test(tokens[i+2]||'')){ out+='[.'+tok+':.'+tokens[i+2]+']'; i+=2; }
+      else out+='[.'+tok+']';
+    } else if(/^[A-Za-z_][A-Za-z0-9_]*$/.test(tok) && tokens[i+1]==='('){ out+=FN_TO_ODF[tok.toUpperCase()]||tok.toUpperCase(); }
+    else if(/^(TRUE|WAHR)$/i.test(tok)) out+='TRUE()';
+    else if(/^(FALSE|FALSCH)$/i.test(tok)) out+='FALSE()';
+    else if(tok===','||tok===';') out+=';';
+    else if(tok==='#REF!') out+='[.#REF!]';
+    else out+=tok;
+  }
+  return 'of:='+out;
+}
+function odfFormulaToInternal(odf){
+  let body=odf.replace(/^of:=/,'').replace(/^=/,'');
+  // [.A1], [.$A$1], [.A1:.B2] -> A1 / $A$1 / A1:B2  (';' als Trenner versteht der Parser direkt)
+  body=body.replace(/\[\.(\$?[A-Z]+\$?\d+)(?::\.(\$?[A-Z]+\$?\d+))?\]/g,(m,a,b)=>b?a+':'+b:a)
+           .replace(/\[\.?#REF![^\]]*\]/g,'#REF!');
+  return '='+body;
+}
+function formatNumberPlain(v,fmt){
+  switch(fmt){
+    case 'num2': return v.toFixed(2);
+    case 'percent': return (v*100).toFixed(1)+'%';
+    case 'currency': return '€'+v.toFixed(2);
+    case 'int': return String(Math.round(v));
+    default: return Number.isInteger(v)?String(v):parseFloat(v.toPrecision(10)).toString();
+  }
+}
+const NUMBER_STYLE_DEFS=`
+<number:number-style style:name="Nnum2"><number:number number:decimal-places="2" number:min-integer-digits="1"/></number:number-style>
+<number:percentage-style style:name="Npercent"><number:number number:decimal-places="1" number:min-integer-digits="1"/><number:text>%</number:text></number:percentage-style>
+<number:currency-style style:name="Ncurrency"><number:currency-symbol number:language="de" number:country="DE">€</number:currency-symbol><number:number number:decimal-places="2" number:min-integer-digits="1"/></number:currency-style>
+<number:number-style style:name="Nint"><number:number number:decimal-places="0" number:min-integer-digits="1"/></number:number-style>`;
+const NUMFMT_TO_DATASTYLE={num2:'Nnum2',percent:'Npercent',currency:'Ncurrency',int:'Nint',general:null};
+function styleKey(s){ return [s.bold?1:0,s.italic?1:0,s.underline?1:0,s.align,s.color,s.bg,s.numFmt,s.borderSides||'0000',s.borderColor||''].join('|'); }
+function cellStyleXml(name,s){
+  const dataStyle=NUMFMT_TO_DATASTYLE[s.numFmt];
+  const attrs=`style:name="${name}" style:family="table-cell"`+(dataStyle?` style:data-style-name="${dataStyle}"`:'');
+  const sides=s.borderSides||'0000';
+  const bcol=s.borderColor||'#333333';
+  let borderAttrs='';
+  if(sides!=='0000'){
+    const bv=`0.5pt solid ${bcol}`;
+    if(sides[0]==='1') borderAttrs+=` fo:border-top="${bv}"`;
+    if(sides[1]==='1') borderAttrs+=` fo:border-right="${bv}"`;
+    if(sides[2]==='1') borderAttrs+=` fo:border-bottom="${bv}"`;
+    if(sides[3]==='1') borderAttrs+=` fo:border-left="${bv}"`;
+  }
+  const cellPropsInner=(s.bg?` fo:background-color="${s.bg}"`:'')+borderAttrs;
+  const cellProps=cellPropsInner?`<style:table-cell-properties${cellPropsInner}/>`:'';
+  let textProps='';
+  if(s.bold||s.italic||s.underline||s.color){
+    textProps='<style:text-properties'
+      +(s.bold?' fo:font-weight="bold"':'')+(s.italic?' fo:font-style="italic"':'')
+      +(s.underline?' style:text-underline-style="solid" style:text-underline-type="single"':'')
+      +(s.color?` fo:color="${s.color}"`:'')+'/>';
+  }
+  let paraProps='';
+  if(s.align && s.align!=='left'){
+    const align=s.align==='right'?'end':s.align==='center'?'center':'start';
+    paraProps=`<style:paragraph-properties fo:text-align="${align}"/>`;
+  }
+  return `<style:style ${attrs}>${cellProps}${textProps}${paraProps}</style:style>`;
+}
+function pxToCm(px){ return (px*2.54/96).toFixed(3)+'cm'; }
+function buildOdsContentXml(rows,cols,grid,colW,rowH){
+  const styleMap=new Map(); let styleCounter=1;
+  function nameFor(style){
+    const noBorder=!style.borderSides||style.borderSides==='0000';
+    const isDefault=!style.bold&&!style.italic&&!style.underline&&style.align==='left'&&!style.color&&!style.bg&&style.numFmt==='general'&&noBorder;
+    if(isDefault) return null;
+    const key=styleKey(style);
+    if(styleMap.has(key)) return styleMap.get(key);
+    const name='ce'+(styleCounter++); styleMap.set(key,name); return name;
+  }
+  const rowsXml=[];
+  for(let r=0;r<rows;r++){
+    const cellsXml=[];
+    for(let c=0;c<cols;c++){
+      const cell=grid[r][c];
+      const styleName=nameFor(cell.style);
+      const styleAttr=styleName?` table:style-name="${styleName}"`:'';
+      const raw=(cell.raw||'').trim();
+      const comp=cell.computed;
+      if(raw===''){ cellsXml.push(styleAttr?`<table:table-cell${styleAttr}/>`:`<table:table-cell/>`); continue; }
+      if(raw.startsWith('=')){
+        const formulaAttr=` table:formula="${xmlEscape(internalFormulaToOdf(raw))}"`;
+        let vtAttr='',vAttr='',text='';
+        if(typeof comp==='number'){ vtAttr=' office:value-type="float"'; vAttr=` office:value="${comp}"`; text=formatNumberPlain(comp,cell.style.numFmt); }
+        else if(typeof comp==='boolean'){ vtAttr=' office:value-type="boolean"'; vAttr=` office:boolean-value="${comp}"`; text=comp?'WAHR':'FALSCH'; }
+        else if(comp && typeof comp==='object' && comp.__err){ vtAttr=' office:value-type="string"'; text=comp.__err; }
+        else { vtAttr=' office:value-type="string"'; text=comp==null?'':String(comp); }
+        cellsXml.push(`<table:table-cell${styleAttr}${formulaAttr}${vtAttr}${vAttr}>${text!==''?`<text:p>${xmlEscape(text)}</text:p>`:''}</table:table-cell>`);
+      } else {
+        const n=parseCellNumber(raw);
+        if(typeof comp==='boolean'){
+          cellsXml.push(`<table:table-cell${styleAttr} office:value-type="boolean" office:boolean-value="${comp}"><text:p>${comp?'WAHR':'FALSCH'}</text:p></table:table-cell>`);
+        } else if(n!==null){
+          cellsXml.push(`<table:table-cell${styleAttr} office:value-type="float" office:value="${n}"><text:p>${xmlEscape(formatNumberPlain(n,cell.style.numFmt))}</text:p></table:table-cell>`);
+        } else {
+          cellsXml.push(`<table:table-cell${styleAttr} office:value-type="string">${String(cell.raw).replace(/^\s+$/,'').split('\n').map(p=>`<text:p>${xmlEscape(p)}</text:p>`).join('')}</table:table-cell>`);
+        }
+      }
+    }
+    const rowStyleName = (rowH && rowH[r] && rowH[r]!==DEFAULT_ROW_H) ? 'ro'+(r+1) : null;
+    const rowAttr = rowStyleName ? ` table:style-name="${rowStyleName}"` : '';
+    rowsXml.push(`<table:table-row${rowAttr}>${cellsXml.join('')}</table:table-row>`);
+  }
+  const cellStylesXml=Array.from(styleMap.entries()).map(([key,name])=>{
+    const p=key.split('|');
+    return cellStyleXml(name,{bold:p[0]==='1',italic:p[1]==='1',underline:p[2]==='1',align:p[3],color:p[4],bg:p[5],numFmt:p[6],borderSides:p[7]||'0000',borderColor:p[8]||''});
+  }).join('');
+  // Spalten-Styles (nur für abweichende Breiten) + <table:table-column> je Spalte
+  let columnsXml='';
+  const colStylesXml=[];
+  for(let c=0;c<cols;c++){
+    const w=colW && colW[c] ? colW[c] : DEFAULT_COL_W;
+    if(w!==DEFAULT_COL_W){
+      const name='co'+(c+1);
+      colStylesXml.push(`<style:style style:name="${name}" style:family="table-column"><style:table-column-properties style:column-width="${pxToCm(w)}"/></style:style>`);
+      columnsXml+=`<table:table-column table:style-name="${name}"/>`;
+    } else {
+      columnsXml+=`<table:table-column/>`;
+    }
+  }
+  // Zeilen-Styles (nur für abweichende Höhen)
+  const rowStylesXml=[];
+  for(let r=0;r<rows;r++){
+    const h=rowH && rowH[r] ? rowH[r] : DEFAULT_ROW_H;
+    if(h!==DEFAULT_ROW_H){
+      rowStylesXml.push(`<style:style style:name="ro${r+1}" style:family="table-row"><style:table-row-properties style:row-height="${pxToCm(h)}"/></style:style>`);
+    }
+  }
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0" xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" office:version="1.2">
+<office:automatic-styles>${NUMBER_STYLE_DEFS}${cellStylesXml}${colStylesXml.join('')}${rowStylesXml.join('')}</office:automatic-styles>
+<office:body><office:spreadsheet><table:table table:name="Tabelle1">
+${columnsXml}
+${rowsXml.join('')}
+</table:table></office:spreadsheet></office:body>
+</office:document-content>`;
+}
+const ODS_STYLES_XML=`<?xml version="1.0" encoding="UTF-8"?>
+<office:document-styles xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" office:version="1.2">
+<office:styles/><office:automatic-styles/><office:master-styles/>
+</office:document-styles>`;
+const ODS_MANIFEST_XML=`<?xml version="1.0" encoding="UTF-8"?>
+<manifest:manifest xmlns:manifest="urn:oasis:names:tc:opendocument:xmlns:manifest:1.0" manifest:version="1.2">
+<manifest:file-entry manifest:full-path="/" manifest:version="1.2" manifest:media-type="application/vnd.oasis.opendocument.spreadsheet"/>
+<manifest:file-entry manifest:full-path="content.xml" manifest:media-type="text/xml"/>
+<manifest:file-entry manifest:full-path="styles.xml" manifest:media-type="text/xml"/>
+</manifest:manifest>`;
+function parseOdsContentXml(doc){
+  const ns={t:'urn:oasis:names:tc:opendocument:xmlns:table:1.0',s:'urn:oasis:names:tc:opendocument:xmlns:style:1.0',tx:'urn:oasis:names:tc:opendocument:xmlns:text:1.0',n:'urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0'};
+  function lengthToPx(str){
+    const m=/^([\d.]+)(cm|mm|in|px)$/.exec(str||'');
+    if(!m) return null;
+    const val=parseFloat(m[1]);
+    switch(m[2]){ case 'cm': return val*96/2.54; case 'mm': return val*96/25.4; case 'in': return val*96; case 'px': return val; }
+  }
+  const colStyleWidths={}, rowStyleHeights={};
+  for(const el of doc.getElementsByTagNameNS(ns.s,'style')){
+    const fam=el.getAttribute('style:family');
+    if(fam==='table-column'){
+      const cp=el.getElementsByTagNameNS(ns.s,'table-column-properties')[0];
+      const w=cp?lengthToPx(cp.getAttribute('style:column-width')):null;
+      if(w) colStyleWidths[el.getAttribute('style:name')]=Math.round(w);
+    } else if(fam==='table-row'){
+      const rp=el.getElementsByTagNameNS(ns.s,'table-row-properties')[0];
+      const h=rp?lengthToPx(rp.getAttribute('style:row-height')):null;
+      if(h) rowStyleHeights[el.getAttribute('style:name')]=Math.round(h);
+    }
+  }
+  const cellStyles={}, dataStyleNumFmt={};
+  for(const el of doc.getElementsByTagNameNS(ns.n,'percentage-style')) dataStyleNumFmt[el.getAttribute('style:name')]='percent';
+  for(const el of doc.getElementsByTagNameNS(ns.n,'currency-style')) dataStyleNumFmt[el.getAttribute('style:name')]='currency';
+  for(const el of doc.getElementsByTagNameNS(ns.n,'number-style')){
+    const dp=el.getElementsByTagNameNS(ns.n,'number')[0];
+    const decimals=dp?parseInt(dp.getAttribute('number:decimal-places')||'0',10):0;
+    dataStyleNumFmt[el.getAttribute('style:name')]=decimals>=2?'num2':(decimals===0?'int':'general');
+  }
+  for(const el of doc.getElementsByTagNameNS(ns.s,'style')){
+    if(el.getAttribute('style:family')!=='table-cell') continue;
+    const name=el.getAttribute('style:name');
+    const style={bold:false,italic:false,underline:false,align:'left',color:'',bg:'',numFmt:'general',borderSides:'0000',borderColor:''};
+    const dsName=el.getAttribute('style:data-style-name');
+    if(dsName && dataStyleNumFmt[dsName]) style.numFmt=dataStyleNumFmt[dsName];
+    const tp=el.getElementsByTagNameNS(ns.s,'text-properties')[0];
+    if(tp){
+      if(tp.getAttribute('fo:font-weight')==='bold') style.bold=true;
+      if(tp.getAttribute('fo:font-style')==='italic') style.italic=true;
+      if(tp.getAttribute('style:text-underline-style') && tp.getAttribute('style:text-underline-style')!=='none') style.underline=true;
+      if(tp.getAttribute('fo:color')) style.color=tp.getAttribute('fo:color');
+    }
+    const cp=el.getElementsByTagNameNS(ns.s,'table-cell-properties')[0];
+    if(cp && cp.getAttribute('fo:background-color')) style.bg=cp.getAttribute('fo:background-color');
+    if(cp){
+      // fo:border (alle Seiten) oder einzelne fo:border-top/right/bottom/left
+      const all=cp.getAttribute('fo:border');
+      const bt=cp.getAttribute('fo:border-top')||all;
+      const br=cp.getAttribute('fo:border-right')||all;
+      const bb=cp.getAttribute('fo:border-bottom')||all;
+      const bl=cp.getAttribute('fo:border-left')||all;
+      const on=v=>v&&!/\bnone\b/.test(v)?'1':'0';
+      const sides=on(bt)+on(br)+on(bb)+on(bl);
+      if(sides!=='0000'){
+        style.borderSides=sides;
+        const m=(bt||br||bb||bl||'').match(/#[0-9a-fA-F]{6}/);
+        style.borderColor=m?m[0]:'#333333';
+      }
+    }
+    const pp=el.getElementsByTagNameNS(ns.s,'paragraph-properties')[0];
+    if(pp){ const al=pp.getAttribute('fo:text-align'); if(al==='end') style.align='right'; else if(al==='center') style.align='center'; else if(al==='start') style.align='left'; }
+    cellStyles[name]=style;
+  }
+  /* LibreOffice schreibt das *komplette* Blatt-Raster in content.xml: die letzte
+     Spaltendefinition traegt table:number-columns-repeated="16364", die letzte Zeile
+     table:number-rows-repeated="1048501". Wuerde man diese Wiederholungen naiv
+     expandieren, entstuenden ~16 Mio. Zellobjekte und ebenso viele <td> - der Browser
+     bleibt haengen. Deshalb: leere, unformatierte Zellen/Zeilen am Ende werden nur
+     "gemerkt" und erst dann materialisiert, wenn rechts/darunter noch Inhalt folgt.
+     Zusaetzlich harte Obergrenzen als Sicherheitsnetz. */
+  const MAX_IMPORT_COLS=256, MAX_IMPORT_ROWS=5000;
+  const EMPTY_STYLE={bold:false,italic:false,underline:false,align:'left',color:'',bg:'',numFmt:'general',borderSides:'0000',borderColor:''};
+  const blankCell=()=>({raw:'',style:Object.assign({},EMPTY_STYLE),computed:''});
+  const styleIsPlain=s=>!s.bold&&!s.italic&&!s.underline&&s.align==='left'&&!s.color&&!s.bg&&s.numFmt==='general'&&s.borderSides==='0000';
+  let truncated=false;
+
+  const table=doc.getElementsByTagNameNS(ns.t,'table')[0];
+  const colWidthsOut=[];
+  if(table){
+    for(const colEl of Array.from(table.children)){
+      if(colEl.localName!=='table-column') continue;
+      const repeat=parseInt(colEl.getAttribute('table:number-columns-repeated')||'1',10)||1;
+      const sName=colEl.getAttribute('table:style-name');
+      const w=(sName && colStyleWidths[sName])?colStyleWidths[sName]:DEFAULT_COL_W;
+      for(let i=0;i<repeat && colWidthsOut.length<MAX_IMPORT_COLS;i++) colWidthsOut.push(w);
+    }
+  }
+  const rowEls=table?Array.from(table.getElementsByTagNameNS(ns.t,'table-row')):[];
+  const rowHeightsOut=[];
+  const grid=[]; let maxCols=1;
+  const pendingRowHs=[];                 // uebersprungene Leerzeilen (Position bleibt erhalten)
+  for(const rowEl of rowEls){
+    const rsName=rowEl.getAttribute('table:style-name');
+    const rowH=(rsName && rowStyleHeights[rsName])?rowStyleHeights[rsName]:DEFAULT_ROW_H;
+    const rowRepeat=parseInt(rowEl.getAttribute('table:number-rows-repeated')||'1',10)||1;
+    const row=[];
+    let pending=[], pendingCount=0;      // zurueckgehaltene Leerzellen (auch formatierte!)
+    for(const cellEl of Array.from(rowEl.children)){
+      if(cellEl.localName!=='table-cell' && cellEl.localName!=='covered-table-cell') continue;
+      if(row.length+pendingCount>=MAX_IMPORT_COLS){ truncated=true; break; }
+      const repeat=parseInt(cellEl.getAttribute('table:number-columns-repeated')||'1',10)||1;
+      const styleName=cellEl.getAttribute('table:style-name');
+      const style=(styleName && cellStyles[styleName])?cellStyles[styleName]:EMPTY_STYLE;
+      const formula=cellEl.getAttribute('table:formula');
+      const valueType=cellEl.getAttribute('office:value-type');
+      // Anzeigetext: alle <text:p> der Zelle (mehrzeilige Zellen bleiben erhalten)
+      const displayText=()=>Array.from(cellEl.getElementsByTagNameNS(ns.tx,'p')).map(p=>p.textContent).join('\n').trim();
+      let raw='';
+      if(formula) raw=odfFormulaToInternal(formula);
+      else if(valueType==='float'||valueType==='percentage'||valueType==='currency') raw=cellEl.getAttribute('office:value')||'0';
+      else if(valueType==='boolean') raw=cellEl.getAttribute('office:boolean-value')==='true'?'TRUE':'FALSE';
+      // Datum/Zeit kennt MiniCalc nicht als Typ -> als angezeigten Text uebernehmen
+      else if(valueType==='date') raw=displayText()||cellEl.getAttribute('office:date-value')||'';
+      else if(valueType==='time') raw=displayText()||cellEl.getAttribute('office:time-value')||'';
+      else raw=displayText();            // string bzw. Zelle ohne office:value-type
+      // Leere Zellen zurueckhalten: folgt rechts noch Inhalt, werden sie (samt Format)
+      // nachgeholt - sonst verworfen. So verschwinden die Filler-Zellen am Zeilenende,
+      // auch wenn LibreOffice ihnen wie hier den Kopfzeilen-Style "ce1" mitgibt.
+      if(raw===''){ pending.push({style,repeat}); pendingCount+=repeat; continue; }
+      for(const pe of pending){
+        const st=styleIsPlain(pe.style)?null:pe.style;
+        for(let i=0;i<pe.repeat && row.length<MAX_IMPORT_COLS;i++)
+          row.push(st?{raw:'',style:Object.assign({},st),computed:''}:blankCell());
+      }
+      pending=[]; pendingCount=0;
+      for(let i=0;i<repeat && row.length<MAX_IMPORT_COLS;i++) row.push({raw,style:Object.assign({},style),computed:''});
+    }
+    if(row.length===0){                  // vollstaendig leere Zeile: nur vormerken
+      for(let i=0;i<rowRepeat && pendingRowHs.length<MAX_IMPORT_ROWS;i++) pendingRowHs.push(rowH);
+      continue;
+    }
+    while(pendingRowHs.length && grid.length<MAX_IMPORT_ROWS){ rowHeightsOut.push(pendingRowHs.shift()); grid.push([]); }
+    pendingRowHs.length=0;
+    for(let i=0;i<rowRepeat && grid.length<MAX_IMPORT_ROWS;i++){
+      rowHeightsOut.push(rowH);
+      grid.push(row.map(cell=>({raw:cell.raw, style:Object.assign({},cell.style), computed:''})));
+    }
+    if(row.length>maxCols) maxCols=row.length;
+  }
+  if(truncated) console.warn('ODS-Import: Blatt auf max. '+MAX_IMPORT_COLS+' Spalten / '+MAX_IMPORT_ROWS+' Zeilen begrenzt.');
+  const newRows=Math.max(grid.length,1), newCols=Math.max(maxCols,1);
+  const outData=[];
+  for(let r=0;r<newRows;r++){
+    const row=[];
+    for(let c=0;c<newCols;c++) row.push((grid[r]&&grid[r][c])?grid[r][c]:{raw:'',style:{bold:false,italic:false,underline:false,align:'left',color:'',bg:'',numFmt:'general',borderSides:'0000',borderColor:''},computed:''});
+    outData.push(row);
+  }
+  while(colWidthsOut.length<newCols) colWidthsOut.push(DEFAULT_COL_W);
+  while(rowHeightsOut.length<newRows) rowHeightsOut.push(DEFAULT_ROW_H);
+  return {ROWS:newRows,COLS:newCols,data:outData,colWidths:colWidthsOut.slice(0,newCols),rowHeights:rowHeightsOut.slice(0,newRows)};
+}
+
+/* =========================================================================
+   MiniCalc – Anwendung
+   ========================================================================= */
+let ROWS=40, COLS=20;
+const DEFAULT_COL_W=88, DEFAULT_ROW_H=24;
+let colWidths=[], rowHeights=[]; // pro Spalte/Zeile individuell einstellbare Breite/Höhe (px)
+let data=[];          // data[r][c] = {raw, style:{bold,italic,underline,align,color,bg,numFmt}, computed}
+let domCells=[];       // domCells[r][c] = <td>
+let domRowHeads=[], domColHeads=[], domColEls=[];
+let active={r:0,c:0};
+let selRange={r1:0,c1:0,r2:0,c2:0};
+let editing=false;
+let editMode='edit'; // 'enter' = per Tippen begonnen (Pfeiltasten übernehmen), 'edit' = F2/Doppelklick (Pfeiltasten bewegen den Cursor)
+let isSelecting=false;
+let selAnchor={r:0,c:0};
+let isPointing=false;    // "Point-Mode": Zellbezüge per Klick in eine Formel einfügen
+let pointRef=null;       // {anchor:{r,c}, insertStart, insertLen, td}
+let pointingCells=[];    // aktuell farblich hervorgehobene Zellen während des Point-Mode
+
+const gridBody=document.getElementById('gridBody');
+const headRow=document.getElementById('headRow');
+const clipProxy=document.getElementById('clipProxy');
+const formulaInput=document.getElementById('formulaInput');
+const cellAddrEl=document.getElementById('cellAddr');
+
+function newCell(){ return {raw:'', style:{bold:false,italic:false,underline:false,align:'left',color:'',bg:'',numFmt:'general',borderSides:'0000',borderColor:''}, computed:''}; }
+
+function initData(rows,cols){
+  data=[];
+  for(let r=0;r<rows;r++){ const row=[]; for(let c=0;c<cols;c++) row.push(newCell()); data.push(row); }
+  ROWS=rows; COLS=cols;
+  colWidths=Array.from({length:cols},()=>DEFAULT_COL_W);
+  rowHeights=Array.from({length:rows},()=>DEFAULT_ROW_H);
+}
+
+
+/* ---------- Rückgängig / Wiederholen ----------
+   Einträge: 'cells' (nur geänderter Bereich), 'sizes' (Spaltenbreiten/Zeilenhöhen),
+   'full' (komplettes Blatt, bei Zeilen/Spalten einfügen/löschen). */
+const UNDO_MAX=100;
+let undoStack=[], redoStack=[];
+let lastUndoTag='', lastUndoTime=0;
+const copyStyle=st=>Object.assign({},st);
+function selSnapshot(){ return {sel:Object.assign({},selRange), active:Object.assign({},active)}; }
+function captureCells(r1,c1,r2,c2){
+  const cells=[];
+  for(let r=r1;r<=r2;r++){ const row=[]; for(let c=c1;c<=c2;c++){ const d=data[r][c]; row.push({raw:d.raw, style:copyStyle(d.style)}); } cells.push(row); }
+  return Object.assign({kind:'cells', r1,c1,r2,c2, cells}, selSnapshot());
+}
+function captureSel(){ const {r1,r2,c1,c2}=normRange(); return captureCells(r1,c1,r2,c2); }
+function captureSizes(){ return Object.assign({kind:'sizes', colWidths:colWidths.slice(), rowHeights:rowHeights.slice()}, selSnapshot()); }
+function captureFull(){
+  return Object.assign({kind:'full', ROWS, COLS, colWidths:colWidths.slice(), rowHeights:rowHeights.slice(),
+    data:data.map(row=>row.map(d=>({raw:d.raw, style:copyStyle(d.style)})))}, selSnapshot());
+}
+function captureLike(e){ return e.kind==='cells' ? captureCells(e.r1,e.c1,e.r2,e.c2) : e.kind==='sizes' ? captureSizes() : captureFull(); }
+/* tag: gleichartige Schritte kurz hintereinander (z.B. Farbwähler ziehen) zu einem zusammenfassen */
+function pushUndo(entry, tag){
+  const now=Date.now();
+  if(tag && tag===lastUndoTag && now-lastUndoTime<1500){ lastUndoTime=now; return; }
+  lastUndoTag=tag||''; lastUndoTime=now;
+  undoStack.push(entry); if(undoStack.length>UNDO_MAX) undoStack.shift();
+  redoStack.length=0;
+  updateUndoButtons();
+}
+function resetUndo(){ undoStack=[]; redoStack=[]; lastUndoTag=''; updateUndoButtons(); }
+function applyUndoEntry(e){
+  if(e.kind==='cells'){
+    for(let r=e.r1;r<=e.r2;r++) for(let c=e.c1;c<=e.c2;c++){
+      if(r>=ROWS||c>=COLS) continue;
+      const src=e.cells[r-e.r1][c-e.c1];
+      data[r][c].raw=src.raw; data[r][c].style=copyStyle(src.style);
+    }
+    recalcAll();
+  } else if(e.kind==='sizes'){
+    colWidths=e.colWidths.slice(); rowHeights=e.rowHeights.slice();
+    buildTable(); recalcAll();
+  } else {
+    ROWS=e.ROWS; COLS=e.COLS; colWidths=e.colWidths.slice(); rowHeights=e.rowHeights.slice();
+    data=e.data.map(row=>row.map(d=>({raw:d.raw, style:copyStyle(d.style), computed:''})));
+    buildTable(); recalcAll();
+  }
+  selRange=Object.assign({},e.sel); active=Object.assign({},e.active); selAnchor=Object.assign({},e.active);
+  clampSelection();
+  renderAll(); syncFormulaBar(); ensureVisible(active.r,active.c);
+}
+function undo(){
+  if(editing) cancelEdit();
+  const e=undoStack.pop(); if(!e) return;
+  redoStack.push(captureLike(e)); lastUndoTag='';
+  applyUndoEntry(e); updateUndoButtons(); focusProxy();
+}
+function redo(){
+  if(editing) cancelEdit();
+  const e=redoStack.pop(); if(!e) return;
+  undoStack.push(captureLike(e)); lastUndoTag='';
+  applyUndoEntry(e); updateUndoButtons(); focusProxy();
+}
+function updateUndoButtons(){
+  const u=document.getElementById('btnUndo'), r=document.getElementById('btnRedo');
+  if(u) u.disabled=!undoStack.length; if(r) r.disabled=!redoStack.length;
+}
+
+/* ---------- Tabellenaufbau mit Zeilen-Virtualisierung ----------
+   Im DOM stehen nur die sichtbaren Zeilen (plus Puffer). Platzhalterzeilen oben/unten
+   halten die Scrollhöhe korrekt. So bleiben auch Blätter mit tausenden Zeilen flüssig.
+   domCells[r] / domRowHeads[r] existieren nur für gerade gerenderte Zeilen. */
+const VBUF=15;                 // Pufferzeilen ober-/unterhalb des sichtbaren Bereichs
+let vStart=0, vEnd=0;          // gerenderter Zeilenbereich [vStart, vEnd)
+let rowTops=[0];               // Präfixsummen der Zeilenhöhen (Länge ROWS+1)
+let topSpacer=null, bottomSpacer=null;
+const gridWrap=document.getElementById('gridWrap');
+
+function computeRowTops(){
+  rowTops=new Array(ROWS+1); rowTops[0]=0;
+  for(let r=0;r<ROWS;r++) rowTops[r+1]=rowTops[r]+(rowHeights[r]||DEFAULT_ROW_H);
+}
+function rowAtY(y){          // größte Zeile r mit rowTops[r] <= y
+  let lo=0, hi=Math.max(0,ROWS-1);
+  while(lo<hi){ const mid=(lo+hi+1)>>1; if(rowTops[mid]<=y) lo=mid; else hi=mid-1; }
+  return lo;
+}
+function makeSpacer(){
+  const tr=document.createElement('tr'); tr.className='vspacer';
+  const td=document.createElement('td'); td.colSpan=COLS+1; tr.appendChild(td);
+  return tr;
+}
+function setSpacerHeight(tr,h){ tr.style.display=h>0?'':'none'; tr.firstChild.style.height=h+'px'; }
+function updateSpacers(){
+  setSpacerHeight(topSpacer, rowTops[vStart]);
+  setSpacerHeight(bottomSpacer, rowTops[ROWS]-rowTops[vEnd]);
+}
+function createRow(r){
+  const tr=document.createElement('tr');
+  tr.style.height=(rowHeights[r]||DEFAULT_ROW_H)+'px';
+  const th=document.createElement('th');
+  th.className='rowhead'; th.textContent=(r+1); th.dataset.r=r;
+  tr.appendChild(th);
+  const cells=new Array(COLS);
+  for(let c=0;c<COLS;c++){
+    const td=document.createElement('td');
+    td.dataset.r=r; td.dataset.c=c;
+    tr.appendChild(td); cells[c]=td;
+  }
+  domCells[r]=cells; domRowHeads[r]=th;
+  return tr;
+}
+function removeRow(r){
+  const th=domRowHeads[r];
+  if(th) markedRowHeads.delete(th);
+  if(domCells[r]) for(const td of domCells[r]) markedCells.delete(td);
+  if(th && th.parentElement) th.parentElement.remove();
+  domCells[r]=undefined; domRowHeads[r]=undefined;
+}
+function buildRows(from,to){
+  const frag=document.createDocumentFragment();
+  for(let r=from;r<to;r++) frag.appendChild(createRow(r));
+  return frag;
+}
+function renderRowWindow(force, aroundRow){
+  const headH=headRow.offsetHeight||DEFAULT_ROW_H;
+  const visH=gridWrap.clientHeight||800;
+  const y=Math.max(0, gridWrap.scrollTop-headH);
+  let s=Math.max(0, rowAtY(y)-VBUF);
+  let e=Math.min(ROWS, rowAtY(y+visH)+1+VBUF);
+  if(aroundRow!==undefined && (aroundRow<s || aroundRow>=e)){   // Zielzeile erzwingen (falls kein Layout/Scroll möglich)
+    s=Math.max(0,aroundRow-VBUF); e=Math.min(ROWS,aroundRow+VBUF+1);
+  }
+  if(!force && s===vStart && e===vEnd) return;
+  // Wird die gerade bearbeitete Zeile weggescrollt, Bearbeitung vorher abschließen
+  if(editing && (active.r<s || active.r>=e)) commitEdit(null);
+  const created=[];
+  if(force || s>=vEnd || e<=vStart){
+    for(let r=vStart;r<vEnd;r++) removeRow(r);
+    bottomSpacer.before(buildRows(s,e));
+    for(let r=s;r<e;r++) created.push(r);
+  } else {
+    for(let r=vStart;r<s;r++) removeRow(r);
+    for(let r=e;r<vEnd;r++) removeRow(r);
+    if(s<vStart){ topSpacer.after(buildRows(s,vStart)); for(let r=s;r<vStart;r++) created.push(r); }
+    if(e>vEnd){ bottomSpacer.before(buildRows(vEnd,e)); for(let r=vEnd;r<e;r++) created.push(r); }
+  }
+  vStart=s; vEnd=e;
+  updateSpacers();
+  for(const r of created) for(let c=0;c<COLS;c++) renderCell(r,c);
+  if(created.length) updateSelectionVisuals();
+}
+/* Zelle (r,c) in den sichtbaren Bereich scrollen und ihre Zeile rendern */
+function ensureVisible(r,c){
+  const headH=headRow.offsetHeight||DEFAULT_ROW_H;
+  const top=rowTops[r], bot=rowTops[r+1];
+  if(top<gridWrap.scrollTop) gridWrap.scrollTop=top;
+  else if(gridWrap.clientHeight && headH+bot>gridWrap.scrollTop+gridWrap.clientHeight) gridWrap.scrollTop=headH+bot-gridWrap.clientHeight;
+  const headW=domColHeads[0]?domColHeads[0].offsetLeft:44;
+  let left=0; for(let i=0;i<c;i++) left+=colWidths[i]||DEFAULT_COL_W;
+  const right=left+(colWidths[c]||DEFAULT_COL_W);
+  if(left<gridWrap.scrollLeft) gridWrap.scrollLeft=left;
+  else if(gridWrap.clientWidth && headW+right>gridWrap.scrollLeft+gridWrap.clientWidth) gridWrap.scrollLeft=headW+right-gridWrap.clientWidth;
+  renderRowWindow(false, r);   // Fenster nach Scrollposition, Zielzeile notfalls erzwingen
+}
+
+function buildTable(){
+  if(editing){                 // laufende Bearbeitung übernehmen, bevor die Zellen neu entstehen
+    const td=domCells[active.r]&&domCells[active.r][active.c];
+    if(td && data[active.r] && data[active.r][active.c]) data[active.r][active.c].raw=td.textContent;
+    editing=false; isPointing=false; pointRef=null;
+  }
+  // Spaltenbreiten über <colgroup>
+  const colgroup=document.getElementById('colgroup');
+  colgroup.innerHTML='';
+  const headCol=document.createElement('col'); headCol.style.width='var(--head-w)';
+  colgroup.appendChild(headCol);
+  domColEls=[];
+  for(let c=0;c<COLS;c++){
+    const col=document.createElement('col'); col.style.width=(colWidths[c]||DEFAULT_COL_W)+'px';
+    colgroup.appendChild(col);
+    domColEls.push(col);
+  }
+  // Kopfzeile
+  headRow.innerHTML='';
+  const corner=document.createElement('th'); corner.className='corner rowhead';
+  headRow.appendChild(corner);
+  domColHeads=[];
+  for(let c=0;c<COLS;c++){
+    const th=document.createElement('th');
+    th.textContent=indexToCol(c);
+    th.dataset.c=c;
+    th.addEventListener('mousedown', onColHeaderMouseDown);
+    th.addEventListener('mousemove', onColHeaderMouseMove);
+    headRow.appendChild(th);
+    domColHeads.push(th);
+  }
+  // Body: nur Platzhalter + sichtbarer Ausschnitt
+  gridBody.innerHTML='';
+  domCells=new Array(ROWS); domRowHeads=new Array(ROWS);
+  pointingCells=[]; markedCells=new Set(); markedRowHeads=new Set();
+  topSpacer=makeSpacer(); bottomSpacer=makeSpacer();
+  gridBody.appendChild(topSpacer); gridBody.appendChild(bottomSpacer);
+  vStart=vEnd=0;
+  clampSelection();
+  computeRowTops();
+  renderRowWindow(true);
+}
+/* Auswahl/aktive Zelle auf die aktuelle Tabellengröße begrenzen (nach Löschen, Neu, Laden) */
+function clampSelection(){
+  const cr=v=>Math.max(0,Math.min(ROWS-1,v)), cc=v=>Math.max(0,Math.min(COLS-1,v));
+  selRange={r1:cr(selRange.r1), r2:cr(selRange.r2), c1:cc(selRange.c1), c2:cc(selRange.c2)};
+  active={r:cr(active.r), c:cc(active.c)};
+  selAnchor={r:cr(selAnchor.r), c:cc(selAnchor.c)};
+}
+
+/* ---------- Recalc ---------- */
+function recalcAll(){
+  const memo=new Map();
+  const evaluating=new Set();
+  function getCell(r,c){
+    if(r<0||c<0||r>=ROWS||c>=COLS) return '';
+    const key=r*COLS+c;
+    if(memo.has(key)){
+      const v=memo.get(key);
+      if(v && v.__err) throw new FormulaError(v.__err);
+      return v;
+    }
+    if(evaluating.has(key)) throw new FormulaError('#CIRC!');
+    const raw=(data[r][c].raw||'').trim();
+    let result;
+    if(raw===''){ memo.set(key,''); return ''; }
+    if(raw.startsWith('=')){
+      evaluating.add(key);
+      try{ result=evalFormula(raw.slice(1),{getCell}); }
+      catch(e){ evaluating.delete(key); const code=e.code||'#ERROR!'; memo.set(key,{__err:code}); throw new FormulaError(code); }
+      evaluating.delete(key);
+    } else {
+      const n=parseCellNumber(raw);
+      if(n!==null) result=n;
+      else if(/^(TRUE|WAHR)$/i.test(raw)) result=true;
+      else if(/^(FALSE|FALSCH)$/i.test(raw)) result=false;
+      else result=raw;
+    }
+    memo.set(key,result);
+    return result;
+  }
+  for(let r=0;r<ROWS;r++){
+    for(let c=0;c<COLS;c++){
+      try{ data[r][c].computed=getCell(r,c); }
+      catch(e){ data[r][c].computed={__err:e.code||'#ERROR!'}; }
+    }
+  }
+}
+
+function formatNumber(v,fmt){
+  const de=s=>s.replace('.',',');          // deutsche Anzeige: Dezimalkomma
+  switch(fmt){
+    case 'num2': return de(v.toFixed(2));
+    case 'percent': return de((v*100).toFixed(1))+'%';
+    case 'currency': return de(v.toFixed(2))+' €';
+    case 'int': return String(Math.round(v));
+    default: {
+      if(Number.isInteger(v)) return String(v);
+      return de(parseFloat(v.toPrecision(10)).toString());
+    }
+  }
+}
+
+function renderCell(r,c){
+  const td=domCells[r] && domCells[r][c]; if(!td) return;    // Zeile gerade nicht im DOM
+  const cell=data[r][c];
+  const comp=cell.computed;
+  let text, isErr=false;
+  if(comp && typeof comp==='object' && comp.__err){ text=comp.__err; isErr=true; }
+  else if(typeof comp==='number') text=formatNumber(comp,cell.style.numFmt);
+  else if(typeof comp==='boolean') text = comp? 'WAHR':'FALSCH';
+  else text = (comp===undefined||comp===null) ? '' : comp;
+  if(!td.classList.contains('editing')) td.textContent=text;
+  td.classList.toggle('errorcell', isErr);
+  td.style.fontWeight = cell.style.bold ? '700':'400';
+  td.style.fontStyle = cell.style.italic ? 'italic':'normal';
+  td.style.textDecoration = cell.style.underline ? 'underline':'none';
+  td.style.color = cell.style.color || '';
+  td.style.background = cell.style.bg || '';
+  td.dataset.align = cell.style.align || 'left';
+  // Benutzer-Rahmen (überschreibt pro Seite die dünne Gitterlinie); '' => Gitterlinie zurück
+  const sides=cell.style.borderSides||'0000';
+  const bc=cell.style.borderColor||'#333333';
+  td.style.borderTop    = sides[0]==='1' ? '1px solid '+bc : '';
+  td.style.borderRight  = sides[1]==='1' ? '1px solid '+bc : '';
+  td.style.borderBottom = sides[2]==='1' ? '1px solid '+bc : '';
+  td.style.borderLeft   = sides[3]==='1' ? '1px solid '+bc : '';
+}
+
+function renderAll(){
+  for(let r=vStart;r<vEnd;r++) for(let c=0;c<COLS;c++) renderCell(r,c);
+  updateSelectionVisuals();
+  updateStatusBar();
+}
+
+function recalcAndRender(){ recalcAll(); renderAll(); }
+
+/* ---------- Selektion ---------- */
+function normRange(){
+  return {
+    r1:Math.min(selRange.r1,selRange.r2), r2:Math.max(selRange.r1,selRange.r2),
+    c1:Math.min(selRange.c1,selRange.c2), c2:Math.max(selRange.c1,selRange.c2)
+  };
+}
+function setSelection(a,b){
+  selRange={r1:a.r,c1:a.c,r2:b.r,c2:b.c};
+  active={r:a.r,c:a.c};
+  updateSelectionVisuals();
+  syncFormulaBar();
+  updateStatusBar();
+}
+/* Hervorhebung differenziell: nur Zellen im (sichtbaren) Auswahlrechteck und die
+   zuvor markierten werden angefasst – unabhängig von der Blattgröße. */
+let markedCells=new Set(), markedRowHeads=new Set();
+function updateSelectionVisuals(){
+  const {r1,r2,c1,c2}=normRange();
+  const nextCells=new Set(), nextHeads=new Set();
+  const ra=Math.max(r1,vStart), rb=Math.min(r2,vEnd-1);
+  for(let r=ra;r<=rb;r++){
+    const row=domCells[r]; if(!row) continue;
+    for(let c=c1;c<=c2;c++) if(row[c]) nextCells.add(row[c]);
+    if(domRowHeads[r]) nextHeads.add(domRowHeads[r]);
+  }
+  const at=domCells[active.r] && domCells[active.r][active.c];
+  if(at) nextCells.add(at);
+  for(const td of markedCells) if(!nextCells.has(td)){ td.classList.remove('sel'); td.classList.remove('active'); }
+  for(const td of nextCells){
+    const isActive = td===at;
+    td.classList.toggle('active', isActive);
+    td.classList.toggle('sel', !isActive);
+  }
+  markedCells=nextCells;
+  for(const th of markedRowHeads) if(!nextHeads.has(th)) th.classList.remove('hActive');
+  for(const th of nextHeads) th.classList.add('hActive');
+  markedRowHeads=nextHeads;
+  for(let c=0;c<COLS;c++) domColHeads[c].classList.toggle('hActive', c>=c1&&c<=c2);
+}
+function syncFormulaBar(){
+  const {r1,r2,c1,c2}=normRange();
+  cellAddrEl.textContent = (r1===r2&&c1===c2) ? (indexToCol(c1)+(r1+1)) : (indexToCol(c1)+(r1+1)+':'+indexToCol(c2)+(r2+1));
+  formulaInput.value = data[active.r][active.c].raw;
+}
+function updateStatusBar(){
+  clampSelection();
+  const {r1,r2,c1,c2}=normRange();
+  let count=0,sum=0,nums=0;
+  for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){
+    const v=data[r][c].computed;
+    if(v!=='' && v!==undefined) count++;
+    if(typeof v==='number'){ sum+=v; nums++; }
+  }
+  document.getElementById('stCount').textContent=count;
+  document.getElementById('stSum').textContent = nums? formatNumber(sum,'general'):'0';
+  document.getElementById('stAvg').textContent = nums? formatNumber(sum/nums,'general'):'0';
+}
+
+function focusProxy(){ if(!editing) clipProxy.focus({preventScroll:true}); }
+
+/* ---------- Cursor-Position in einer contentEditable-Zelle (einfacher Textknoten) ---------- */
+function getCaretOffset(el){
+  const sel=window.getSelection();
+  if(!sel.rangeCount) return el.textContent.length;
+  const range=sel.getRangeAt(0);
+  if(!el.contains(range.startContainer)) return el.textContent.length;
+  if(range.startContainer===el){
+    // Container ist das <td> selbst: startOffset ist ein Kindknoten-Index, kein Zeichen-Offset
+    let offset=0;
+    for(let i=0;i<range.startOffset && i<el.childNodes.length;i++) offset+=el.childNodes[i].textContent.length;
+    return offset;
+  }
+  if(el.firstChild && range.startContainer===el.firstChild) return range.startOffset;
+  return el.textContent.length;
+}
+function setCaretOffset(el,offset){
+  if(!el.firstChild || el.firstChild.nodeType!==3) el.textContent=el.textContent;
+  const node=el.firstChild || el.appendChild(document.createTextNode(''));
+  const off=Math.max(0,Math.min(node.textContent.length,offset));
+  const range=document.createRange();
+  range.setStart(node,off); range.collapse(true);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+  el.focus();
+}
+
+/* ---------- Maus-Interaktion ---------- */
+function clearPointingHighlight(){
+  for(const td of pointingCells) td.classList.remove('sel');
+  pointingCells=[];
+}
+function setPointingHighlight(r1,c1,r2,c2){
+  clearPointingHighlight();
+  const rr1=Math.min(r1,r2), rr2=Math.max(r1,r2), cc1=Math.min(c1,c2), cc2=Math.max(c1,c2);
+  for(let r=Math.max(rr1,vStart);r<=Math.min(rr2,vEnd-1);r++) for(let c=cc1;c<=cc2;c++){
+    if(r===active.r && c===active.c) continue; // die bearbeitete Zelle selbst nicht überdecken
+    const td=domCells[r] && domCells[r][c]; if(!td) continue;
+    td.classList.add('sel');
+    pointingCells.push(td);
+  }
+}
+function onCellMouseDown(e){
+  const r=+e.currentTarget.dataset.r, c=+e.currentTarget.dataset.c;
+  if(editing){
+    const td=domCells[active.r][active.c];
+    const text=td.textContent;
+    const isFormula=text.trim().startsWith('=');
+    const isSameCell=(r===active.r && c===active.c);
+    if(isSameCell) return;   // Klick in die eigene Zelle: Browser setzt den Cursor, Bearbeitung bleibt aktiv
+    if(isFormula){
+      // "Point-Mode": Zellbezug an der Cursorposition in die Formel einfügen, Bearbeitung bleibt aktiv
+      e.preventDefault();
+      const offset=getCaretOffset(td);
+      const addr=indexToCol(c)+(r+1);
+      td.textContent=text.slice(0,offset)+addr+text.slice(offset);
+      setCaretOffset(td,offset+addr.length);
+      pointRef={anchor:{r,c}, insertStart:offset, insertLen:addr.length, td};
+      isPointing=true;
+      setPointingHighlight(r,c,r,c);
+      return;
+    }
+    // kein Formel-Kontext -> Bearbeitung normal abschließen
+    commitEdit(null);
+  }
+  if(e.shiftKey){ setSelection(active,{r,c}); }
+  else { selAnchor={r,c}; setSelection({r,c},{r,c}); }
+  isSelecting=true;
+  e.preventDefault();
+}
+function onCellMouseOver(e){
+  const r=+e.currentTarget.dataset.r, c=+e.currentTarget.dataset.c;
+  if(isPointing && pointRef){
+    const td=pointRef.td;
+    const text=td.textContent;
+    const sameAsAnchor=(r===pointRef.anchor.r && c===pointRef.anchor.c);
+    const addr=sameAsAnchor
+      ? indexToCol(c)+(r+1)
+      : indexToCol(pointRef.anchor.c)+(pointRef.anchor.r+1)+':'+indexToCol(c)+(r+1);
+    td.textContent = text.slice(0,pointRef.insertStart)+addr+text.slice(pointRef.insertStart+pointRef.insertLen);
+    pointRef.insertLen=addr.length;
+    setCaretOffset(td,pointRef.insertStart+addr.length);
+    setPointingHighlight(pointRef.anchor.r,pointRef.anchor.c,r,c);
+    return;
+  }
+  if(!isSelecting || editing) return;
+  setSelection(selAnchor,{r,c});
+}
+/* Ereignis-Delegation am <tbody> statt Listener an jeder Zelle */
+function delegated(e,el){
+  return {currentTarget:el, target:e.target, shiftKey:e.shiftKey, ctrlKey:e.ctrlKey, metaKey:e.metaKey,
+          clientX:e.clientX, clientY:e.clientY, preventDefault:()=>e.preventDefault()};
+}
+gridBody.addEventListener('mousedown',(e)=>{
+  const td=e.target.closest('td[data-c]'); if(td) return onCellMouseDown(delegated(e,td));
+  const th=e.target.closest('th.rowhead[data-r]'); if(th) return onRowHeaderMouseDown(delegated(e,th));
+});
+gridBody.addEventListener('mouseover',(e)=>{ const td=e.target.closest('td[data-c]'); if(td) onCellMouseOver(delegated(e,td)); });
+gridBody.addEventListener('dblclick',(e)=>{ const td=e.target.closest('td[data-c]'); if(td) onCellDblClick(delegated(e,td)); });
+gridBody.addEventListener('mousemove',(e)=>{ const th=e.target.closest('th.rowhead[data-r]'); if(th) onRowHeaderMouseMove(delegated(e,th)); });
+gridBody.addEventListener('input',(e)=>{ if(editing && e.target.classList && e.target.classList.contains('editing')) formulaInput.value=e.target.textContent; });
+gridWrap.addEventListener('keydown', onGridEditKeydown);
+gridWrap.addEventListener('scroll', ()=>renderRowWindow(false), {passive:true});
+window.addEventListener('resize', ()=>renderRowWindow(false));
+// Klick auf Toolbar/Formelleiste während der Zellbearbeitung: Eingabe erst übernehmen
+document.getElementById('toolbar').addEventListener('mousedown', (e)=>{ if(editing) commitEdit(null); }, true);
+formulaInput.addEventListener('mousedown', ()=>{ if(editing) commitEdit(null); });
+
+window.addEventListener('mouseup', ()=>{
+  if(isPointing){ isPointing=false; pointRef=null; clearPointingHighlight(); return; }
+  if(isSelecting){ isSelecting=false; focusProxy(); }
+});
+
+function onCellDblClick(e){
+  if(editing) return; // während laufender Bearbeitung keinen neuen Edit über Doppelklick starten
+  const r=+e.currentTarget.dataset.r, c=+e.currentTarget.dataset.c;
+  startEdit(r,c,data[r][c].raw);
+}
+
+/* ---------- Spaltenbreite / Zeilenhöhe per Ziehen am Rand ---------- */
+const RESIZE_ZONE=6; // px Toleranz am Rand für den Ziehgriff
+function onColHeaderMouseMove(e){
+  if(isColResizing || isRowResizing) return;
+  const th=e.currentTarget; const rect=th.getBoundingClientRect();
+  th.style.cursor = (rect.right - e.clientX <= RESIZE_ZONE) ? 'col-resize' : 'default';
+}
+function onRowHeaderMouseMove(e){
+  if(isColResizing || isRowResizing) return;
+  const th=e.currentTarget; const rect=th.getBoundingClientRect();
+  th.style.cursor = (rect.bottom - e.clientY <= RESIZE_ZONE) ? 'row-resize' : 'default';
+}
+let isColResizing=false, isRowResizing=false;
+function onColHeaderMouseDown(e){
+  const th=e.currentTarget; const rect=th.getBoundingClientRect();
+  if(rect.right - e.clientX > RESIZE_ZONE) return; // kein Klick am Rand -> normales Verhalten
+  e.preventDefault();
+  const c=+th.dataset.c;
+  const startX=e.clientX, startW=colWidths[c]||DEFAULT_COL_W;
+  const before=captureSizes();
+  isColResizing=true;
+  function onMove(ev){
+    const w=Math.max(24, startW + (ev.clientX - startX));
+    colWidths[c]=w;
+    domColEls[c].style.width=w+'px';
+  }
+  function onUp(){
+    isColResizing=false;
+    if((colWidths[c]||DEFAULT_COL_W)!==startW) pushUndo(before);
+    window.removeEventListener('mousemove',onMove);
+    window.removeEventListener('mouseup',onUp);
+  }
+  window.addEventListener('mousemove',onMove);
+  window.addEventListener('mouseup',onUp);
+}
+function onRowHeaderMouseDown(e){
+  const th=e.currentTarget; const rect=th.getBoundingClientRect();
+  if(rect.bottom - e.clientY > RESIZE_ZONE) return;
+  e.preventDefault();
+  const r=+th.dataset.r;
+  const startY=e.clientY, startH=rowHeights[r]||DEFAULT_ROW_H;
+  const before=captureSizes();
+  isRowResizing=true;
+  function onMove(ev){
+    const h=Math.max(14, startH + (ev.clientY - startY));
+    rowHeights[r]=h;
+    if(domRowHeads[r]) domRowHeads[r].parentElement.style.height=h+'px';
+  }
+  function onUp(){
+    isRowResizing=false;
+    computeRowTops(); updateSpacers();
+    if((rowHeights[r]||DEFAULT_ROW_H)!==startH) pushUndo(before);
+    window.removeEventListener('mousemove',onMove);
+    window.removeEventListener('mouseup',onUp);
+  }
+  window.addEventListener('mousemove',onMove);
+  window.addEventListener('mouseup',onUp);
+}
+
+/* ---------- Bearbeiten ---------- */
+function startEdit(r,c,initialText,mode){
+  editMode=mode||'edit';
+  active={r,c}; selRange={r1:r,c1:c,r2:r,c2:c};
+  ensureVisible(r,c);
+  editing=true;
+  const td=domCells[r][c];
+  td.classList.add('editing');
+  td.setAttribute('contenteditable','true');
+  td.textContent=initialText;
+  td.focus();
+  placeCursorAtEnd(td);
+  updateSelectionVisuals();
+  syncFormulaBar();
+}
+function placeCursorAtEnd(el){
+  const range=document.createRange(); range.selectNodeContents(el); range.collapse(false);
+  const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+}
+function commitEdit(moveDir,extend){
+  const {r,c}=active;
+  const td=domCells[r][c];
+  const newRaw=td.textContent;
+  if(newRaw!==data[r][c].raw) pushUndo(captureCells(r,c,r,c));
+  data[r][c].raw=newRaw;
+  isPointing=false; pointRef=null;
+  td.removeAttribute('contenteditable');
+  td.classList.remove('editing');
+  editing=false;
+  recalcAndRender();
+  if(moveDir) moveActive(moveDir,!!extend);
+  focusProxy();
+}
+function cancelEdit(){
+  const {r,c}=active;
+  const td=domCells[r][c];
+  td.removeAttribute('contenteditable');
+  td.classList.remove('editing');
+  editing=false;
+  renderCell(r,c);
+  focusProxy();
+}
+function onGridEditKeydown(e){
+  if(!editing) return;
+  if(e.key==='Enter'){ e.preventDefault(); commitEdit(e.shiftKey?'up':'down'); }
+  else if(e.key==='Tab'){ e.preventDefault(); commitEdit(e.shiftKey?'left':'right'); }
+  else if(e.key==='Escape'){ e.preventDefault(); cancelEdit(); }
+  else if(e.key==='F2'){ e.preventDefault(); editMode = editMode==='enter' ? 'edit' : 'enter'; }
+  else if(['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(e.key) && !e.ctrlKey && !e.metaKey && !e.altKey){
+    // Wie Excel/LibreOffice Calc: im Eingabemodus übernehmen Pfeiltasten den Inhalt und wechseln die Zelle.
+    // Formeln (beginnen mit '=') und der Bearbeitungsmodus (F2/Doppelklick) behalten die Cursorsteuerung im Feld.
+    const td=domCells[active.r][active.c];
+    const isFormula=td.textContent.trim().startsWith('=');
+    if(editMode==='enter' && !isFormula){
+      e.preventDefault();
+      const dir = e.key==='ArrowDown'?'down':e.key==='ArrowUp'?'up':e.key==='ArrowLeft'?'left':'right';
+      commitEdit(dir, e.shiftKey);
+    }
+  }
+}
+
+/* ---------- Tastatur-Navigation (über clipProxy) ---------- */
+function clampRC(r,c){ return {r:Math.max(0,Math.min(ROWS-1,r)), c:Math.max(0,Math.min(COLS-1,c))}; }
+function moveActive(dir,extend){
+  // Beim Erweitern (Shift+Pfeil) wandert das freie Ende der Auswahl, der Anker bleibt stehen – wie in Excel/Calc
+  let {r,c}= extend ? {r:selRange.r2, c:selRange.c2} : active;
+  if(extend && !selAnchor) selAnchor={r:active.r,c:active.c};
+  if(dir==='down') r++; else if(dir==='up') r--; else if(dir==='left') c--; else if(dir==='right') c++;
+  const n=clampRC(r,c);
+  if(extend) setSelection(selAnchor,n); else { selAnchor=n; setSelection(n,n); }
+  ensureVisible(n.r,n.c);
+}
+clipProxy.addEventListener('keydown', (e)=>{
+  if(editing) return;
+  const key=e.key;
+  if(['ArrowDown','ArrowUp','ArrowLeft','ArrowRight'].includes(key)){
+    e.preventDefault();
+    const dir = key==='ArrowDown'?'down':key==='ArrowUp'?'up':key==='ArrowLeft'?'left':'right';
+    moveActive(dir, e.shiftKey);
+    return;
+  }
+  if(key==='Tab'){ e.preventDefault(); moveActive(e.shiftKey?'left':'right', false); return; }
+  if(key==='Enter'){ e.preventDefault(); startEdit(active.r,active.c,data[active.r][active.c].raw); return; }
+  if(key==='F2'){ e.preventDefault(); startEdit(active.r,active.c,data[active.r][active.c].raw); return; }
+  if(key==='Delete' || key==='Backspace'){
+    e.preventDefault();
+    const {r1,r2,c1,c2}=normRange();
+    pushUndo(captureCells(r1,c1,r2,c2));
+    for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++) data[r][c].raw='';
+    recalcAndRender(); syncFormulaBar();
+    return;
+  }
+  if((e.ctrlKey||e.metaKey) && !e.altKey && key.toLowerCase()==='z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); return; }
+  if((e.ctrlKey||e.metaKey) && !e.altKey && key.toLowerCase()==='y'){ e.preventDefault(); redo(); return; }
+  if((e.ctrlKey||e.metaKey) && key.toLowerCase()==='a'){ e.preventDefault(); setSelection({r:0,c:0},{r:ROWS-1,c:COLS-1}); return; }
+  if(e.ctrlKey||e.metaKey||e.altKey) return; // Copy/Cut/Paste laufen über native Events unten
+  if(key.length===1){ e.preventDefault(); startEdit(active.r,active.c,key,'enter'); return; }
+});
+
+/* ---------- Zwischenablage ---------- */
+function buildClipboardText(){
+  const {r1,r2,c1,c2}=normRange();
+  const rows=[];
+  for(let r=r1;r<=r2;r++){
+    const cols=[];
+    for(let c=c1;c<=c2;c++){
+      const v=String(data[r][c].raw);
+      cols.push(/[\t\n\r"]/.test(v) ? '"'+v.replace(/"/g,'""')+'"' : v);
+    }
+    rows.push(cols.join('\t'));
+  }
+  return rows.join('\n');
+}
+function cellDisplayText(cell){
+  const comp=cell.computed;
+  if(comp && typeof comp==='object' && comp.__err) return comp.__err;
+  if(typeof comp==='number') return formatNumber(comp,cell.style.numFmt);
+  if(typeof comp==='boolean') return comp? 'WAHR':'FALSCH';
+  return (comp===undefined||comp===null) ? '' : String(comp);
+}
+function htmlEscape(s){
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+// Baut eine echte <table> mit den ANGEZEIGTEN Werten (nicht Formeln) inkl.
+// Formatierung. WordPress/Gutenberg, LibreOffice, Google Docs, E-Mail erkennen
+// dadurch beim Einfügen eine Tabelle.
+function buildClipboardHtml(){
+  const {r1,r2,c1,c2}=normRange();
+  // Hat die Auswahl eigene Rahmen? Dann keine Standard-border="1" (sonst doppelt),
+  // sonst behalten wir die dünne Standard-Tabellenlinie fürs Ziel bei.
+  let anyBorder=false;
+  for(let r=r1;r<=r2&&!anyBorder;r++) for(let c=c1;c<=c2;c++){ const sd=data[r][c].style.borderSides; if(sd&&sd!=='0000'){anyBorder=true;break;} }
+  let html='<table '+(anyBorder?'':'border="1" ')+'cellspacing="0" cellpadding="4" style="border-collapse:collapse;">';
+  for(let r=r1;r<=r2;r++){
+    html+='<tr>';
+    for(let c=c1;c<=c2;c++){
+      const cell=data[r][c], s=cell.style, css=[];
+      if(s.bold) css.push('font-weight:700');
+      if(s.italic) css.push('font-style:italic');
+      if(s.underline) css.push('text-decoration:underline');
+      if(s.align && s.align!=='left') css.push('text-align:'+s.align);
+      if(s.color) css.push('color:'+s.color);
+      if(s.bg) css.push('background-color:'+s.bg);
+      const sides=s.borderSides||'0000', bc=s.borderColor||'#333333';
+      if(sides!=='0000'){
+        const bv='1px solid '+bc;
+        if(sides[0]==='1') css.push('border-top:'+bv);
+        if(sides[1]==='1') css.push('border-right:'+bv);
+        if(sides[2]==='1') css.push('border-bottom:'+bv);
+        if(sides[3]==='1') css.push('border-left:'+bv);
+      }
+      const styleAttr = css.length ? ' style="'+css.join(';')+'"' : '';
+      const txt=htmlEscape(cellDisplayText(cell));
+      html+='<td'+styleAttr+'>'+(txt===''?'&nbsp;':txt)+'</td>';
+    }
+    html+='</tr>';
+  }
+  return html+'</table>';
+}
+/* Merkt sich, woher die zuletzt in MiniCalc kopierten Zellen stammen. Wird genau
+   dieser Text wieder eingefügt, werden relative Bezüge verschoben (wie in LibreOffice).
+   Nach Ausschneiden bleiben Bezüge unverändert. */
+let internalClip=null;
+function rememberClip(cut){
+  const {r1,c1}=normRange();
+  internalClip={text:buildClipboardText().replace(/\r/g,''), r:r1, c:c1, cut};
+}
+function pasteText(text){
+  if(!text) return;
+  const fromSelf = internalClip && !internalClip.cut && text.replace(/\r/g,'')===internalClip.text;
+  const dr = fromSelf ? active.r-internalClip.r : 0, dc = fromSelf ? active.c-internalClip.c : 0;
+  const rows=parseCsv(text,'\t');            // Tab-getrennt, Zellen mit Umbruch in "…" (Excel/LibreOffice)
+  if(!rows.length) return;
+  const startR=active.r, startC=active.c;
+  const width=rows.reduce((m,r)=>Math.max(m,r.length),1);
+  const neededRows=startR+rows.length, neededCols=startC+width;
+  if(neededRows>ROWS || neededCols>COLS){
+    pushUndo(captureFull());
+    growGrid(Math.max(ROWS,neededRows), Math.max(COLS,neededCols));
+  } else pushUndo(captureCells(startR,startC,neededRows-1,neededCols-1));
+  rows.forEach((cols,i)=>{
+    cols.forEach((val,j)=>{
+      const r=startR+i, c=startC+j;
+      if(r<ROWS && c<COLS) data[r][c].raw = fromSelf ? refsShifted(val,dr,dc) : val;
+    });
+  });
+  const endR=Math.min(ROWS-1,startR+rows.length-1);
+  const endC=Math.min(COLS-1,startC+width-1);
+  setSelection({r:startR,c:startC},{r:endR,c:endC});
+  recalcAndRender();
+}
+clipProxy.addEventListener('copy',(e)=>{
+  if(editing) return; e.preventDefault();
+  rememberClip(false);
+  e.clipboardData.setData('text/plain', buildClipboardText());
+  e.clipboardData.setData('text/html', buildClipboardHtml());
+});
+clipProxy.addEventListener('cut',(e)=>{
+  if(editing) return; e.preventDefault();
+  rememberClip(true);
+  pushUndo(captureSel());
+  e.clipboardData.setData('text/plain', buildClipboardText());
+  e.clipboardData.setData('text/html', buildClipboardHtml());
+  const {r1,r2,c1,c2}=normRange();
+  for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++) data[r][c].raw='';
+  recalcAndRender();
+});
+clipProxy.addEventListener('paste',(e)=>{
+  if(editing) return; e.preventDefault();
+  const text=(e.clipboardData||window.clipboardData).getData('text/plain');
+  pasteText(text);
+});
+
+/* ---------- Formelleiste ---------- */
+formulaInput.addEventListener('focus', ()=>{ /* Eingabe erlauben */ });
+formulaInput.addEventListener('keydown',(e)=>{
+  if(e.key==='Enter'){
+    e.preventDefault();
+    if(formulaInput.value!==data[active.r][active.c].raw) pushUndo(captureCells(active.r,active.c,active.r,active.c));
+    data[active.r][active.c].raw=formulaInput.value;
+    recalcAndRender();
+    focusProxy();
+  } else if(e.key==='Escape'){
+    formulaInput.value=data[active.r][active.c].raw;
+    focusProxy();
+  }
+});
+
+/* ---------- Formatierung ---------- */
+function applyToSelection(fn, tag){
+  const {r1,r2,c1,c2}=normRange();
+  pushUndo(captureCells(r1,c1,r2,c2), tag);
+  for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++) fn(data[r][c].style);
+  for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++) renderCell(r,c);
+  updateSelectionVisuals();
+  focusProxy();
+}
+document.getElementById('btnUndo').onclick=()=>undo();
+document.getElementById('btnRedo').onclick=()=>redo();
+document.getElementById('btnBold').onclick=()=>applyToSelection(s=>s.bold=!s.bold);
+document.getElementById('btnItalic').onclick=()=>applyToSelection(s=>s.italic=!s.italic);
+document.getElementById('btnUnderline').onclick=()=>applyToSelection(s=>s.underline=!s.underline);
+document.getElementById('btnLeft').onclick=()=>applyToSelection(s=>s.align='left');
+document.getElementById('btnCenter').onclick=()=>applyToSelection(s=>s.align='center');
+document.getElementById('btnRight').onclick=()=>applyToSelection(s=>s.align='right');
+document.getElementById('fontColor').oninput=(e)=>applyToSelection(s=>s.color=e.target.value,'fontColor');
+document.getElementById('fontColor').onchange=(e)=>applyToSelection(s=>s.color=e.target.value,'fontColor');
+document.getElementById('fontColorApply').onclick=()=>applyToSelection(s=>s.color=document.getElementById('fontColor').value);
+document.getElementById('fillColor').oninput=(e)=>applyToSelection(s=>s.bg=e.target.value,'fillColor');
+document.getElementById('fillColor').onchange=(e)=>applyToSelection(s=>s.bg=e.target.value,'fillColor');
+document.getElementById('fillColorApply').onclick=()=>applyToSelection(s=>s.bg=document.getElementById('fillColor').value);
+document.getElementById('btnClearFmt').onclick=()=>applyToSelection(s=>{ s.bold=false;s.italic=false;s.underline=false;s.align='left';s.color='';s.bg='';s.numFmt='general';s.borderSides='0000';s.borderColor=''; });
+
+/* ---------- Rahmen ---------- */
+// mode: 'all' (jede Zelle voll), 'outline' (nur Außenkante der Auswahl), 'none'
+function applyBorder(mode){
+  const {r1,r2,c1,c2}=normRange();
+  pushUndo(captureCells(r1,c1,r2,c2));
+  const col=document.getElementById('borderColor').value;
+  for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++){
+    const s=data[r][c].style;
+    if(mode==='all'){ s.borderSides='1111'; s.borderColor=col; }
+    else if(mode==='none'){ s.borderSides='0000'; s.borderColor=''; }
+    else if(mode==='outline'){
+      const t=r===r1?'1':'0', ri=c===c2?'1':'0', b=r===r2?'1':'0', l=c===c1?'1':'0';
+      s.borderSides=t+ri+b+l;               // Reihenfolge: oben,rechts,unten,links
+      if(s.borderSides!=='0000') s.borderColor=col;
+    }
+  }
+  for(let r=r1;r<=r2;r++) for(let c=c1;c<=c2;c++) renderCell(r,c);
+  updateSelectionVisuals();
+  focusProxy();
+}
+document.getElementById('btnBorderAll').onclick=()=>applyBorder('all');
+document.getElementById('btnBorderOutline').onclick=()=>applyBorder('outline');
+document.getElementById('btnBorderNone').onclick=()=>applyBorder('none');
+document.getElementById('numFmt').onchange=(e)=>applyToSelection(s=>s.numFmt=e.target.value);
+
+/* ---------- Zeilen / Spalten ---------- */
+function growGrid(newRows,newCols){
+  for(let r=0;r<data.length;r++) while(data[r].length<newCols) data[r].push(newCell());
+  while(data.length<newRows){ const row=[]; for(let c=0;c<newCols;c++) row.push(newCell()); data.push(row); }
+  while(colWidths.length<newCols) colWidths.push(DEFAULT_COL_W);
+  while(rowHeights.length<newRows) rowHeights.push(DEFAULT_ROW_H);
+  ROWS=newRows; COLS=newCols;
+  buildTable(); recalcAndRender();
+}
+document.getElementById('btnAddRow').onclick=()=>{ pushUndo(captureFull()); growGrid(ROWS+1,COLS); setSelection(active,active); };
+document.getElementById('btnAddCol').onclick=()=>{ pushUndo(captureFull()); growGrid(ROWS,COLS+1); setSelection(active,active); };
+document.getElementById('btnDelRow').onclick=()=>{
+  if(ROWS<=1) return;
+  pushUndo(captureFull());
+  for(const row of data) for(const cell of row) cell.raw=refsAfterDelete(cell.raw,'row',active.r);
+  data.splice(active.r,1); rowHeights.splice(active.r,1); ROWS--;
+  active.r=Math.min(active.r,ROWS-1);
+  buildTable(); recalcAndRender(); setSelection(active,active);
+};
+document.getElementById('btnDelCol').onclick=()=>{
+  if(COLS<=1) return;
+  pushUndo(captureFull());
+  for(const row of data) for(const cell of row) cell.raw=refsAfterDelete(cell.raw,'col',active.c);
+  for(let r=0;r<ROWS;r++) data[r].splice(active.c,1); colWidths.splice(active.c,1); COLS--;
+  active.c=Math.min(active.c,COLS-1);
+  buildTable(); recalcAndRender(); setSelection(active,active);
+};
+
+/* ---------- Neu ---------- */
+document.getElementById('btnNew').onclick=()=>{
+  if(!confirm('Neue Tabelle erstellen? Nicht gespeicherte Änderungen gehen verloren.')) return;
+  initData(40,20); resetUndo(); buildTable(); recalcAndRender(); setSelection({r:0,c:0},{r:0,c:0});
+};
+
+/* ---------- Speichern: ODS ---------- */
+document.getElementById('btnSaveOds').onclick=()=>{
+  const contentXml=buildOdsContentXml(ROWS,COLS,data,colWidths,rowHeights);
+  const entries=[
+    {name:'mimetype', data:new TextEncoder().encode('application/vnd.oasis.opendocument.spreadsheet')},
+    {name:'META-INF/manifest.xml', data:new TextEncoder().encode(ODS_MANIFEST_XML)},
+    {name:'content.xml', data:new TextEncoder().encode(contentXml)},
+    {name:'styles.xml', data:new TextEncoder().encode(ODS_STYLES_XML)},
+  ];
+  const zipBytes=buildZip(entries);
+  const blob=new Blob([zipBytes],{type:'application/vnd.oasis.opendocument.spreadsheet'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='tabelle.ods'; a.click();
+};
+
+/* ---------- Speichern: CSV ---------- */
+function csvEscape(v){
+  v=String(v);
+  if(/[";\r\n]/.test(v)) return '"'+v.replace(/"/g,'""')+'"';
+  return v;
+}
+/* Export mit ';' als Trenner und deutschem Dezimalkomma (öffnet so direkt im deutschen Excel/LibreOffice).
+   Exportiert wird nur der benutzte Bereich, nicht leere Zeilen/Spalten am Ende. */
+function csvValue(val){
+  if(val && typeof val==='object' && val.__err) return val.__err;
+  if(typeof val==='number') return String(val).replace('.',',');
+  if(typeof val==='boolean') return val?'WAHR':'FALSCH';
+  return val==null?'':String(val);
+}
+document.getElementById('btnSaveCsv').onclick=()=>{
+  let lastR=-1, lastC=-1;
+  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++) if(csvValue(data[r][c].computed)!==''){ if(r>lastR) lastR=r; if(c>lastC) lastC=c; }
+  const lines=[];
+  for(let r=0;r<=lastR;r++){
+    const cols=[];
+    for(let c=0;c<=lastC;c++) cols.push(csvEscape(csvValue(data[r][c].computed)));
+    lines.push(cols.join(';'));
+  }
+  const blob=new Blob(['\uFEFF'+lines.join('\r\n')+(lines.length?'\r\n':'')],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='minicalc.csv'; a.click();
+};
+
+/* ---------- Öffnen eines alten MiniCalc-Formats (Speichern-Button entfernt) ---------- */
+function loadMinicalcJson(text){
+  const payload=JSON.parse(text);
+  ROWS=payload.ROWS; COLS=payload.COLS;
+  colWidths=payload.colWidths || Array.from({length:COLS},()=>DEFAULT_COL_W);
+  rowHeights=payload.rowHeights || Array.from({length:ROWS},()=>DEFAULT_ROW_H);
+  data=payload.data.map(row=>row.map(c=>({raw:c.raw||'', style:Object.assign(newCell().style, c.style||{}), computed:''})));
+  resetUndo();
+  buildTable(); recalcAndRender(); setSelection({r:0,c:0},{r:0,c:0});
+}
+
+/* ---------- Öffnen ---------- */
+/* Liest CSV als Ganzes: Felder in Anführungszeichen dürfen Trennzeichen und
+   Zeilenumbrüche enthalten ("" = ein Anführungszeichen). maxRows begrenzt die Vorschau. */
+function parseCsv(text, sep, maxRows){
+  text=text.replace(/^\uFEFF/,'');
+  const rows=[]; let row=[], cur='', inQ=false;
+  const endRow=()=>{ row.push(cur); rows.push(row); row=[]; cur=''; };
+  for(let i=0;i<text.length;i++){
+    const ch=text[i];
+    if(inQ){
+      if(ch==='"'){ if(text[i+1]==='"'){ cur+='"'; i++; } else inQ=false; }
+      else if(ch==='\r' && text[i+1]==='\n'){ /* \r\n im Feld -> \n */ }
+      else cur+=ch;
+    } else if(ch==='"' && cur==='') inQ=true;
+    else if(ch===sep){ row.push(cur); cur=''; }
+    else if(ch==='\r'){ if(text[i+1]!=='\n') endRow(); }
+    else if(ch==='\n') endRow();
+    else cur+=ch;
+    if(maxRows && rows.length>=maxRows) return rows;
+  }
+  if(cur!=='' || row.length) endRow();
+  return rows;
+}
+// Zählt Trennzeichen NUR außerhalb von Anführungszeichen (erste ~64 KB) und rät das häufigste.
+function detectCsvSep(text){
+  const counts={';':0,',':0,'\t':0};
+  const n=Math.min(text.length,65536); let inQ=false;
+  for(let i=0;i<n;i++){
+    const ch=text[i];
+    if(ch==='"'){ if(inQ && text[i+1]==='"'){ i++; } else inQ=!inQ; }
+    else if(!inQ && (ch===';'||ch===','||ch==='\t')) counts[ch]++;
+  }
+  let best=',', bestN=-1;
+  for(const s of [';','\t',',']) if(counts[s]>bestN){ bestN=counts[s]; best=s; }
+  return bestN>0?best:',';
+}
+function loadCsvText(text, sep){
+  if(!sep) sep = detectCsvSep(text);
+  const rows=parseCsv(text, sep);
+  const newRows=Math.max(40, rows.length+3);
+  const newCols=Math.max(20, rows.reduce((m,r)=>Math.max(m,r.length),1)+3);
+  initData(newRows,newCols);
+  rows.forEach((cols,r)=>cols.forEach((val,c)=>{ data[r][c].raw=val; }));
+  resetUndo();
+  buildTable(); recalcAndRender(); setSelection({r:0,c:0},{r:0,c:0});
+}
+function loadOdsFile(arrayBuffer){
+  const files=readZip(new Uint8Array(arrayBuffer));
+  const contentBytes=files['content.xml'];
+  if(!contentBytes) throw new Error('content.xml fehlt in der ODS-Datei');
+  const xmlText=new TextDecoder('utf-8').decode(contentBytes);
+  const doc=new DOMParser().parseFromString(xmlText,'application/xml');
+  if(doc.getElementsByTagName('parsererror').length) throw new Error('content.xml ist kein gültiges XML');
+  const parsed=parseOdsContentXml(doc);
+  ROWS=Math.max(40,parsed.ROWS+3); COLS=Math.max(20,parsed.COLS+3);
+  data=[];
+  for(let r=0;r<ROWS;r++){
+    const row=[];
+    for(let c=0;c<COLS;c++) row.push((parsed.data[r]&&parsed.data[r][c])?parsed.data[r][c]:newCell());
+    data.push(row);
+  }
+  colWidths=Array.from({length:COLS},(_,c)=>(parsed.colWidths&&parsed.colWidths[c])?parsed.colWidths[c]:DEFAULT_COL_W);
+  rowHeights=Array.from({length:ROWS},(_,r)=>(parsed.rowHeights&&parsed.rowHeights[r])?parsed.rowHeights[r]:DEFAULT_ROW_H);
+  resetUndo();
+  buildTable(); recalcAndRender(); setSelection({r:0,c:0},{r:0,c:0});
+}
+document.getElementById('fileInput').addEventListener('change',(e)=>{
+  const file=e.target.files[0];
+  if(!file) return;
+  const isJson=/\.json$/i.test(file.name);
+  const isOds=/\.ods$/i.test(file.name);
+  const reader=new FileReader();
+  reader.onload=(ev)=>{
+    try{
+      if(isJson) loadMinicalcJson(ev.target.result);
+      else if(isOds) loadOdsFile(ev.target.result);
+      else openCsvDialog(ev.target.result);   // CSV: erst Trennzeichen-Dialog
+    } catch(err){
+      alert('Datei konnte nicht gelesen werden: '+err.message);
+    }
+  };
+  if(isOds) reader.readAsArrayBuffer(file); else reader.readAsText(file,'utf-8');
+  e.target.value='';
+});
+
+/* ---------- CSV-Trennzeichen-Dialog ---------- */
+let csvPendingText='';
+function currentCsvSep(){
+  const v=(document.querySelector('input[name="csvsep"]:checked')||{}).value;
+  if(v==='tab') return '\t';
+  if(v==='custom') return document.getElementById('csvCustomSep').value || ',';
+  return v || ',';
+}
+function renderCsvPreview(){
+  const sep=currentCsvSep();
+  const rows=parseCsv(csvPendingText, sep, 6);
+  const maxc=Math.min(10, Math.max(1, ...rows.map(r=>r.length)));
+  let html='';
+  for(const r of rows){
+    html+='<tr>';
+    for(let c=0;c<maxc;c++){ const v=r[c]==null?'':r[c]; html+='<td>'+(v===''?'&nbsp;':htmlEscape(v))+'</td>'; }
+    html+='</tr>';
+  }
+  document.getElementById('csvPreview').innerHTML = html || '<tr><td>(leer)</td></tr>';
+}
+function openCsvDialog(text){
+  csvPendingText=text;
+  const guess=detectCsvSep(text);
+  const valMap={';':';',',':',','\t':'tab'};
+  const val=valMap[guess]||',';
+  const radio=document.querySelector('input[name="csvsep"][value="'+val+'"]');
+  if(radio) radio.checked=true;
+  document.getElementById('csvCustomSep').value='';
+  renderCsvPreview();
+  document.getElementById('csvOverlay').hidden=false;
+  document.getElementById('csvConfirm').focus();
+}
+document.querySelectorAll('input[name="csvsep"]').forEach(el=>el.addEventListener('change', renderCsvPreview));
+document.getElementById('csvCustomSep').addEventListener('input',()=>{
+  const c=document.querySelector('input[name="csvsep"][value="custom"]'); if(c) c.checked=true;
+  renderCsvPreview();
+});
+function closeCsvDialog(){ document.getElementById('csvOverlay').hidden=true; csvPendingText=''; focusProxy(); }
+document.getElementById('csvCancel').onclick=closeCsvDialog;
+document.getElementById('csvConfirm').onclick=()=>{
+  const sep=currentCsvSep(); const text=csvPendingText;
+  document.getElementById('csvOverlay').hidden=true; csvPendingText='';
+  try{ loadCsvText(text, sep); } catch(err){ alert('Datei konnte nicht gelesen werden: '+err.message); }
+  focusProxy();
+};
+document.getElementById('csvOverlay').addEventListener('keydown',(e)=>{
+  if(e.key==='Enter'){ e.preventDefault(); document.getElementById('csvConfirm').click(); }
+  else if(e.key==='Escape'){ e.preventDefault(); closeCsvDialog(); }
+});
+
+/* ---------- Start ---------- */
+initData(ROWS,COLS);
+buildTable();
+recalcAndRender();
+setSelection({r:0,c:0},{r:0,c:0});
+focusProxy();
+</script>
+</body>
+</html>
