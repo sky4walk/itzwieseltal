@@ -32,6 +32,11 @@ main{max-width:1400px;margin:0 auto;padding:18px 22px 40px}
 #schirm.roehre{image-rendering:auto;filter:blur(.6px) saturate(1.1)}
 #schirm:focus-visible{box-shadow:0 0 0 3px var(--gelb)}
 .schirmrahmen.fest #schirm{width:auto}
+.schirmrahmen:fullscreen{display:flex;align-items:center;justify-content:center;padding:0;border-radius:0;background:#000;box-shadow:none}
+.schirmrahmen:-webkit-full-screen{display:flex;align-items:center;justify-content:center;padding:0;border-radius:0;background:#000;box-shadow:none}
+.schirmrahmen:fullscreen #schirm{width:min(100vw,calc(100vh*352/240))!important;height:auto;max-height:100vh}
+.schirmrahmen:-webkit-full-screen #schirm{width:min(100vw,calc(100vh*352/240))!important;height:auto;max-height:100vh}
+button.tonaus{background:var(--rot)}
 .leiste{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center}
 .status{margin-left:auto;font:13px var(--mono);color:var(--leise)}
 button,select,input[type=number],input[type=text]{font:inherit;font-size:14px;color:var(--text)}
@@ -145,6 +150,8 @@ table.belegung button{font:12px var(--mono);padding:1px 6px;min-width:84px;borde
       <button id="bSchritt">Schritt</button>
       <button id="bBild">Ein Bild</button>
       <button id="bWarp" aria-pressed="false" title="Warp ein/aus – Bild↓ gedrückt halten wirkt nur solange">Warp</button>
+      <button id="bVoll" title="Vollbild ein/aus (F9, Esc beendet)">⛶ Vollbild</button>
+      <button id="bTonKnopf" aria-pressed="true" title="Ton ein/aus (F7)">🔊 Ton an</button>
       <span class="status" id="status">angehalten</span>
     </div>
     <div class="steuer">
@@ -1842,6 +1849,7 @@ async function tonStarten(){
   }catch(e){$('tonStand').textContent='Ton nicht verfügbar: '+e.message;audioCtx=null;}
 }
 function tonEinstellen(){
+  if(typeof tonKnopf==='function')tonKnopf();
   const an=$('chkTon').checked&&!!audioCtx;
   at.audioOn=an;if(!an){at.audioBuf=[];at.audioAcc=0;at.audioN=0;}
   at.speakerOn=$('chkLautsprecher').checked;at.speakerLvl=at.speakerOn?(at.speaker?6:0):0;
@@ -1858,6 +1866,31 @@ function tonAbgeben(schnell){
 }
 ['chkTon','chkLautsprecher','rngVol'].forEach(id=>$(id).addEventListener('input',()=>{if(!audioCtx)tonStarten().then(tonEinstellen);else tonEinstellen();}));
 document.addEventListener('pointerdown',()=>{if(!audioCtx)tonStarten();else if(audioCtx.state==='suspended')audioCtx.resume();},{passive:true});
+
+/* ---------- Vollbild und Ton-Schalter ---------- */
+function vollbildAn(){return !!(document.fullscreenElement||document.webkitFullscreenElement);}
+function vollbildUmschalten(){
+  const r=$('rahmen');
+  try{
+    if(vollbildAn())(document.exitFullscreen||document.webkitExitFullscreen).call(document);
+    else{const f=r.requestFullscreen||r.webkitRequestFullscreen;if(f){const p=f.call(r);if(p&&p.catch)p.catch(e=>meldung('Vollbild nicht möglich: '+e.message));}else meldung('Der Browser kann hier kein Vollbild');}
+  }catch(e){meldung('Vollbild nicht möglich: '+e.message);}
+  canvas.focus();
+}
+function vollbildAnzeigen(){const an=vollbildAn();$('bVoll').textContent=an?'⛶ Vollbild aus':'⛶ Vollbild';$('bVoll').setAttribute('aria-pressed',an);setTimeout(()=>canvas.focus(),50);}
+document.addEventListener('fullscreenchange',vollbildAnzeigen);document.addEventListener('webkitfullscreenchange',vollbildAnzeigen);
+$('bVoll').onclick=vollbildUmschalten;
+function tonKnopf(){const an=$('chkTon').checked,b=$('bTonKnopf');b.textContent=an?'🔊 Ton an':'🔇 Ton aus';b.setAttribute('aria-pressed',an);b.classList.toggle('tonaus',!an);}
+function tonUmschalten(){const c=$('chkTon');c.checked=!c.checked;c.dispatchEvent(new Event('input'));tonKnopf();meldung(c.checked?'Ton an':'Ton aus');}
+$('bTonKnopf').onclick=()=>{tonUmschalten();canvas.focus();};
+$('chkTon').addEventListener('change',tonKnopf);$('chkTon').addEventListener('input',tonKnopf);
+document.addEventListener('keydown',e=>{
+  if(e.code!=='F9'&&e.code!=='F7')return;
+  const t=e.target;if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return;
+  e.preventDefault();if(e.repeat)return;
+  if(e.code==='F9')vollbildUmschalten();else tonUmschalten();
+});
+tonKnopf();
 
 // ---------- Module ----------
 const box=[];   // {name, gruppe, bytes}
