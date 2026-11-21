@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colossus-Werkbank</title>
+<style>
+:root{--bg:#1a1d1b;--fg:#e8e4d8;--dim:#9aa39b;--card:#252a26;--line:#3a423b;--acc:#e3b04b;--steel:#5d675c;--steel2:#47504a;--plate:#ece5d2;--ink:#262626;--lamp:#ffb347;--ok:#7fd17f;--bad:#f07a6a}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;flex-wrap:wrap;gap:6px 24px;align-items:baseline}
+h1{margin:0;font-size:1.4rem}
+header p{margin:0;color:var(--dim);font-size:.9rem}
+nav{display:flex;gap:4px;flex-wrap:wrap;padding:8px 16px 0;border-bottom:1px solid var(--line);max-width:1280px;margin:0 auto}
+nav button{background:none;border:1px solid transparent;border-bottom:none;color:var(--dim);padding:7px 14px;cursor:pointer;font:inherit;border-radius:6px 6px 0 0}
+nav button.on{background:var(--card);color:var(--fg);border-color:var(--line)}
+main{max-width:1280px;margin:0 auto;padding:16px}
+section.tab{display:none}section.tab.on{display:block}
+h2{font-size:1rem;margin:0 0 8px;color:var(--acc)}
+h3{font-size:.92rem;margin:12px 0 6px;color:var(--acc)}
+.mono{font-family:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+@media(max-width:900px){.g2{grid-template-columns:1fr}}
+button.b,select,input[type=number],input[type=text]{background:#1d211e;border:1px solid var(--line);color:var(--fg);padding:5px 9px;border-radius:5px;font:inherit}
+button.b{cursor:pointer}button.b:hover{border-color:var(--dim)}button.b.pri{background:#5a4718;border-color:#8a6d22}
+button.b:disabled{opacity:.45;cursor:default}
+input[type=number]{width:5.2em}
+label{white-space:nowrap}
+.row{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;margin:6px 0}
+.small{font-size:.82rem;color:var(--dim)}
+.note{font-size:.85rem;color:var(--dim);margin:6px 0 0}
+p{margin:6px 0}
+table{border-collapse:collapse}
+td,th{padding:2px 6px;text-align:left}
+a{color:#e9c46a}
+
+/* ---- Maschine ---- */
+.machine{background:linear-gradient(#66705f,#4c5549);border-radius:10px;padding:12px;box-shadow:0 6px 18px #0009,inset 0 1px 0 #ffffff26}
+.mtitle{display:flex;justify-content:space-between;align-items:center;color:#f1eee2;font-weight:700;letter-spacing:.3em;font-size:.95rem;margin:0 2px 8px}
+.mtitle span.sub{letter-spacing:.05em;font-weight:400;font-size:.8rem;color:#dfe5d6}
+.bay{background:#2b302b;border-radius:6px;padding:8px;margin-bottom:10px;box-shadow:inset 0 2px 6px #000a}
+.bay h4{margin:0 0 6px;color:#d8d2bd;font-size:.72rem;letter-spacing:.14em;font-weight:700}
+canvas{display:block;max-width:100%}
+.counters{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+.ctr{background:#151815;border-radius:6px;padding:6px 8px 4px;text-align:center;min-width:92px;box-shadow:inset 0 0 0 1px #3d453d}
+.ctr .dg{font:700 1.45rem/1 ui-monospace,Consolas,monospace;color:#ffb347;text-shadow:0 0 8px #ff8c1a99;letter-spacing:.08em}
+.ctr .lb{font-size:.66rem;color:#b9c2b3;margin-top:3px}
+.ctr.off{opacity:.3}
+.ctr.hit .dg{color:#ffe08a}
+.plate{background:var(--plate);color:var(--ink);border-radius:5px;padding:8px 10px;box-shadow:inset 0 0 0 2px #cdc3a8}
+.plate .row{margin:4px 0}
+.plate label{font-size:.85rem}
+.plate select,.plate input[type=number]{background:#fbf8ef;color:var(--ink);border-color:#b9af95}
+.sw{display:inline-flex;gap:3px}
+.sw label{display:inline-flex;flex-direction:column;align-items:center;font-size:.7rem;font-weight:700;gap:2px;cursor:pointer}
+.sw input{display:none}
+.sw i{width:20px;height:30px;border-radius:4px;background:#d7cfb8;position:relative;box-shadow:inset 0 1px 3px #0006}
+.sw i::after{content:"";position:absolute;left:4px;width:12px;height:12px;border-radius:2px;background:linear-gradient(#444,#111);top:15px;transition:top .1s}
+.sw input:checked+i::after{top:3px}
+.sw input:checked+i{background:#e8c66a}
+.status{display:flex;flex-wrap:wrap;gap:4px 18px;font-size:.85rem;color:#e7ecdf;margin-top:6px}
+.status b{color:#fff}
+.printer{background:#fdfcf6;color:#1d1d1d;border-radius:4px;font:14px/1.35 "Courier New",Courier,monospace;padding:10px 14px;height:280px;overflow:auto;box-shadow:inset 0 0 0 1px #d3ccb8,0 3px 10px #0007;white-space:pre}
+.printer .h{color:#7b6b4b}
+.printer .best{background:#fff3c4}
+.presets{display:flex;gap:6px;flex-wrap:wrap}
+.found{display:flex;gap:8px;flex-wrap:wrap}
+.found .fx{background:#1d211e;border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-size:.85rem}
+.found .fx b{color:var(--acc)}
+.found .fx input{width:3.6em}
+.wheels{overflow-x:auto}
+.wheel{display:flex;align-items:center;gap:6px;margin:3px 0}
+.wheel .nm{width:54px;font-size:.8rem;color:var(--dim)}
+.pins{display:flex;gap:1px}
+.pin{width:13px;height:16px;border-radius:2px;background:#3a3f3b;cursor:pointer;font:9px/16px monospace;text-align:center;color:#9aa}
+.pin.x{background:#c9a24a;color:#222}
+.pin.cur{outline:2px solid #7fd17f;outline-offset:-1px}
+.wheel input{width:3.6em}
+textarea{width:100%;background:#1d211e;color:var(--fg);border:1px solid var(--line);border-radius:6px;font:13px/1.4 ui-monospace,Consolas,monospace;padding:8px}
+.tape-out{font:13px/1.5 ui-monospace,Consolas,monospace;word-break:break-all;background:#1d211e;border:1px solid var(--line);border-radius:6px;padding:8px;max-height:180px;overflow:auto}
+.ktable td{font:12px ui-monospace,Consolas,monospace;padding:1px 4px;text-align:center}
+.ktable th{font-size:.75rem;color:var(--dim);font-weight:400;text-align:right;padding-right:8px}
+.ok{color:var(--ok)}.bad{color:var(--bad)}
+.legend{font-size:.78rem;color:var(--dim)}
+.flow{width:100%;height:auto}
+footer{max-width:1280px;margin:10px auto 30px;padding:10px 16px;color:var(--dim);font-size:.85rem;border-top:1px solid var(--line)}
+.info p{max-width:900px}
+.info ul{max-width:900px;margin:4px 0 8px;padding-left:20px}
+.qp{border-collapse:collapse;margin:4px 0}
+.qp td,.qp th{padding:1px 3px;text-align:center;font-size:.72rem;color:#4a4436}
+.qp th{font-weight:700}
+.qp td.lb{text-align:left;font-weight:700;padding-right:8px;white-space:nowrap}
+.qp tr.off td{opacity:.35}
+.sw.mini i{width:16px;height:22px}
+.sw.mini i::after{left:3px;width:10px;height:9px;top:11px}
+.sw.mini input:checked+i::after{top:2px}
+.ctr .st{font-size:.62rem;color:#ffe08a;min-height:.8em}
+</style>
+</head>
+<body>
+<header>
+  <h1>Colossus-Werkbank</h1>
+  <p>Bletchley Park 1944: der Röhrenrechner, der den Lorenz-Schlüsselzusatz SZ 40/42 aufbrach – mit Mark 1 und Mark 2</p>
+</header>
+<nav id="nav">
+  <button data-t="colossus" class="on">Colossus</button>
+  <button data-t="lorenz">Lorenz SZ 40/42</button>
+  <button data-t="dechi">De-Chi &amp; Klartext</button>
+  <button data-t="logisim">Logisim-Abgleich</button>
+  <button data-t="info">Hintergrund</button>
+</nav>
+<main>
+
+<!-- ======================= COLOSSUS ======================= -->
+<section class="tab on" id="t-colossus">
+<div class="grid g2">
+<div>
+  <div class="machine">
+    <div class="mtitle"><span>COLOSSUS</span>
+      <span class="sub"><label>Ausführung <select id="mark"><option value="1">Mark 1 (Feb. 1944)</option><option value="2" selected>Mark 2 (Juni 1944)</option></select></label></span>
+    </div>
+    <div class="bay">
+      <h4>BANDLESER („BEDSTEAD“) · LOCHSTREIFENSCHLEIFE · FOTOZELLEN</h4>
+      <canvas id="cvTape" width="620" height="92"></canvas>
+    </div>
+    <div class="bay">
+      <h4>CHI-RINGE (THYRATRONRINGE) · STIFTMUSTER, STELLUNG <span id="memHint"></span></h4>
+      <canvas id="cvRings" width="620" height="150"></canvas>
+    </div>
+    <div class="bay">
+      <h4>ZÄHLER a–e (JE VIER DEKADEN)</h4>
+      <div class="counters" id="counters"></div>
+      <div class="status" id="mstatus"></div>
+    </div>
+    <div class="plate">
+      <div class="row">
+        <label>Schnelles Rad <select id="fast"></select></label>
+        <label>Langsames Rad <select id="slow"></select></label>
+        <label title="Bandzeichen pro Sekunde">Tempo <select id="speed">
+          <option value="1">Echtzeit (5000 Z/s)</option><option value="10" selected>×10</option><option value="100">×100</option><option value="1000">×1000</option><option value="0">sofort</option></select></label>
+      </div>
+      <div class="row" id="mk2row">
+        <span class="sw"><label><input type="checkbox" id="mult" checked><i></i>MULT</label></span>
+        <span style="font-size:.82rem">Mehrfachtest: Zähler a–e prüfen die Stellungen s, s−1 … s−4 des schnellen Rades gleichzeitig</span>
+        <label>Spanne ab Zeichen <input type="number" id="span" value="5" min="1" max="999"></label>
+      </div>
+      <div style="overflow-x:auto">
+      <table class="qp" id="qp"></table>
+      </div>
+      <div class="small" style="color:#5b5240">Q-Feld: je Zähler die Impulse der Summe Q = (Δ)Z ⊕ (Δ)χ. Δ = Differenz zum Vorzeichen, × = Kreuze statt Punkte zählen. Bei MULT gilt Zeile a für alle fünf Zähler.</div>
+      <div class="row">
+        <label>Satz <input type="number" id="thr" min="0" max="9999" step="1"></label>
+        <label><input type="checkbox" id="thrAuto" checked> automatisch (Zufall + 2,5 σ, wie in Bletchley)</label>
+        <span class="sw"><label title="Drucken, was den Satz NICHT überschreitet"><input type="checkbox" id="unter"><i></i>≤</label></span>
+      </div>
+      <div class="row">
+        <button class="b pri" id="bStart">▶ Lauf starten</button>
+        <button class="b" id="bPause" disabled>⏸ Pause</button>
+        <button class="b" id="bStep">⏭ ein Durchlauf</button>
+        <button class="b" id="bStop">■ Abbrechen</button>
+      </div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px">
+    <h2>Läufe nach Art der Newmanry</h2>
+    <div class="presets">
+      <button class="b" data-p="12">1. Lauf: 1+2-Einbruch (χ1 × χ2)</button>
+      <button class="b" data-p="3">2. Lauf: χ3 (Impulse 1+3)</button>
+      <button class="b" data-p="4">3. Lauf: χ4 (Impulse 2+4)</button>
+      <button class="b" data-p="5">4. Lauf: χ5 (Impuls 5)</button>
+    </div>
+    <p class="note">Nach jedem Lauf trägt „Ergebnis übernehmen“ die beste Stellung als feste Stellung ein. Die übrigen Räder stehen beim Zählen auf diesen festen Stellungen.</p>
+    <h3>Feste Chi-Stellungen (bei Bandzeichen 0)</h3>
+    <div class="found" id="fixed"></div>
+    <div class="row"><button class="b" id="bTake" disabled>Ergebnis übernehmen</button><span class="small" id="takeInfo"></span></div>
+  </div>
+</div>
+<div>
+  <div class="card">
+    <h2>Drucker (Electromatic-Schreibmaschine)</h2>
+    <div class="printer" id="printer"></div>
+    <div class="row"><button class="b" id="bClearPr">Papier abreißen</button><span class="small">Gedruckt wird, was den Satz überschreitet (mit „≤“: was ihn nicht überschreitet). Das Original druckte in der Lücke der Bandschleife, während der nächste Durchlauf schon begann.</span></div>
+  </div>
+  <div class="card">
+    <h2>Verteilung der Zählerstände im aktuellen Lauf</h2>
+    <canvas id="cvHist" width="560" height="190"></canvas>
+    <p class="legend">Grau: alle bisher geprüften Stellungen (Zähler a, bei MULT alle fünf). Gelb: der Satz. Rot: der höchste Wert. Bei falscher Stellung ist der Zählerstand Zufall (Mittelwert ≈ Zeichenzahl/2), die richtige Stellung ragt um einige Standardabweichungen σ heraus.</p>
+  </div>
+  <div class="card">
+    <h2>So wird gezählt</h2>
+    <svg class="flow" viewBox="0 0 560 120" font-family="system-ui,sans-serif" font-size="12">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0L10,5L0,10z" fill="#c9c2a8"/></marker></defs>
+      <g fill="none" stroke="#c9c2a8" stroke-width="1.4">
+        <rect x="6" y="14" width="86" height="34" rx="5"/><rect x="6" y="70" width="86" height="34" rx="5"/>
+        <rect x="124" y="14" width="56" height="34" rx="5"/><rect x="124" y="70" width="56" height="34" rx="5"/>
+        <circle cx="222" cy="59" r="15"/><rect x="262" y="42" width="92" height="34" rx="5"/>
+        <rect x="384" y="42" width="66" height="34" rx="5"/><rect x="478" y="42" width="76" height="34" rx="5"/>
+        <path d="M92,31H124" marker-end="url(#ar)"/><path d="M92,87H124" marker-end="url(#ar)"/>
+        <path d="M180,31H200L211,48" marker-end="url(#ar)"/><path d="M180,87H200L211,70" marker-end="url(#ar)"/>
+        <path d="M237,59H262" marker-end="url(#ar)"/><path d="M354,59H384" marker-end="url(#ar)"/><path d="M450,59H478" marker-end="url(#ar)"/>
+      </g>
+      <g fill="#e8e4d8" text-anchor="middle">
+        <text x="49" y="35">Band Z</text><text x="49" y="91">Chi-Ringe χ</text>
+        <text x="152" y="35">Δ</text><text x="152" y="91">Δ</text><text x="222" y="63">⊕</text>
+        <text x="308" y="56">Q = ΔZ ⊕ Δχ</text><text x="308" y="70" font-size="10" fill="#9aa39b">Impulse wählen</text>
+        <text x="417" y="56">Summe</text><text x="417" y="70" font-size="10" fill="#9aa39b">XOR = •?</text>
+        <text x="516" y="63">Zähler +1</text>
+      </g>
+    </svg>
+    <p class="note">ΔZ = Z ⊕ Vorgängerzeichen. Weil die Psi-Räder oft stehen bleiben und deutscher Fernschreibtext viele Wiederholungen hat, ist ΔZ1 ⊕ ΔZ2 ⊕ Δχ1 ⊕ Δχ2 bei <em>richtiger</em> Chi-Stellung etwas häufiger ein Punkt (•) als bei falscher. Tutte schätzte etwa 55 Prozent, bei falscher Stellung sind es 50.</p>
+  </div>
+</div>
+</div>
+</section>
+
+<!-- ======================= LORENZ ======================= -->
+<section class="tab" id="t-lorenz">
+<div class="grid g2">
+<div class="card">
+  <h2>Klartext</h2>
+  <textarea id="plainIn" rows="9"></textarea>
+  <div class="row">
+    <label><input type="checkbox" id="dbl" checked> Leerzeichen doppelt tippen (99)</label>
+    <label>Bandlänge <input type="number" id="tapeLen" value="3000" min="200" max="12000" step="100"></label>
+    <span class="small">Der Text wird wiederholt, bis die Länge erreicht ist.</span>
+  </div>
+  <h3>Fernschreibzeichen (Bletchley-Schreibweise)</h3>
+  <div class="tape-out" id="plainTp"></div>
+  <p class="note">/ Null · 9 Leerzeichen · 3 Wagenrücklauf · 4 Zeilenvorschub · 5 Ziffernumschaltung · 8 Buchstabenumschaltung. Ziffern liegen im Ziffernmodus auf der oberen Tastenreihe (1=Q, 2=W …), der Punkt auf M. Wie die deutschen Funker tippt die Seite die Umschaltzeichen doppelt: „14. MAERZ“ wird zu 55QRM9988MAERZ. Zeilenenden werden Leerzeichen, im Klartext standen keine Wagenrückläufe.</p>
+  <h3>Chiffre Z</h3>
+  <div class="tape-out" id="cipherOut"></div>
+  <div class="row">
+    <button class="b pri" id="bEnc">Verschlüsseln</button>
+    <button class="b" id="bLoad">Als Band in Colossus einlegen</button>
+    <button class="b" id="bDefault">Standard-Testmeldung</button>
+  </div>
+</div>
+<div class="card">
+  <h2>Schlüssel: 12 Räder</h2>
+  <div class="row">
+    <button class="b" id="bRandKey">Zufallsschlüssel</button><label>Startwert <input type="number" id="seed" value="43" style="width:6em"></label>
+    <label>Begrenzung <select id="limit"><option value="0">keine (SZ 40)</option><option value="1">χ2 eine zurück (SZ 42A)</option><option value="2">χ2 eine zurück ⊕ P5 zwei zurück (SZ 42B)</option></select></label>
+  </div>
+  <p class="small">Klick auf einen Stift schaltet Punkt/Kreuz, das Zahlenfeld ist die Startstellung.</p>
+  <div class="wheels" id="wheels"></div>
+  <h3>Die ersten Zeichen im Einzelnen</h3>
+  <div style="overflow-x:auto"><table class="ktable" id="ktable"></table></div>
+  <p class="note">K = χ ⊕ ψ′. Z = P ⊕ K, entschlüsselt wird mit derselben Rechnung. Die Chi-Räder und μ61 rücken bei jedem Zeichen weiter, μ37 nur, wenn μ61 ein Kreuz zeigt. BM („Basic Motor“) ist der Stift von μ37. Die Begrenzung LIM ist beim SZ 40 immer Kreuz. Der „Total Motor“ TM ist nur dann Punkt, wenn BM Punkt und LIM Kreuz ist – sonst rücken alle fünf Psi-Räder gemeinsam weiter. Beim SZ 42B hängt die Begrenzung vom Klartext ab (P5 zwei Zeichen zurück); der Schlüssel wird damit zum „Autoklav“. Den zeitlichen Bezug von „eine/zwei zurück“ bildet die Seite nach der Bletchley-Beschreibung nach.</p>
+</div>
+</div>
+</section>
+
+<!-- ======================= DE-CHI ======================= -->
+<section class="tab" id="t-dechi">
+<div class="card">
+  <h2>De-Chi: Band ⊕ gefundene Chi-Stellungen</h2>
+  <p>Colossus lieferte nur die fünf Chi-Stellungen. Zieht man den Chi-Strom vom Band ab, bleibt das <b>De-Chi</b> D = P ⊕ ψ′. Weil die Psi-Räder oft stehen, wiederholen sich in D auffällig viele Zeichen. Daraus bestimmten die Kryptologinnen und Kryptologen der „Testery“ von Hand die Psi- und Motorstellungen.</p>
+  <div class="row"><button class="b pri" id="bDechi">De-Chi berechnen</button><span class="small" id="dechiInfo"></span></div>
+  <h3>Wiederholungen (ΔX = • je Impuls)</h3>
+  <table id="dtab" class="mono"></table>
+  <h3>De-Chi D</h3>
+  <div class="tape-out" id="dechiOut"></div>
+  <h3>Lösung prüfen</h3>
+  <div class="row"><button class="b" id="bSolve">mit vollständigem Schlüssel entschlüsseln</button><span class="small">entspricht dem Schritt der Testery (Psi und Motor sind hier aus dem Schlüssel bekannt)</span></div>
+  <div class="tape-out" id="solveOut"></div>
+</div>
+</section>
+
+<!-- ======================= LOGISIM ======================= -->
+<section class="tab" id="t-logisim">
+<div class="card">
+  <h2>Abgleich mit der Logisim-Schaltung der Mark 2</h2>
+  <p>Die Schaltung <a href="colossus2_logisim_web.html">colossus2_logisim_web.html</a> (Datei <span class="mono">colossus2.circ</span>) baut den 1+2-Einbruch einer Colossus Mark 2 mit Mehrfachtest aus Gattern, Registern und Festwertspeichern nach. Band und Chi-Muster sind die ersten 2000 Zeichen der Standard-Testmeldung. Bei gleichen Eingängen muss die Schaltung dieselben Zeilen drucken wie diese Seite.</p>
+  <ul>
+    <li><b>Band</b>: ROM mit 2000 Zeichen, Bandzähler als Register + Addierer (die echte Maschine taktete sich aus den Transportlöchern des Bandes).</li>
+    <li><b>Chi-Ringe</b>: χ1 und χ2 als Festwertspeicher mit Stellungszählern statt Thyratronringen.</li>
+    <li><b>Mehrfachtest</b>: Ein Schieberegister aus fünf Flipflops merkt sich die χ1-Zeichen 1…5 Stellen zurück. Zähler a sieht die gegenwärtige Stellung s, Zähler b die Stellung s−1 usw.; für Δχ1 braucht Zähler e noch das Zeichen fünf zurück. Weil das Register erst gefüllt werden muss, wird ab Bandzeichen 5 gezählt (Spanne).</li>
+    <li><b>Zähler</b>: fünf vierstellige Dezimalzähler (BCD), wie die Röhren-Dekadenzähler des Originals.</li>
+    <li><b>Eingänge</b>: <span class="mono">SATZ</span> als BCD (<span class="mono">0x1100</span> = 1100), <span class="mono">KREUZ</span> = 1 zählt Kreuze, <span class="mono">UNTER</span> = 1 druckt, was den Satz nicht überschreitet.</li>
+    <li><b>Drucker</b>: TTY-Baustein. Zeilenformat <span class="mono">χ1 χ2 Zähler</span>, je Fünferblock rückwärts (z. B. 34, 33, 32 …) wie im Original.</li>
+  </ul>
+  <div class="row">
+    <label>Satz <input type="number" id="lgThr" value="1100" min="0" max="9999"></label>
+    <label><input type="checkbox" id="lgCross"> Kreuze zählen</label>
+    <label><input type="checkbox" id="lgUnter"> ≤ (nicht überschreiten)</label>
+    <button class="b pri" id="bLg">Erwartete Druckausgabe berechnen</button>
+  </div>
+  <div class="printer" id="lgOut" style="height:200px"></div>
+  <p class="note">Ablauf der Schaltung: Durchlauf über das Band (2000 Takte) → Druckphase (je Zähler höchstens 11 Zeichen) → nächster Fünferblock von χ1 (gegenwärtige Stellung 4, 9, … 39, dann 40 allein). Danach rückt χ2 weiter, nach χ2 = 30 hält die Maschine (Ausgang <span class="mono">FERTIG</span>). Logisim Web schafft im Browser rund 800 Takte pro Sekunde: Mit Satz 1100 erscheint die richtige Stellung nach etwa 20 Sekunden, der vollständige Lauf (rund 570 000 Takte) dauert gut zehn Minuten.</p>
+</div>
+</section>
+
+<!-- ======================= INFO ======================= -->
+<section class="tab info" id="t-info">
+<div class="card">
+  <h2>Was Colossus tat</h2>
+  <p>Ab 1941 hörten die Briten deutsche Funkfernschreiben ab, die mit dem Lorenz-Schlüsselzusatz SZ 40/42 verschlüsselt waren („Tunny“). John Tiltman und Bill Tutte rekonstruierten aus einer doppelt gesendeten Nachricht den gesamten Aufbau der Maschine. Tutte fand auch die statistische Methode, den „1+2-Einbruch“: Bildet man Differenzen aufeinanderfolgender Zeichen, scheinen die Chi-Räder durch das Rauschen der Psi-Räder hindurch.</p>
+  <p>Diese Methode verlangt, für jede mögliche Chi-Stellung das ganze Band durchzuzählen – für χ1 und χ2 zusammen sind das 41 × 31 = 1271 Stellungen. Max Newman ließ dafür Maschinen bauen. Der Vorgänger „Heath Robinson“ las Band und Radmuster von zwei synchron laufenden Lochstreifen und verlor oft den Gleichlauf. Tommy Flowers vom Post-Forschungszentrum Dollis Hill erzeugte die Radmuster stattdessen elektronisch in Thyratronringen. So entstand Colossus, mit rund 1600 Röhren ab Februar 1944 in Bletchley Park.</p>
+  <h3>Mark 1 und Mark 2</h3>
+  <ul>
+    <li><b>Mark 1</b>: etwa 1600 Röhren, Band mit rund 5000 Zeichen pro Sekunde, fünf Zähler. Die Zähler konnten verschiedene Bedingungen für <em>dieselbe</em> Stellung zählen (zwei Paare auch für Doppeltests an χ1). Spannen gab es noch nicht.</li>
+    <li><b>Mark 2</b>: etwa 2400 Röhren, ab 1. Juni 1944. Neu war der Mehrfachtest: Ein Speicher hielt die Zeichen des schnellen Rades 1, 2, 3 und 4 Stellen zurück vor, so konnten die fünf Zähler fünf Stellungen gleichzeitig prüfen. Gedruckt wurde ein solcher Block rückwärts. Dazu kamen ein größeres Schalterfeld, ein vielseitiges Steckfeld und Spannen, mit denen sich verstümmelte Bandstücke ausblenden ließen. Bis Kriegsende liefen zehn Maschinen.</li>
+    <li>Programmiert wurde mit Schaltern und Steckfeldern, ein gespeichertes Programm gab es nicht. Colossus war also ein programmierbarer elektronischer Spezialrechner, kein Universalrechner.</li>
+    <li>Der Satz („set total“): In Bletchley druckte man nur Stellungen, deren Zählerstand etwa 2,5 Standardabweichungen über dem Zufallswert lag. Bei 1271 Stellungen erscheinen so auch einige zufällige Zeilen – die richtige ragt meist deutlich heraus.</li>
+  </ul>
+  <h3>Was in dieser Werkbank vereinfacht ist</h3>
+  <ul>
+    <li>Bedienelemente: Q-Feld mit fünf Zeilen (Impulse, Δ, Kreuz/Punkt), Mehrfachtest, Spanne ab, ein gemeinsamer Satz, Drucker. Das Steckfeld, die Spanne „bis“, Doppeltests der Mark 1 sowie Läufe mit Psi- und Motorrädern fehlen.</li>
+    <li>Die Testmeldung ist synthetisch. Leerzeichen doppelt (99) und doppelte Umschaltzeichen (55 … 88) sind echte Gewohnheiten deutscher Funker, die die Statistik stärken. Die Psi-Räder stehen relativ oft.</li>
+    <li>Die Zählbedingungen der Läufe für χ3, χ4, χ5 sind auf diese Testmeldung abgestimmt. In Bletchley wählte man die Bedingungen je nach Nachricht.</li>
+  </ul>
+  <h3>Nachleben</h3>
+  <p>Nach dem Krieg wurden die meisten Maschinen zerlegt und die Unterlagen vernichtet, zwei liefen noch bis in die 1960er-Jahre beim GCHQ. Erst ab den 1970er-Jahren wurde Colossus öffentlich bekannt, der „General Report on Tunny“ von 1945 wurde im Jahr 2000 freigegeben. Tony Sale baute mit einem Team eine Mark 2 nach, die seit 2007 im National Museum of Computing in Bletchley läuft.</p>
+</div>
+</section>
+</main>
+<footer>
+  Colossus-Werkbank · <a href="colossus2_logisim_web.html">Mark 2 als Schaltung (Logisim Web)</a> · mehr auf <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a>
+</footer>
+
+<script>
+// Gemeinsames Modell: Lorenz SZ 40/42, ITA2 (Bletchley-Schreibweise), Colossus-Zählläufe.
+// Wird von colossus.html und vom Logisim-Generator (Node) benutzt.
+(function (root) {
+'use strict';
+const LEN = { chi: [41, 31, 29, 26, 23], psi: [43, 47, 51, 53, 59], mu: [61, 37] };
+
+// ITA2, Impuls 1 = Bit 0 … Impuls 5 = Bit 4, Kreuz (x) = 1, Punkt (•) = 0.
+// Bletchley-Zeichen für Steuerzeichen: / Null, 9 Leerzeichen, 3 Wagenrücklauf,
+// 4 Zeilenvorschub, 5 Ziffernumschaltung, 8 Buchstabenumschaltung.
+const BITS = {
+  '/':'00000','E':'10000','4':'01000','A':'11000','9':'00100','S':'10100','I':'01100','U':'11100',
+  '3':'00010','D':'10010','R':'01010','J':'11010','N':'00110','F':'10110','C':'01110','K':'11110',
+  'T':'00001','Z':'10001','L':'01001','W':'11001','H':'00101','Y':'10101','P':'01101','Q':'11101',
+  'O':'00011','B':'10011','G':'01011','5':'11011','M':'00111','X':'10111','V':'01111','8':'11111'
+};
+const CODE = {}, CHAR = new Array(32);
+for (const [c, s] of Object.entries(BITS)) {
+  let v = 0; for (let k = 0; k < 5; k++) if (s[k] === '1') v |= 1 << k;
+  CODE[c] = v; CHAR[v] = c;
+}
+// Im Ziffernmodus: Ziffern auf der oberen Buchstabenreihe, Satzzeichen auf weiteren Tasten
+const FIG = { '1':'Q','2':'W','3':'E','4':'R','5':'T','6':'Y','7':'U','8':'I','9':'O','0':'P',
+  '.':'M', ',':'N', ':':'C', '-':'A', '?':'B', '/':'X', '(':'K', ')':'L', "'":'J', '+':'Z' };
+
+function rng(seed) {             // mulberry32
+  let a = seed >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0; let t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// Radmuster: etwa halb Kreuze, nie mehr als vier gleiche Stifte hintereinander
+function wheelPattern(len, r, pOne = 0.5) {
+  for (;;) {
+    const w = []; for (let i = 0; i < len; i++) w.push(r() < pOne ? 1 : 0);
+    let ok = true, run = 1;
+    for (let i = 1; i < len * 2 && ok; i++) {
+      if (w[i % len] === w[(i - 1) % len]) { if (++run > 4) ok = false; } else run = 1;
+    }
+    const ones = w.reduce((a, b) => a + b, 0);
+    if (ok && Math.abs(ones - len * pOne) <= len * 0.12) return w;
+  }
+}
+// limit: 0 = keine Begrenzung (SZ 40), 1 = χ2 eine zurück (SZ 42A), 2 = χ2 eine zurück ⊕ P5 zwei zurück (SZ 42B)
+function randomKey(seed, limit = 0) {
+  const r = rng(seed);
+  return {
+    chi: LEN.chi.map(l => wheelPattern(l, r)),
+    psi: LEN.psi.map(l => wheelPattern(l, r)),
+    mu:  [wheelPattern(61, r, 0.7), wheelPattern(37, r, 0.35)],
+    chiPos: LEN.chi.map(l => Math.floor(r() * l)),
+    psiPos: LEN.psi.map(l => Math.floor(r() * l)),
+    muPos:  LEN.mu.map(l => Math.floor(r() * l)),
+    limit,
+  };
+}
+
+// Klartext in Fernschreibzeichen (Bletchley-Schreibweise) umsetzen. Wie die deutschen
+// Funker: Umschaltzeichen doppelt (55 … 88), Punkt als 55M88, Zeilenenden als Leerzeichen
+// (im Klartext standen keine Wagenrückläufe/Zeilenvorschübe). dblSpace: Leerzeichen doppelt (99).
+function toTeleprinter(text, dblSpace) {
+  let out = '', figs = false;
+  const up = text.toUpperCase().replace(/Ä/g, 'AE').replace(/Ö/g, 'OE').replace(/Ü/g, 'UE').replace(/ß/g, 'SS').replace(/\s+/g, ' ');
+  for (const ch of up) {
+    if (FIG[ch] !== undefined) { if (!figs) { out += '55'; figs = true; } out += FIG[ch]; continue; }
+    if (ch === ' ') { out += dblSpace ? '99' : '9'; continue; }
+    if (!/[A-Z]/.test(ch)) continue;
+    if (figs) { out += '88'; figs = false; }
+    out += ch;
+  }
+  if (figs) out += '88';
+  return out;
+}
+
+// SZ 40/42 verschlüsselt (decrypt=false) oder entschlüsselt (decrypt=true). Der Schlüsselstrom
+// hängt bei SZ 42B vom Klartext ab, deshalb muss die Richtung bekannt sein.
+// Weiterschalten nach Bletchley: χ und μ61 bei jedem Zeichen; μ37, wenn μ61 Kreuz zeigt;
+// „Basic Motor“ BM = μ37; Begrenzung LIM (ohne Begrenzung immer Kreuz);
+// „Total Motor“ TM = Punkt nur, wenn BM Punkt und LIM Kreuz – sonst rücken alle ψ weiter.
+function lorenz(codes, key, decrypt = false) {
+  const chi = key.chiPos.slice(), psi = key.psiPos.slice(), mu = key.muPos.slice();
+  const out = [], ks = [], tm = [], cs = [], ps = [];
+  let chi2b1 = 0, p5b1 = 0, p5b2 = 0;            // χ2 eine zurück, P5 eine/zwei zurück
+  for (const c of codes) {
+    let kc = 0, kp = 0;
+    for (let i = 0; i < 5; i++) { kc |= key.chi[i][chi[i]] << i; kp |= key.psi[i][psi[i]] << i; }
+    const k = kc ^ kp;
+    cs.push(kc); ps.push(kp); ks.push(k); const z = c ^ k; out.push(z);
+    const plain = decrypt ? z : c;
+    const m61 = key.mu[0][mu[0]], bm = key.mu[1][mu[1]];
+    let lim = 1;
+    if (key.limit === 1) lim = chi2b1;
+    else if (key.limit === 2) lim = chi2b1 ^ p5b2;
+    const t = (bm === 0 && lim === 1) ? 0 : 1;
+    tm.push(t);
+    chi2b1 = key.chi[1][chi[1]]; p5b2 = p5b1; p5b1 = (plain >> 4) & 1;
+    if (t) for (let i = 0; i < 5; i++) psi[i] = (psi[i] + 1) % LEN.psi[i];
+    if (m61 === 1) mu[1] = (mu[1] + 1) % 37;
+    mu[0] = (mu[0] + 1) % 61;
+    for (let i = 0; i < 5; i++) chi[i] = (chi[i] + 1) % LEN.chi[i];
+  }
+  return { out, ks, tm, cs, ps };
+}
+
+// Fernschreibzeichen zurück in lesbaren Text (Ziffernmodus beachten)
+function fromTeleprinter(s) {
+  const UNFIG = {}; for (const [d, c] of Object.entries(FIG)) UNFIG[c] = d;
+  let out = '', figs = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '5') { figs = true; continue; }
+    if (c === '8') { figs = false; continue; }
+    if (c === '9') { out += out.endsWith(' ') ? '' : ' '; continue; }
+    if (c === '3') continue;
+    if (c === '4') { out += '\n'; continue; }
+    if (c === '/') continue;
+    out += figs && UNFIG[c] ? UNFIG[c] : c;
+  }
+  return out;
+}
+const strToCodes = s => [...s].filter(c => CODE[c] !== undefined).map(c => CODE[c]);
+const codesToStr = a => a.map(v => CHAR[v & 31]).join('');
+const bit = (v, k) => (v >> k) & 1;
+
+// ---------------------------------------------------------------------------
+// Colossus: ein Zähldurchlauf. Q = (Δ)Z ⊕ (Δ)χ, Bedingung = XOR der gewählten Impulse.
+// cfg: { delta:true, imp:[bool×5] (welche Impulse in die Summe), cross:false (zählt Kreuze statt Punkte) }
+// chiStart: 5 Startstellungen (Stellung bei Bandzeichen 0). Gezählt wird ab Zeichen 1 (Δ braucht den Vorgänger).
+function chiAt(chi, k, pos) { const L = LEN.chi[k]; return chi[k][((pos % L) + L) % L]; }
+function countRun(Z, chi, chiStart, cfg, from = 1) {
+  const N = Z.length; let cnt = 0;
+  for (let i = from; i < N; i++) {
+    let t = 0;
+    for (let k = 0; k < 5; k++) {
+      if (!cfg.imp[k]) continue;
+      if (cfg.delta) t ^= bit(Z[i], k) ^ bit(Z[i - 1], k) ^ chiAt(chi, k, chiStart[k] + i) ^ chiAt(chi, k, chiStart[k] + i - 1);
+      else t ^= bit(Z[i], k) ^ chiAt(chi, k, chiStart[k] + i);
+    }
+    if ((t === 1) === !!cfg.cross) cnt++;
+  }
+  return cnt;
+}
+
+// Ablauf eines Laufs: schnelles Rad (fast), optional langsames Rad (slow).
+// Ohne Mehrfachtest: eine Stellung je Banddurchlauf.
+// Mehrfachtest (nur Mark 2): Colossus merkt sich die Zeichen des schnellen Rades 1…4 Stellen
+// zurück (Schieberegister). Zähler 1 sieht die „gegenwärtige“ Stellung s, Zähler 2 die Stellung
+// s−1 usw. – fünf Stellungen je Durchlauf, rückwärts gedruckt (z. B. 09 08 07 06 05).
+// Die gegenwärtigen Stellungen laufen 4, 9, 14, …; der letzte Block endet bei L−1, bereits
+// geprüfte Stellungen werden dort nicht noch einmal gedruckt (en = false).
+function planRun(fast, slow, mult) {
+  const Lf = LEN.chi[fast], Ls = slow >= 0 ? LEN.chi[slow] : 1, passes = [];
+  for (let b = 0; b < Ls; b++) {
+    if (!mult) { for (let a = 0; a < Lf; a++) passes.push({ present: a, slowPos: b, procs: [{ p: 0, f: a, s: b, en: true }] }); continue; }
+    let prev = -1;
+    for (let s = 4; ; s += 5) {
+      if (s > Lf - 1) s = Lf - 1;
+      const procs = [];
+      for (let p = 0; p < 5; p++) { const f = s - p; procs.push({ p, f: (f + Lf) % Lf, s: b, en: f > prev && f >= 0 }); }
+      passes.push({ present: s, slowPos: b, procs });
+      prev = s;
+      if (s === Lf - 1) break;
+    }
+  }
+  return passes;
+}
+
+const pad2 = n => String(n).padStart(2, '0');
+const pad4 = n => String(n).padStart(4, '0');
+// Druckzeile wie in der Logisim-Schaltung: "FF SS ZZZZ"
+const printLine = (f, s, c) => pad2(f) + ' ' + pad2(s) + ' ' + pad4(c % 10000);
+// Satz: gedruckt wird, was den Satz überschreitet – oder mit „unter“ was ihn nicht überschreitet
+const passesSet = (c, satz, unter) => unter ? (c % 10000) <= satz : (c % 10000) > satz;
+
+// Referenzlauf der Logisim-Schaltung: 1+2-Einbruch, Mehrfachtest auf χ1, χ2 langsam, Spanne ab Zeichen 5.
+const LOGISIM_SPAN = 5;
+function logisimReference(Z, chi, satz, cross, unter) {
+  const lines = [], cfg = { delta: true, imp: [1, 1, 0, 0, 0], cross: !!cross };
+  for (const pass of planRun(0, 1, true))
+    for (const pr of pass.procs) {
+      if (!pr.en) continue;
+      const c = countRun(Z, chi, [pr.f, pr.s, 0, 0, 0], cfg, LOGISIM_SPAN);
+      if (passesSet(c, satz, unter)) lines.push(printLine(pr.f, pr.s, c));
+    }
+  return lines;
+}
+
+// Standard-Testmeldung (fester Startwert, damit Seite und Schaltung dasselbe Band haben)
+const DEFAULT_TEXT =
+`AN OBERKOMMANDO DES HEERES. GENERALSTAB. OPERATIONSABTEILUNG.
+VON HEERESGRUPPE SUED. BETREFF LAGEBERICHT VOM 14. MAERZ 1944.
+ERSTENS FEINDLAGE. DER FEIND HAT IM ABSCHNITT DER ACHTEN ARMEE MIT STARKEN KRAEFTEN ANGEGRIFFEN.
+DIE ANGRIFFE WURDEN UNTER HOHEN VERLUSTEN FUER DEN FEIND ABGEWIESEN.
+IM RAUM SUEDLICH DER STADT WURDEN NEUE FEINDLICHE VERBAENDE ERKANNT.
+ES HANDELT SICH UM ZWEI PANZERKORPS UND DREI SCHUETZENDIVISIONEN.
+ZWEITENS EIGENE LAGE. DIE EIGENEN TRUPPEN HALTEN DIE STELLUNGEN AN DER HAUPTKAMPFLINIE.
+DIE VERSORGUNG MIT MUNITION UND BETRIEBSSTOFF IST NUR TEILWEISE GESICHERT.
+DER EISENBAHNVERKEHR IST DURCH TAUWETTER UND FLIEGERANGRIFFE STARK BEHINDERT.
+DRITTENS ABSICHT. DIE HEERESGRUPPE BEABSICHTIGT DIE FRONT ZU HALTEN UND DIE RESERVEN NACH NORDEN ZU VERSCHIEBEN.
+VIERTENS BITTE UM ZUFUEHRUNG VON 40 PANZERN UND 12 STURMGESCHUETZEN.
+DER OBERBEFEHLSHABER.`;
+const DEFAULT_SEED = 43;
+
+function defaultTape(len) {
+  const key = randomKey(DEFAULT_SEED);
+  let plain = toTeleprinter(DEFAULT_TEXT, true);
+  while (plain.length < len) plain += '99' + toTeleprinter(DEFAULT_TEXT, true);
+  plain = plain.slice(0, len);
+  const P = strToCodes(plain);
+  const { out } = lorenz(P, key);
+  return { key, plain, P, Z: out };
+}
+
+const api = { LEN, CODE, CHAR, BITS, rng, wheelPattern, randomKey, toTeleprinter, fromTeleprinter, lorenz, strToCodes, codesToStr,
+  bit, chiAt, countRun, planRun, printLine, passesSet, pad2, pad4, logisimReference, LOGISIM_SPAN, FIG, DEFAULT_TEXT, DEFAULT_SEED, defaultTape };
+if (typeof module !== 'undefined' && module.exports) module.exports = api; else root.ColModel = api;
+})(this);
+
+</script>
+<script>
+'use strict';
+const M = ColModel, LEN = M.LEN;
+const $ = id => document.getElementById(id);
+const CPS = 5000, GAP = 150;           // Zeichen pro Sekunde, Lücke der Bandschleife (Zeichen)
+const WN = ['χ1','χ2','χ3','χ4','χ5'], CN = ['a','b','c','d','e'];
+
+// ------------------------------------------------------------------ Zustand
+let key = M.randomKey(M.DEFAULT_SEED);        // Schlüssel im Lorenz-Reiter
+let tape = null;                              // { Z, P, key } – eingelegtes Band mit wahrem Schlüssel
+const fixed = [0,0,0,0,0];                    // feste Chi-Stellungen (vom Bediener)
+const found = [null,null,null,null,null];
+let run = null;
+
+// ------------------------------------------------------------------ Tabs
+document.querySelectorAll('#nav button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('on', x === b));
+  document.querySelectorAll('section.tab').forEach(s => s.classList.toggle('on', s.id === 't-' + b.dataset.t));
+});
+
+// ------------------------------------------------------------------ Bedienfeld
+function fillWheelSelect(sel, withNone) {
+  sel.innerHTML = (withNone ? '<option value="-1">keines</option>' : '') +
+    WN.map((n, i) => `<option value="${i}">${n} (${LEN.chi[i]})</option>`).join('');
+}
+fillWheelSelect($('fast'), false); fillWheelSelect($('slow'), true);
+$('fast').value = 0; $('slow').value = 1;
+{ // Q-Feld: 5 Zeilen
+  let h = '<tr><th></th><th>an</th><th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>Δ</th><th>×</th></tr>';
+  for (let r = 0; r < 5; r++) {
+    const sw = (cls, on) => `<td><span class="sw mini"><label><input type="checkbox" class="${cls}" data-r="${r}"${on ? ' checked' : ''}><i></i></label></span></td>`;
+    h += `<tr id="qr${r}"><td class="lb">Zähler ${CN[r]}</td>${sw('q-on', r === 0)}` +
+      [0,1,2,3,4].map(k => sw('q-i q-i' + k, r === 0 && k < 2)).join('') + sw('q-d', true) + sw('q-x', false) + '</tr>';
+  }
+  $('qp').innerHTML = h;
+}
+function rowCfg(r) {
+  const q = cls => $('qp').querySelector(`.${cls}[data-r="${r}"]`).checked;
+  return { on: q('q-on'), delta: q('q-d'), cross: q('q-x'), imp: [0,1,2,3,4].map(k => q('q-i' + k) ? 1 : 0) };
+}
+const isMult = () => +$('mark').value === 2 && $('mult').checked;
+function spanFrom() {
+  if (+$('mark').value === 1) return 1;            // Mark 1 kannte keine Spannen
+  let v = Math.max(1, parseInt($('span').value) || 1);
+  if (isMult()) v = Math.max(5, v);                // Speicher muss erst gefüllt sein
+  return Math.min(v, tape.Z.length - 2);
+}
+function refreshPanel() {
+  const mk2 = +$('mark').value === 2;
+  $('mult').disabled = !mk2; $('span').disabled = !mk2;
+  $('mk2row').style.opacity = mk2 ? 1 : .4;
+  const mult = isMult();
+  for (let r = 0; r < 5; r++) {
+    const tr = $('qr' + r), on = r === 0 ? true : rowCfg(r).on;
+    tr.classList.toggle('off', mult ? r > 0 : !on);
+    tr.querySelectorAll('input').forEach(i => i.disabled = (mult && r > 0) || (run && run.active));
+  }
+  $('qp').querySelector('.q-on[data-r="0"]').checked = true;
+  $('memHint').textContent = mult ? '· SPEICHER 1–4 ZURÜCK (MULT)' : '';
+}
+function renderFixed() {
+  $('fixed').innerHTML = WN.map((n, i) => `<span class="fx"><b>${n}</b> <input type="number" min="0" max="${LEN.chi[i]-1}" value="${fixed[i]}" data-i="${i}">${found[i]!==null?' <span class="ok">✓</span>':''}</span>`).join('');
+  $('fixed').querySelectorAll('input').forEach(inp => inp.onchange = () => {
+    const i = +inp.dataset.i; const v = Math.max(0, Math.min(LEN.chi[i]-1, parseInt(inp.value) || 0));
+    fixed[i] = v; inp.value = v; drawRings(); });
+}
+function counterBoxes() {
+  $('counters').innerHTML = '';
+  for (let i = 0; i < 5; i++) $('counters').insertAdjacentHTML('beforeend',
+    `<div class="ctr" id="ctr${i}"><div class="dg">0000</div><div class="lb">Zähler ${CN[i]}</div><div class="st"></div></div>`);
+}
+const PRESETS = {
+  12: { fast:0, slow:1, imp:[1,1,0,0,0] },
+  3:  { fast:2, slow:-1, imp:[1,0,1,0,0] },
+  4:  { fast:3, slow:-1, imp:[0,1,0,1,0] },
+  5:  { fast:4, slow:-1, imp:[0,0,0,0,1] },
+};
+document.querySelectorAll('.presets button').forEach(b => b.onclick = () => {
+  const p = PRESETS[b.dataset.p]; if (run && run.active) return;
+  $('fast').value = p.fast; $('slow').value = p.slow;
+  for (let r = 0; r < 5; r++) {
+    const set = (cls, v) => $('qp').querySelector(`.${cls}[data-r="${r}"]`).checked = v;
+    set('q-on', r === 0); set('q-d', true); set('q-x', false);
+    for (let k = 0; k < 5; k++) set('q-i' + k, r === 0 && !!p.imp[k]);
+  }
+  if (+$('mark').value === 2) $('mult').checked = true;
+  updatePlan();
+});
+['fast','slow','mark','mult','span','unter','thrAuto'].forEach(id => $(id).addEventListener('change', updatePlan));
+$('qp').addEventListener('change', updatePlan);
+$('thr').addEventListener('input', () => { $('thrAuto').checked = false; updatePlan(); });
+
+function nCounted() { return tape.Z.length - spanFrom(); }
+function autoThreshold() { const n = nCounted(); return Math.round(n / 2 + 2.5 * Math.sqrt(n / 4)); }
+function fmtTime(s) {
+  s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), x = s % 60;
+  return (h ? h + ' h ' : '') + (h || m ? m + ' min ' : '') + x + ' s';
+}
+function trialsOf() {
+  const f = +$('fast').value, s = +$('slow').value;
+  return LEN.chi[f] * (s >= 0 && s !== f ? LEN.chi[s] : 1);
+}
+function updatePlan() {
+  if (run && run.active) return;
+  refreshPanel();
+  if ($('thrAuto').checked) $('thr').value = autoThreshold();
+  const f = +$('fast').value; let s = +$('slow').value; if (s === f) s = -1;
+  const passes = M.planRun(f, s, isMult()).length, per = (tape.Z.length + GAP) / CPS;
+  const p1 = M.planRun(f, s, false).length, p2 = M.planRun(f, s, true).length;
+  $('mstatus').innerHTML = `<span>Band: <b>${tape.Z.length}</b> Zeichen, gezählt ab <b>${spanFrom()}</b></span><span>Stellungen: <b>${trialsOf()}</b></span>` +
+    `<span>Durchläufe: <b>${passes}</b> à ${per.toFixed(2).replace('.', ',')} s</span>` +
+    `<span>Maschinenzeit: <b>${fmtTime(passes * per)}</b> (ohne Mehrfachtest ${fmtTime(p1 * per)}, mit ${fmtTime(p2 * per)})</span>`;
+  drawRings();
+}
+
+// ------------------------------------------------------------------ Band einlegen
+function setTape(Z, P, k) {
+  stopRun();
+  tape = { Z, P, key: k };
+  for (let i = 0; i < 5; i++) { fixed[i] = 0; found[i] = null; }
+  renderFixed(); updatePlan(); drawTape(0); drawHist(); $('bTake').disabled = true; $('takeInfo').textContent = '';
+}
+
+// ------------------------------------------------------------------ Lauf
+function cumRun(Z, chi, starts, cfg, from) {
+  const N = Z.length, cum = new Int32Array(N); let c = 0;
+  for (let i = from; i < N; i++) {
+    let t = 0;
+    for (let k = 0; k < 5; k++) {
+      if (!cfg.imp[k]) continue;
+      const L = LEN.chi[k], a = (starts[k] + i) % L, b = (starts[k] + i - 1) % L;
+      t ^= cfg.delta ? ((Z[i] >> k) ^ (Z[i-1] >> k) ^ chi[k][a] ^ chi[k][b]) & 1 : ((Z[i] >> k) ^ chi[k][a]) & 1;
+    }
+    if ((t === 1) === cfg.cross) c++;
+    cum[i] = c;
+  }
+  return cum;
+}
+function cfgText(c) { return (c.delta ? 'Δ' : '') + '(' + c.imp.map((v, k) => v ? k + 1 : '').filter(Boolean).join('+') + ')' + (c.cross ? '×' : '•'); }
+function startRun() {
+  if (run && run.active && run.paused) { run.paused = false; run.last = performance.now(); $('bPause').disabled = false; requestAnimationFrame(tick); return; }
+  const mark = +$('mark').value, f = +$('fast').value; let s = +$('slow').value; if (s === f) s = -1;
+  const mult = isMult(), rows = [0,1,2,3,4].map(rowCfg);
+  const active = mult ? [0] : rows.map((r, i) => r.on ? i : -1).filter(i => i >= 0);
+  if (!active.every(i => rows[i].imp.some(x => x))) { alert('Jeder eingeschaltete Zähler braucht mindestens einen Impuls im Q-Feld.'); return; }
+  const thr = Math.max(0, Math.min(9999, parseInt($('thr').value) || 0));
+  run = { mark, f, s, mult, rows, ctrs: active, from: spanFrom(), thr, unter: $('unter').checked,
+    passes: M.planRun(f, s, mult), pi: 0, t: 0, results: [], cur: null, last: performance.now() };
+  run.active = true; run.paused = false;
+  const pr = $('printer');
+  const cond = mult ? `MULT ${cfgText(rows[0])}` : active.map(i => `${CN[i]}=${cfgText(rows[i])}`).join(' ');
+  pr.insertAdjacentHTML('beforeend', `<span class="h">— Lauf ${WN[f]}${s>=0?' × '+WN[s]:''} · Mark ${mark} · ${cond} · Spanne ab ${run.from} · Satz ${run.unter?'≤':'>'} ${thr} —\n${WN[f]} ${s>=0?WN[s]:'  '} ${mult ? 'ZÄHLER' : active.map(i => '  ' + CN[i] + '  ').join(' ')}\n</span>`);
+  pr.scrollTop = pr.scrollHeight;
+  ['mark','fast','slow','thr','mult','span','unter'].forEach(id => $(id).disabled = true);
+  refreshPanel();
+  $('bPause').disabled = false; $('bTake').disabled = true;
+  beginPass();
+  requestAnimationFrame(tick);
+}
+function beginPass() {
+  const pass = run.passes[run.pi], chi = tape.key.chi;
+  const starts = f => { const st = fixed.slice(); st[run.f] = f; if (run.s >= 0) st[run.s] = pass.slowPos; return st; };
+  if (run.mult) {
+    run.cur = pass.procs.map(pr => ({ f: pr.f, s: pr.s, en: pr.en, st: starts(pr.f), cum: cumRun(tape.Z, chi, starts(pr.f), run.rows[0], run.from) }));
+  } else {
+    const st = starts(pass.present);
+    run.cur = [0,1,2,3,4].map(i => run.ctrs.includes(i)
+      ? { f: pass.present, s: pass.slowPos, en: true, st, cum: cumRun(tape.Z, chi, st, run.rows[i], run.from) }
+      : { f: pass.present, s: pass.slowPos, en: false, st, cum: null });
+  }
+  run.pass = pass; run.t0 = run.t;
+}
+const fmtF = (f, s) => M.pad2(f) + ' ' + (run.s >= 0 ? M.pad2(s) : '  ');
+function endPass() {
+  const pr = $('printer'), N1 = tape.Z.length - 1; let txt = '';
+  if (run.mult) {
+    for (const c of run.cur) {
+      if (!c.en) continue;
+      const n = c.cum[N1]; run.results.push({ f: c.f, s: c.s, n });
+      if (M.passesSet(n, run.thr, run.unter)) txt += fmtF(c.f, c.s) + ' ' + M.pad4(n % 10000) + '\n';
+    }
+  } else {
+    const vals = run.ctrs.map(i => run.cur[i].cum[N1]);
+    run.results.push({ f: run.pass.present, s: run.pass.slowPos, n: vals[0] });
+    if (vals.some(v => M.passesSet(v, run.thr, run.unter)))
+      txt += fmtF(run.pass.present, run.pass.slowPos) + ' ' + vals.map((v, j) => CN[run.ctrs[j]] + ' ' + M.pad4(v % 10000)).join('  ') + '\n';
+  }
+  if (txt) { pr.insertAdjacentText('beforeend', txt); pr.scrollTop = pr.scrollHeight; }
+  run.pi++;
+}
+function finishRun(aborted) {
+  run.active = false;
+  ['mark','fast','slow','thr','mult','span','unter'].forEach(id => $(id).disabled = false);
+  $('bPause').disabled = true;
+  refreshPanel();
+  const pr = $('printer');
+  if (run.results.length) {
+    const best = run.results.reduce((a, b) => b.n > a.n ? b : a);
+    const n = tape.Z.length - run.from, sig = (best.n - n / 2) / Math.sqrt(n / 4);
+    run.best = best;
+    pr.insertAdjacentHTML('beforeend', `<span class="h">— ${aborted ? 'abgebrochen' : 'Ende'}: höchster Stand ${fmtF(best.f, best.s).trim()} mit ${best.n} (${sig.toFixed(1).replace('.', ',')} σ) —\n\n</span>`);
+    $('bTake').disabled = false;
+    $('takeInfo').textContent = `${WN[run.f]} = ${best.f}${run.s>=0?', '+WN[run.s]+' = '+best.s:''}`;
+  }
+  pr.scrollTop = pr.scrollHeight;
+  drawHist();
+}
+function stopRun() { if (run && run.active) finishRun(true); }
+function tick(now) {
+  if (!run || !run.active || run.paused) return;
+  const sp = +$('speed').value, per = (tape.Z.length + GAP) / CPS;
+  if (sp === 0) {
+    const t0 = performance.now();
+    while (run.pi < run.passes.length && performance.now() - t0 < 30) { beginPass(); endPass(); }
+    run.t = run.pi * per;
+    showPass(tape.Z.length - 1);
+    if (run.pi >= run.passes.length) { finishRun(false); return; }
+    drawHist(); requestAnimationFrame(tick); return;
+  }
+  const dt = Math.min(0.1, (now - run.last) / 1000); run.last = now;
+  run.t += dt * sp;
+  let guard = 0;
+  while (run.t - run.t0 >= per && guard++ < 400) {
+    endPass();
+    if (run.pi >= run.passes.length) { showPass(tape.Z.length - 1); finishRun(false); return; }
+    const t0 = run.t0 + per; beginPass(); run.t0 = t0;
+  }
+  showPass(Math.min(tape.Z.length - 1, Math.floor((run.t - run.t0) * CPS)));
+  if (guard) drawHist();
+  requestAnimationFrame(tick);
+}
+function stepPass() {
+  if (!run || !run.active) { startRun(); if (!run || !run.active) return; run.paused = true; $('bPause').disabled = true; }
+  endPass(); showPass(tape.Z.length - 1);
+  if (run.pi >= run.passes.length) { finishRun(false); return; }
+  beginPass(); drawHist();
+}
+function showPass(idx) {
+  const per = (tape.Z.length + GAP) / CPS, N1 = tape.Z.length - 1;
+  run.cur.forEach((c, i) => {
+    const el = $('ctr' + i);
+    el.classList.toggle('off', !c.en);
+    if (!c.en) { el.querySelector('.dg').textContent = '----'; el.querySelector('.st').textContent = ''; el.classList.remove('hit'); return; }
+    const v = idx >= run.from ? c.cum[idx] : 0;
+    el.querySelector('.dg').textContent = M.pad4(v % 10000);
+    el.querySelector('.st').textContent = run.mult ? `${WN[run.f]}=${M.pad2(c.f)}` : (i === 0 || run.ctrs.includes(i) ? cfgText(run.rows[i]) : '');
+    el.classList.toggle('hit', idx === N1 && M.passesSet(v, run.thr, run.unter));
+  });
+  drawTape(idx);
+  drawRings(run.cur[0].st, idx);
+  const total = run.passes.length;
+  $('mstatus').innerHTML = `<span>Durchlauf <b>${Math.min(run.pi + 1, total)}</b> / ${total}</span><span>Zeichen <b>${idx}</b></span>` +
+    `<span>Maschinenzeit <b>${fmtTime(run.t)}</b> von ${fmtTime(total * per)}</span><span>Ergebnisse: <b>${run.results.length}</b></span>`;
+}
+$('bStart').onclick = startRun;
+$('bPause').onclick = () => { if (run && run.active) { run.paused = true; $('bPause').disabled = true; } };
+$('bStep').onclick = stepPass;
+$('bStop').onclick = () => { stopRun(); updatePlan(); };
+$('bClearPr').onclick = () => $('printer').textContent = '';
+$('bTake').onclick = () => {
+  if (!run || !run.best) return;
+  fixed[run.f] = run.best.f; found[run.f] = run.best.f;
+  if (run.s >= 0) { fixed[run.s] = run.best.s; found[run.s] = run.best.s; }
+  renderFixed(); drawRings(); $('bTake').disabled = true;
+};
+
+// ------------------------------------------------------------------ Zeichnen
+function drawTape(idx) {
+  const cv = $('cvTape'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.fillStyle = '#1b1f1b'; g.fillRect(0, 0, W, H);
+  const step = 16, cx = W / 2, n = Math.floor(W / step / 2) + 1;
+  g.fillStyle = '#efe6c8'; g.fillRect(0, 10, W, 64);
+  const rowY = k => 18 + k * 12 + (k >= 2 ? 6 : 0);   // Transportloch zwischen Impuls 2 und 3
+  for (let j = -n; j <= n; j++) {
+    const i = idx + j, x = cx + j * step;
+    if (i < 0 || i >= tape.Z.length) { g.fillStyle = '#d9cfae'; g.fillRect(x - step / 2, 10, step, 64); continue; }
+    const v = tape.Z[i];
+    g.fillStyle = '#7d7563'; g.beginPath(); g.arc(x, 41, 2, 0, 7); g.fill();
+    for (let k = 0; k < 5; k++) if ((v >> k) & 1) { g.fillStyle = '#2a2620'; g.beginPath(); g.arc(x, rowY(k), 4.2, 0, 7); g.fill(); }
+    g.fillStyle = '#6b6350'; g.font = '10px monospace'; g.textAlign = 'center'; g.fillText(M.CHAR[v], x, 88);
+  }
+  g.strokeStyle = '#ffb347'; g.lineWidth = 2; g.strokeRect(cx - step / 2, 6, step, 72);
+  g.fillStyle = '#ffb347'; g.font = '10px system-ui'; g.textAlign = 'left';
+  g.fillText('Fotozellen', cx + 12, 12);
+}
+function drawRings(st, idx) {
+  const cv = $('cvRings'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.fillStyle = '#20241f'; g.fillRect(0, 0, W, H);
+  const chi = tape.key.chi, f = +$('fast').value, s = +$('slow').value, mult = run && run.active ? run.mult : isMult();
+  for (let k = 0; k < 5; k++) {
+    const L = LEN.chi[k], cx = 62 + k * 124, cy = 72, R = 52;
+    const pos = st ? ((st[k] + (idx || 0)) % L) : fixed[k];
+    for (let j = 0; j < L; j++) {
+      const a = -Math.PI / 2 + j / L * 2 * Math.PI, x = cx + R * Math.cos(a), y = cy + R * Math.sin(a);
+      const on = chi[k][j] === 1, cur = j === pos;
+      const back = mult && k === f ? ((pos - j + L) % L) : 99;   // Mehrfachtest: 1…4 zurück
+      g.beginPath(); g.arc(x, y, cur ? 5 : (back <= 4 ? 4.2 : 3.3), 0, 7);
+      g.fillStyle = cur ? (on ? '#ffe08a' : '#7fd17f') : back <= 4 ? '#7fb4ff' : (on ? '#d19a3a' : '#454b44');
+      if (cur) { g.shadowColor = '#ffb347'; g.shadowBlur = 10; }
+      g.fill(); g.shadowBlur = 0;
+    }
+    g.fillStyle = k === f ? '#ffb347' : (k === s ? '#e8d48a' : '#cfd6c8');
+    g.font = 'bold 15px system-ui'; g.textAlign = 'center'; g.fillText(WN[k], cx, cy - 2);
+    g.font = '11px monospace'; g.fillStyle = '#aab3a5'; g.fillText(`${pos}/${L}`, cx, cy + 14);
+    g.font = '10px system-ui'; g.fillStyle = '#8e978a';
+    g.fillText(k === f ? (mult ? 'schnell · MULT' : 'schnell') : (k === s ? 'langsam' : 'fest'), cx, cy + 27);
+  }
+}
+function drawHist() {
+  const cv = $('cvHist'), g = cv.getContext('2d'), W = cv.width, H = cv.height;
+  g.fillStyle = '#1d211e'; g.fillRect(0, 0, W, H);
+  if (!run || !run.results.length) { g.fillStyle = '#6c756d'; g.font = '13px system-ui'; g.textAlign = 'center'; g.fillText('noch kein Lauf', W / 2, H / 2); return; }
+  const n = tape.Z.length - run.from, sd = Math.sqrt(n / 4), lo = n / 2 - 5 * sd, hi = n / 2 + 7 * sd;
+  const B = 60, bins = new Array(B).fill(0), bx = v => Math.max(0, Math.min(B - 1, Math.floor((v - lo) / (hi - lo) * B)));
+  for (const r of run.results) bins[bx(r.n)]++;
+  const mx = Math.max(...bins), pw = (W - 30) / B, X = v => 20 + (v - lo) / (hi - lo) * (W - 30);
+  for (let b = 0; b < B; b++) if (bins[b]) {
+    const h = Math.max(2, bins[b] / mx * (H - 40));
+    g.fillStyle = '#7b857a'; g.fillRect(20 + b * pw, H - 22 - h, pw - 1, h);
+  }
+  const best = run.results.reduce((a, b) => b.n > a.n ? b : a);
+  g.fillStyle = '#f07a6a'; g.fillRect(X(best.n) - 1, 12, 3, H - 34);
+  g.fillStyle = '#e3b04b'; g.fillRect(X(run.thr), 6, 1.5, H - 28);
+  g.fillStyle = '#aab3a5'; g.font = '10px system-ui'; g.textAlign = 'center';
+  for (let k = -4; k <= 6; k += 2) { const v = n / 2 + k * sd; g.fillText(k === 0 ? 'n/2' : (k > 0 ? '+' : '') + k + 'σ', X(v), H - 8); }
+  g.textAlign = 'left'; g.fillStyle = '#f07a6a';
+  g.fillText(`max ${best.n} (${((best.n - n / 2) / sd).toFixed(1).replace('.', ',')} σ)`, Math.min(W - 110, X(best.n) + 5), 14);
+  g.fillStyle = '#e3b04b'; g.fillText('Satz', X(run.thr) + 4, 26);
+}
+
+// ------------------------------------------------------------------ Lorenz-Tab
+function renderWheels() {
+  const rows = [];
+  const add = (nm, arr, pos, grp, i) => {
+    rows.push(`<div class="wheel"><span class="nm">${nm}</span><input type="number" min="0" max="${arr.length-1}" value="${pos}" data-g="${grp}" data-i="${i}" title="Startstellung"><div class="pins">` +
+      arr.map((v, j) => `<span class="pin${v?' x':''}" data-g="${grp}" data-i="${i}" data-j="${j}">${v?'×':'·'}</span>`).join('') + '</div></div>');
+  };
+  key.chi.forEach((w, i) => add('χ' + (i+1) + ' (' + w.length + ')', w, key.chiPos[i], 'chi', i));
+  key.psi.forEach((w, i) => add('ψ' + (i+1) + ' (' + w.length + ')', w, key.psiPos[i], 'psi', i));
+  key.mu.forEach((w, i) => add('μ' + (i ? 37 : 61), w, key.muPos[i], 'mu', i));
+  $('wheels').innerHTML = rows.join('');
+  $('wheels').querySelectorAll('.pin').forEach(p => p.onclick = () => {
+    key[p.dataset.g][+p.dataset.i][+p.dataset.j] ^= 1; renderWheels(); encrypt(); });
+  $('wheels').querySelectorAll('input').forEach(inp => inp.onchange = () => {
+    const g = inp.dataset.g, i = +inp.dataset.i, L = key[g][i].length;
+    key[g + 'Pos'][i] = ((parseInt(inp.value) || 0) % L + L) % L; inp.value = key[g + 'Pos'][i]; encrypt(); });
+  $('limit').value = key.limit || 0;
+}
+let lastEnc = null;
+function plainCodes() {
+  const dbl = $('dbl').checked, len = Math.max(200, Math.min(12000, parseInt($('tapeLen').value) || 3000));
+  const one = M.toTeleprinter($('plainIn').value, dbl); if (!one) return [];
+  let s = one; while (s.length < len) s += (dbl ? '99' : '9') + one;
+  return M.strToCodes(s.slice(0, len));
+}
+function encrypt() {
+  const P = plainCodes(); if (!P.length) return;
+  key.limit = +$('limit').value;
+  const r = M.lorenz(P, key);
+  lastEnc = { P, Z: r.out };
+  $('plainTp').textContent = M.codesToStr(P);
+  $('cipherOut').textContent = M.codesToStr(r.out);
+  const n = Math.min(24, P.length), fmt = v => M.CHAR[v], row = (h, a) => `<tr><th>${h}</th>${a.slice(0, n).map(x => `<td>${x}</td>`).join('')}</tr>`;
+  $('ktable').innerHTML = row('P', P.map(fmt)) + row('χ', r.cs.map(fmt)) + row('ψ′', r.ps.map(fmt)) + row('K', r.ks.map(fmt)) + row('Z', r.out.map(fmt)) +
+    row('TM', r.tm.map(t => t ? '×' : '·'));
+}
+$('bEnc').onclick = encrypt;
+['dbl','tapeLen','limit'].forEach(id => $(id).addEventListener('change', encrypt));
+$('bRandKey').onclick = () => { key = M.randomKey(parseInt($('seed').value) || 1, +$('limit').value); renderWheels(); encrypt(); };
+$('bLoad').onclick = () => {
+  encrypt(); if (!lastEnc) return;
+  setTape(lastEnc.Z, lastEnc.P, JSON.parse(JSON.stringify(key)));
+  $('printer').insertAdjacentHTML('beforeend', `<span class="h">— neues Band eingelegt: ${lastEnc.Z.length} Zeichen —\n</span>`);
+  document.querySelector('#nav button[data-t=colossus]').click();
+};
+$('bDefault').onclick = () => {
+  $('plainIn').value = M.DEFAULT_TEXT; $('dbl').checked = true; $('tapeLen').value = 3000; $('seed').value = M.DEFAULT_SEED; $('limit').value = 0;
+  key = M.randomKey(M.DEFAULT_SEED); renderWheels(); encrypt();
+};
+
+// ------------------------------------------------------------------ De-Chi-Tab
+$('bDechi').onclick = () => {
+  const Z = tape.Z, chi = tape.key.chi, D = [];
+  for (let i = 0; i < Z.length; i++) { let c = 0; for (let k = 0; k < 5; k++) c |= M.chiAt(chi, k, fixed[k] + i) << k; D.push(Z[i] ^ c); }
+  const rate = (A, k) => { let c = 0; for (let i = 1; i < A.length; i++) if ((((A[i] ^ A[i-1]) >> k) & 1) === 0) c++; return c / (A.length - 1); };
+  let rows = '<tr><th></th>' + [1,2,3,4,5].map(k => `<th>Impuls ${k}</th>`).join('') + '</tr>';
+  rows += '<tr><td>Band ΔZ = •</td>' + [0,1,2,3,4].map(k => `<td>${(rate(Z, k) * 100).toFixed(1)} %</td>`).join('') + '</tr>';
+  rows += '<tr><td>De-Chi ΔD = •</td>' + [0,1,2,3,4].map(k => { const r = rate(D, k); return `<td class="${r > 0.6 ? 'ok' : ''}">${(r * 100).toFixed(1)} %</td>`; }).join('') + '</tr>';
+  $('dtab').innerHTML = rows;
+  $('dechiOut').textContent = M.codesToStr(D);
+  const tk = tape.key, right = fixed.map((v, i) => v === tk.chiPos[i]);
+  $('dechiInfo').innerHTML = 'Stellungen ' + fixed.map((v, i) => `${WN[i]}=${v}`).join(', ') + ' · ' +
+    (right.every(x => x) ? '<span class="ok">alle fünf richtig – D zeigt die typischen Wiederholungen</span>' :
+      `<span class="bad">${right.filter(x => !x).length} Stellung(en) falsch – D ist Rauschen (≈ 50 %)</span>`);
+};
+$('bSolve').onclick = () => {
+  const k = JSON.parse(JSON.stringify(tape.key)); k.chiPos = fixed.slice();
+  const out = M.lorenz(tape.Z, k, true).out;
+  const txt = M.fromTeleprinter(M.codesToStr(out));
+  const ok = fixed.every((v, i) => v === tape.key.chiPos[i]);
+  $('solveOut').innerHTML = (ok ? '<span class="ok">Klartext:</span>\n' : '<span class="bad">Mit diesen Chi-Stellungen kommt nur Unsinn heraus:</span>\n') + txt.slice(0, 1600).replace(/[<&]/g, c => c === '<' ? '&lt;' : '&amp;');
+  $('solveOut').style.whiteSpace = 'pre-wrap';
+};
+
+// ------------------------------------------------------------------ Logisim-Abgleich
+$('bLg').onclick = () => {
+  const t = M.defaultTape(2000), thr = Math.max(0, Math.min(9999, parseInt($('lgThr').value) || 0));
+  const lines = M.logisimReference(t.Z, t.key.chi, thr, $('lgCross').checked, $('lgUnter').checked);
+  $('lgOut').textContent = lines.length ? lines.join('\n') + '\n' : '(keine Zeile erfüllt den Satz)\n';
+  $('lgOut').insertAdjacentHTML('beforeend', `<span class="h">— ${lines.length} Zeile(n) · SATZ = 0x${String(thr).padStart(4, '0')} · UNTER = ${$('lgUnter').checked ? 1 : 0} —</span>`);
+};
+
+// ------------------------------------------------------------------ Start
+counterBoxes();
+$('bDefault').click();
+{ const t = M.defaultTape(3000); setTape(t.Z, t.P, t.key); }
+$('printer').innerHTML = '<span class="h">COLOSSUS · Standard-Testmeldung eingelegt (3000 Zeichen)\nTipp: „1. Lauf“ wählen und starten.\n\n</span>';
+</script>
+</body>
+</html>
