@@ -4477,7 +4477,10 @@ class Jaguar {
     if (newly & this.pend) this.raise();
   }
   clearPend(b) { this.pend &= ~(b & 0x1F); }
-  setPend(bit) { this.pend |= 1 << bit; if (this.intEnable() & (1 << bit)) this.raise(); }
+  // Tom merkt sich eine Anforderung nur, wenn die Quelle freigegeben ist (wie Virtual Jaguar). Sonst
+  // würde ein Lese-Oder-Schreib-Zugriff auf INT1 (Battle Morph: INT1 lesen, $103 dazu, zurückschreiben)
+  // nebenbei den Jerry-Interrupt freigeben und den 68000 mit Zeitgeber-Interrupts überfluten.
+  setPend(bit) { if (this.intEnable() & (1 << bit)) { this.pend |= 1 << bit; this.raise(); } }
   raise() { this.irqReq = true; this.cpu.ipl = 2; }
   resetPit() {
     const pre = this.t16(0x50), div = this.t16(0x52);
