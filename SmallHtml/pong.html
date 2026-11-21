@@ -1,0 +1,1195 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pong-Werkbank</title>
+<style>
+:root{--bg:#1c2025;--fg:#e6e2d8;--dim:#98a1aa;--card:#262b32;--line:#39414b;--acc:#f0b54a;--mono:ui-monospace,"Cascadia Mono",Consolas,"DejaVu Sans Mono",monospace}
+*{box-sizing:border-box}
+html,body{background:var(--bg)}
+body{margin:0;color:var(--fg);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:14px 20px;border-bottom:1px solid var(--line)}
+h1{margin:0;font-size:1.4rem}
+header p{margin:2px 0 0;color:var(--dim);font-size:.9rem}
+main{max-width:1280px;margin:0 auto;padding:16px}
+h2{font-size:1rem;margin:0 0 8px;color:var(--acc)}
+h3{font-size:.95rem;margin:14px 0 6px;color:var(--acc)}
+.tabs{display:flex;gap:4px;flex-wrap:wrap;margin-bottom:10px}
+.tabs button{background:#2c323a;color:var(--fg);border:1px solid var(--line);border-bottom:none;border-radius:7px 7px 0 0;padding:7px 14px;font:inherit;font-size:.92rem;cursor:pointer}
+.tabs button.on{background:var(--card);color:var(--acc);border-color:var(--acc)}
+.bench{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:16px}
+@media (max-width:900px){.bench{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+.card+.card{margin-top:16px}
+.screenwrap:fullscreen{display:flex;align-items:center;justify-content:center;padding:0;border-radius:0}
+.screenwrap:fullscreen #screen{width:auto;height:100vh;max-width:100vw}
+.screenwrap{background:#000;border-radius:10px;padding:10px;box-shadow:inset 0 0 30px #000,0 4px 14px #0008}
+#screen{width:100%;display:block;aspect-ratio:4/3;background:#000;border-radius:14px/18px;cursor:crosshair;image-rendering:auto}
+#screen.sharp{image-rendering:pixelated;border-radius:2px}
+.ctrls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0}
+.ctrls label{font-size:.88rem;color:var(--dim);display:flex;align-items:center;gap:5px}
+button.b,select,input[type=number]{background:#323943;color:var(--fg);border:1px solid #4a535e;border-radius:5px;padding:5px 10px;font:inherit;font-size:.88rem}
+button.b{cursor:pointer}
+button.b:hover{border-color:var(--acc)}
+button.b.big{padding:8px 16px;font-weight:600}
+button.b.on{background:#5a4416;border-color:var(--acc)}
+.status{font-size:.9rem;margin:6px 0 2px;color:var(--dim)}
+.status b{color:var(--acc)}
+.hint{font-size:.82rem;color:var(--dim);margin:6px 0}
+.hint kbd,.info kbd{background:#333a43;border:1px solid #4a525c;border-radius:3px;padding:0 4px;font-size:.78rem;color:var(--fg)}
+.grid2{display:grid;grid-template-columns:auto 1fr;gap:4px 10px;align-items:center;font-size:.88rem}
+.grid2 span{color:var(--dim)}
+.info{line-height:1.55}
+.info p{margin:0 0 .7em}
+.info h3:first-child{margin-top:0}
+.info table{border-collapse:collapse;font-size:.86rem;margin:6px 0 10px}
+.info td,.info th{border:1px solid var(--line);padding:3px 8px;text-align:left}
+.info th{color:var(--acc);font-weight:600}
+.mono{font-family:var(--mono)}
+.pot{width:150px;accent-color:var(--acc)}
+.leds{display:flex;flex-wrap:wrap;gap:6px 10px;font:12px var(--mono);margin:6px 0}
+.led{display:inline-flex;align-items:center;gap:4px;color:var(--dim)}
+.led i{width:10px;height:10px;border-radius:50%;background:#3a2a20;box-shadow:inset 0 1px 2px #000}
+.led.on i{background:#ffb347;box-shadow:0 0 6px #ffb347}
+.bits{font:13px var(--mono);letter-spacing:1px}
+.bits b{color:#ffb347}
+#raster,#laLine,#laFrame{width:100%;display:block;background:#0b0f14;border:1px solid var(--line);border-radius:6px}
+footer{text-align:center;color:var(--dim);font-size:.85rem;padding:18px}
+footer a,.info a,.hint a{color:#9fc6e0}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>Pong-Werkbank</h1>
+  <p>Pong ohne Prozessor: der Automat von 1972 taktgenau aus seiner TTL-Logik, dazu Home Pong, Super Pong und der AY-3-8500</p>
+</header>
+<main>
+  <div class="tabs" id="tabs">
+    <button data-tab="arcade" class="on">Pong-Automat (1972)</button>
+    <button data-tab="home">Home Pong (1975)</button>
+    <button data-tab="super">Super Pong (1976)</button>
+    <button data-tab="ay">AY-3-8500 (1976)</button>
+    <button data-tab="bild">So entsteht das Bild</button>
+  </div>
+
+  <div id="viewPlay">
+  <div class="bench">
+    <div>
+      <div class="screenwrap" id="screenwrap"><canvas id="screen" width="800" height="600"></canvas></div>
+      <div class="ctrls">
+        <button class="b big" id="bCoin" title="Münze einwerfen (Taste 5 oder M)">🪙 Münze</button>
+        <button class="b big" id="bStart" title="Spiel starten / zurücksetzen (Taste Leertaste)">▶ Start</button>
+        <button class="b" id="bServe" title="Aufschlag bei Handaufschlag (Taste A)">Aufschlag</button>
+        <button class="b" id="bPause">⏸ Pause</button>
+        <button class="b" id="bReset" title="Gerät aus- und wieder einschalten">⏻ Neu einschalten</button>
+        <button class="b" id="bSnd">🔇 Ton aus</button>
+        <button class="b" id="bFull" title="Vollbild ein/aus (Taste F, zurück mit Esc)">⛶ Vollbild</button>
+        <label>Bild <select id="disp"><option value="crt">Röhre</option><option value="sharp">scharf</option></select></label>
+      </div>
+      <div class="status" id="status"></div>
+    </div>
+    <div>
+      <div class="card">
+        <h2>Steuerung</h2>
+        <div class="ctrls">
+          <label>Spieler <select id="players"><option value="1">1 Spieler</option><option value="2" selected>2 Spieler</option></select></label>
+          <label><input type="checkbox" id="aiL"> Computer links</label>
+          <label><input type="checkbox" id="aiR"> Computer rechts</label>
+        </div>
+        <div class="grid2">
+          <span>Links</span><div><select id="inL"><option value="maus">Maus</option><option value="tasten">Tasten W/S</option><option value="pad">Gamepad 1</option></select>
+            <input type="range" class="pot" id="potL" min="0" max="1000" value="500" title="Drehregler links"></div>
+          <span>Rechts</span><div><select id="inR"><option value="tasten" selected>Tasten ↑/↓</option><option value="maus">Maus</option><option value="pad">Gamepad 2</option></select>
+            <input type="range" class="pot" id="potR" min="0" max="1000" value="500" title="Drehregler rechts"></div>
+        </div>
+        <div class="hint">Der Drehregler wird stufenlos nachgebildet: Maus (senkrechte Lage über dem Bild), Tasten (drehen, solange gedrückt) oder Gamepad (Achse des linken Sticks; Spieler 2 auch rechter Stick). <kbd>5</kbd>/<kbd>M</kbd> Münze, <kbd>Leer</kbd> Start, <kbd>A</kbd> Aufschlag, <kbd>P</kbd> Pause.</div>
+        <div id="machineOpts"></div>
+      </div>
+      <div class="card">
+        <h2>Werkbank</h2>
+        <div class="ctrls">
+          <button class="b" id="bSave">Zustand speichern …</button>
+          <button class="b" id="bLoad">Zustand laden …</button>
+          <input type="file" id="file" accept=".json,application/json" hidden>
+        </div>
+        <div class="hint" id="machineNote"></div>
+      </div>
+    </div>
+  </div>
+  <div class="card info" id="info"></div>
+  </div>
+
+  <div id="viewBild" class="hidden">
+    <div class="bench">
+      <div>
+        <div class="card">
+          <h2>Raster: H-Zähler waagrecht, V-Zähler senkrecht</h2>
+          <canvas id="raster" width="910" height="524"></canvas>
+          <div class="ctrls">
+            <label>Tempo <select id="slow">
+              <option value="1">Echtzeit</option><option value="0.1">1/10</option><option value="0.01" selected>1/100</option>
+              <option value="0.001">1/1000</option><option value="0.0001">1/10 000</option><option value="0">angehalten</option></select></label>
+            <button class="b" id="bStepPx">+1 Takt</button><button class="b" id="bStepLn">+1 Zeile</button><button class="b" id="bStepFr">+1 Bild</button>
+            <label><input type="checkbox" id="showZones" checked> Austastung und Sync einfärben</label>
+          </div>
+          <div class="leds" id="leds"></div>
+          <div class="bits" id="bitsH"></div>
+          <div class="bits" id="bitsV"></div>
+          <div class="bits" id="bitsB"></div>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h2>Logikanalysator: eine Zeile</h2>
+          <div class="ctrls"><label>Zeile V = <input type="number" id="laV" min="0" max="261" value="120"></label><button class="b" id="laBall">Zeile mit Ball</button></div>
+          <canvas id="laLine" width="900" height="420"></canvas>
+          <div class="hint" id="laLineInfo"></div>
+          <h2 style="margin-top:12px">Logikanalysator: ein Bild (je Zeile bei H = 300)</h2>
+          <canvas id="laFrame" width="900" height="300"></canvas>
+          <div class="hint" id="laFrameInfo"></div>
+        </div>
+      </div>
+    </div>
+    <div class="card info" id="infoBild"></div>
+  </div>
+</main>
+<footer>Pong-Werkbank · <a href="pong_logisim_web.html">Gatterschaltung des Automaten (Logisim Web)</a> · mehr auf <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a></footer>
+
+<script id="engine">
+// ════════════════════════ PONG 1972 – taktgenaues Modell der TTL-Logik ════════════════════════
+// Gerechnet wird Bildpunkt für Bildpunkt (ein Takt CLK = 7,159 MHz, 455 Takte
+// je Zeile, 262 Zeilen je Bild). Jede Zustandsvariable ist ein Flipflop oder
+// Zähler der Platine (Lageplatz im Kommentar). Wo Pong sich auf Gatter-
+// laufzeiten verlässt, ist das so nachgebildet, wie es die Gattersimulation
+// mit Datenblatt-Laufzeiten (pong_logisim_web.html) zeigt:
+//  · H5 („time critical“): HBLANK endet erst nach der steigenden Flanke bei
+//    H=80, der Ballzähler G7/H7/G6 zählt 374 statt 375 Takte je Zeile.
+//  · Die Zählerkette F8/F9/F6 braucht für 128H und 256H länger als einen
+//    Takt: Schläger erscheinen ab H=129, das Netz bei H=257.
+//  · Treffer und Aus (Überlappung Ball/Schläger bzw. Ball/HBLANK) werden mit
+//    den Flankenzeiten innerhalb des Takts geprüft.
+const PONG_MF4_N = 102, PONG_MG4_N = 15;   // Monoflops F4 (1,7 s) und G4 (0,24 s) in Bildern
+class PongTTL {
+  constructor() {
+    this.W = 455; this.H = 262;
+    this.frame = new Uint8Array(this.W * this.H);   // Bit0 Spielvideo, Bit1 Punkte
+    this.snd = new Uint8Array(262 * 4); this.sndN = 0; // SOUND je Zeile (am Zeilenende)
+    this.paddle = [128, 128]; this.coin = 0; this.sw15 = 0;
+    this.onFrame = null;
+    this.reset();
+  }
+  reset() {
+    this.p = 0; this.v = 0; this.hreset = 0; this.vreset = 0;
+    this.hblank = 1; this.vblank = 0;
+    this.f3b = 0; this.s256 = 0; this.h3a = 0;
+    this.bc = 0; this.vc = 0;
+    this.h2a = 0; this.h2b = 0; this.f1 = 0; this.h3b = 0;
+    this.a5b = 0; this.a5a = 0; this.b5a = 0; this.a2 = 0; this.b5b = 0; this.c2 = 0; this.f3a = 0;
+    this.c7 = 0; this.d7 = 0; this.c8a = 0; this.c8b = 0;
+    this.pq = [0, 0]; this.pz = [0, 0]; this.pc = [0, 0];
+    this.mf4 = 0; this.mf4c = 0; this.mg4 = 0; this.mg4c = 0; this.mf4f = 0; this.mg4f = 0;
+    this.run = 0;
+    this.miss = 0; this.hit1 = 0; this.hit2 = 0; this.d12 = 0; this.vp256 = 0;
+    this.mx = 0; this.my = 0; this.lh = 1; this.lv = 1;          // Monitor wie in Teil B
+    this.frames = 0; this.pixels = 0;
+    this.settle();
+  }
+  // ---------------------------------------------------------- statische Logik (Pegel)
+  stopgCalc() {
+    const sw1 = this.sw15 ? ((this.c7 >> 2) & 1) : 1, sw2 = this.sw15 ? ((this.d7 >> 2) & 1) : 1;  // SW1A/B
+    const s1n = ((this.c7 & 1) && sw1 && this.c8a) ? 0 : 1;   // D8a
+    const s2n = ((this.d7 & 1) && sw2 && this.c8b) ? 0 : 1;   // D8b
+    return (s1n && s2n) ? 0 : 1;                                // B2a
+  }
+  settle() {
+    for (let it = 0; it < 4; it++) {
+      const srstn = this.coin ? 0 : 1;                          // Münz-Taster → SRST_n
+      if (!srstn) { this.c7 = 0; this.d7 = 0; this.c8a = 0; this.c8b = 0; }   // C7/D7 R0, C8 CLR
+      const stopg = this.stopgCalc();
+      if (!srstn) this.run = 1; else if (stopg) this.run = 0;   // Start-Latch
+      this.stopg = stopg;
+      this.attract = (stopg || !this.run) ? 1 : 0;              // D2a → D1b
+      if (this.attract) { this.a5a = 0; this.a5b = 0; this.b5a = 0; this.h3a = 1; }   // D1.6 CLR, H3a PRE
+      this.rstspeed = (!srstn || this.miss) ? 1 : 0;            // E6b
+      if (this.rstspeed) { this.f1 = 0; this.mf4 = 1; this.mf4c = 0; this.mf4f = 1; }   // F1 R0, F4 Trigger
+      if (this.miss) { this.mg4 = 1; this.mg4c = 0; this.mg4f = 1; }            // G4 Trigger = MISS_n
+      this.e5 = (!this.run || stopg || this.mf4) ? 0 : 1;       // E5a
+      if (!this.e5) this.b5b = 0;                                // B5b CLR
+      if (!this.b5b) this.f3a = 0;                               // F3a CLR = B5.9
+      this.hballReset = (!this.attract && !this.b5b) ? 1 : 0;   // E1b = NAND(ATTRACT_n, SERVE)
+      if (this.hballReset) this.bc = 0;                          // G7/H7/G6 CLR
+      if (this.hit1 || this.hit2) { this.a2 = 0; this.c2 = 0; }  // HIT_n: A2 CLR, C2 CLR
+      if (this.hit1) this.h3b = 0; else if (this.hit2) this.h3b = 1;   // H3b CLR / PRE
+      // H3b-Takt = SC · ATTRACT (C1d, D1a)
+      const d12 = (this.mg4 && this.attract) ? 1 : 0;
+      if (d12 && !this.d12 && !this.hit1 && !this.hit2) { this.h3b ^= 1; }
+      this.d12 = d12;
+    }
+  }
+  move() { return (this.h2a && this.h2b) ? 0 : 1; }             // H4a
+  loadH() {                                                      // Ladewert G7/H7: 0x88 + 2·Ba + Aa
+    const mv = this.move(), L = this.h3b, R = L ^ 1;
+    const h4d = (mv && L) ? 0 : 1, ba = (mv && R) ? 0 : 1, aa = (h4d && ba) ? 0 : 1;
+    return 0x88 | (ba << 1) | aa;
+  }
+  loadV() {                                                      // B4 = (A4c, A4b, B6a, 0) + (C4a, 1, 1, 0)
+    const vd = this.a2, b6a = ((vd && this.b5a) || (!this.b5a && !vd)) ? 0 : 1;
+    const a1 = this.a5b ^ vd, a2 = vd ^ this.a5a, c4a = b6a ^ 1;
+    return ((a1 | (a2 << 1) | (b6a << 2)) + (c4a | 6)) & 15;
+  }
+  T(i) { const P = this.paddle[i] & 255; return (P - (P >> 3) + 29) & 255; }   // Schläger-Baustein
+  // ---------------------------------------------------------- Zeilenereignisse
+  hresetRise() {                                                 // H = 454, kurz nach der steigenden Flanke
+    this.hblank = 1;                                             // H5c
+    const v256 = (this.v >> 8) & 1, vrOld = this.vreset, vrNew = (this.v === 261) ? 1 : 0;
+    // G1c = NOR(256H̅, VRESET) fällt → H2a/H2b (74107) kippen
+    if (!vrOld) {
+      const mv = this.move(), a = this.h2a, b = this.h2b;
+      this.h2a = a | b;                                          // J = H2b, K = 0
+      this.h2b = b ? (mv ? 0 : 1) : 1;                           // J = 1, K = MOVE
+    }
+    this.vreset = vrNew;                                         // E7a
+    if (vrNew) {                                                 // H1b/H1c löschen H2 je nach Geschwindigkeit F1
+      const qc = (this.f1 >> 2) & 1, qd = (this.f1 >> 3) & 1;
+      const h1a = (qc || qd) ? 1 : 0, h1d = (h1a && !(qc && qd)) ? 0 : 1;
+      if (h1a) this.h2a = 0;
+      if (h1d) this.h2b = 0;
+    }
+    // Schläger-Bausteine: Zeilenzähler zählt HRESET, solange 256V = 0
+    if (!v256) for (let i = 0; i < 2; i++) { if (this.pz[i] === ((this.T(i) - 1) & 255)) this.pq[i] = 0; this.pz[i] = (this.pz[i] + 1) & 255; }
+    if (vrNew && !vrOld) {
+      // Monoflop-Bausteine: nach dem Trigger wird die erste BILD-Flanke nicht gezählt ("frisch")
+      if (!this.rstspeed) { if (this.mf4f) this.mf4f = 0; else { this.mf4c = (this.mf4c + 1) & 127; if (this.mf4c === PONG_MF4_N) this.mf4 = 0; } }
+      if (!this.miss) { if (this.mg4f) this.mg4f = 0; else { this.mg4c = (this.mg4c + 1) & 127; if (this.mg4c === PONG_MG4_N) this.mg4 = 0; } }
+      this.v = 0; this.vblank = 1;                               // VRESET: E8/E9/D9 zurück, F5-Latch setzen
+      this.settle();
+    }
+  }
+  hresetFall() {                                                 // ein Takt später: HRESET fällt, V zählt
+    if (!this.vreset) this.v = (this.v + 1) & 511;
+    if (this.v & 256) for (let i = 0; i < 2; i++) { this.pq[i] = 1; this.pz[i] = 0; this.pc[i] = 0; }
+    if (this.vblank && (this.v & 16)) {                          // F5-Latch: 16V beendet VBLANK
+      this.vblank = 0;
+      const vvid = this.vc >= 0xFC ? 1 : 0;                      // fallende Flanke VBLANK taktet A2 und F3a
+      if (vvid && !(this.hit1 || this.hit2)) this.a2 ^= 1;
+      if (this.b5b) this.f3a = vvid;
+    }
+  }
+  hsyncRise() {                                                  // H = 64: HSYNC_n steigt
+    if (!this.vblank) this.vc = this.vc === 255 ? this.loadV() : (this.vc + 1) & 255;   // B3/A3
+    const vp = this.vc >= 0xF0 ? 1 : 0;                           // VPOS256 = A3.RC → C2
+    if (vp && !this.vp256 && !(this.hit1 || this.hit2)) this.c2 = 1;
+    this.vp256 = vp;
+    for (let i = 0; i < 2; i++) if (!this.pq[i] && this.pc[i] !== 15) this.pc[i]++;     // B8/A8
+  }
+  hitBegin(side) {
+    const was = this.hit1 || this.hit2;
+    if (side === 0) this.hit1 = 1; else this.hit2 = 1;
+    if (!was) {
+      if (!this.attract) {                                       // HIT ↑: A5/B5a übernehmen die Trefferzone
+        const z = this.pc[side];
+        this.a5b = ((z >> 1) & 1) ^ 1; this.a5a = ((z >> 2) & 1) ^ 1; this.b5a = ((z >> 3) & 1) ^ 1;
+      }
+      const e18 = ((this.f1 & 12) === 12) ? 0 : 1;              // E1c
+      const before = (e18 && !this.c2) ? 0 : 1;                 // E1d = NAND(E1c, C2.Q̅)
+      this.c2 = 0;
+      if (before && e18 && !this.rstspeed) this.f1 = (this.f1 + 1) & 15;   // F1 zählt die Treffer
+    }
+    this.settle();
+  }
+  hitEnd(side) { if (side === 0) this.hit1 = 0; else this.hit2 = 0; }
+  missBegin() { this.miss = 1; this.settle(); }
+  missEnd() {
+    this.miss = 0;
+    if (!this.attract) {                                         // MISSED ↑ → F5 ↓ → C7 bzw. D7 zählen
+      if (!this.h3b) { this.c7 = (this.c7 + 1) % 10; if (this.c7 === 0) this.c8a ^= 1; }
+      else { this.d7 = (this.d7 + 1) % 10; if (this.d7 === 0) this.c8b ^= 1; }
+    }
+    this.settle();
+  }
+  // ---------------------------------------------------------- Punkteanzeige (C5/C6/D6, D3…D5)
+  scoreAt(h, v) {
+    const b = (n) => (h >> n) & 1, vb = (n) => (v >> n) & 1;
+    const h4 = b(2), h8 = b(3), h16 = b(4), h32 = b(5), h64 = b(6), h128 = b(7), h256 = b(8);
+    const v4 = vb(2), v8 = vb(3), v16 = vb(4), v32 = vb(5), v64 = vb(6), v128 = vb(7);
+    const e36 = h128 && !h256 && !h64, e38 = !h128 && h64 && h256;
+    if (!(v32 && !v64 && !v128 && (e36 || e38))) return 0;     // C5-EN
+    const sel = h32 | (h64 << 1);
+    const t1n = this.c8a ^ 1, t2n = this.c8b ^ 1;
+    let d;
+    if (sel === 0) d = 1 | (t1n << 1) | (t1n << 2) | (t1n << 3);
+    else if (sel === 1) d = this.c7;
+    else if (sel === 2) d = 1 | (t2n << 1) | (t2n << 2) | (t2n << 3);
+    else d = this.d7;
+    const seg = SEG7448[d];                                      // a b c d e f g
+    const fe = h16 && !h8 && !h4, bc = h16 && h8 && h4, A = h16 && !v8 && !v4, gd = h16 && v8 && v4;
+    const on = (fe && !v16 && (seg & 2)) || (fe && v16 && (seg & 4)) || (bc && !v16 && (seg & 32)) ||
+               (bc && v16 && (seg & 16)) || (A && !v16 && (seg & 64)) || (gd && !v16 && (seg & 1)) || (gd && v16 && (seg & 8));
+    return on ? 1 : 0;
+  }
+  // ---------------------------------------------------------- ein Takt
+  step() {
+    const pOld = this.p;
+    // fallende Flanke CLK
+    const hiPrev = (pOld === 454) ? 0 : (pOld & 0x180);          // 128H/256H aus dem letzten Takt
+    const p = this.hreset ? 0 : pOld + 1;
+    this.p = p;
+    this.f3b = this.s256;                                        // F3b übernimmt 256H wie vor der Flanke
+    if ((p & 7) === 4) this.h3a = this.attract ? 1 : ((p >> 7) & 1);   // H3a: 4H ↑ übernimmt 128H
+    if (p === 64) this.hsyncRise();
+    // PAD1 ↑ (bei 0,17) taktet B5b (Aufschlag): D = E5
+    if (p === 129 && !this.attract && !this.pq[0] && this.pc[0] !== 15 && this.e5 && !this.b5b) { this.b5b = 1; this.settle(); }
+    // steigende Flanke CLK: Ballzähler (Zählfreigabe ENT = HBLANK_n) und E7b
+    const ballBefore = this.bc >= 0x1FC ? 1 : 0;
+    if (!this.hballReset && !this.hblank) this.bc = this.bc === 0x1FF ? this.loadH() : (this.bc + 1) & 511;
+    const hvid = this.bc >= 0x1FC ? 1 : 0;                       // H6b/H6a (ab 0,79 Takt)
+    if (p === 80) this.hblank = 0;                               // HBLANK endet erst nach dieser Flanke (0,86)
+    const hrOld = this.hreset;
+    this.hreset = (p === 454) ? 1 : 0;
+    if (this.hreset && !hrOld) this.hresetRise();               // HBLANK setzt bei 0,71
+    if (!this.hreset && hrOld) this.hresetFall();
+    // Aus: HVID · HBLANK. HBLANK beginnt bei 454 + 102 ns und endet bei 80 + 124 ns, der Ball
+    // wechselt bei +110 ns. Streift er HBLANK nur 8 ns lang (letzter Ballpunkt bei 454), ist der
+    // Impuls kürzer als die Laufzeit von E6 (12 ns) und wird verschluckt.
+    {
+      const ov = (p < 80) ? (ballBefore || hvid) : (p === 80) ? (ballBefore || hvid) : (p === 454) ? hvid : 0;
+      if (ov && !this.miss) this.missBegin(); else if (!ov && this.miss) this.missEnd();
+    }
+    // Treffer: Ball mit Schlägerfenster (base + 0,17 … base + 3 + 0,67)
+    const vvid = this.vc >= 0xFC ? 1 : 0;
+    for (let s = 0; s < 2; s++) {
+      const base = s ? 385 : 129, act = s ? this.hit2 : this.hit1;
+      let ov = 0;
+      if (!this.attract && p >= base && p <= base + 3 && vvid && !this.pq[s] && this.pc[s] !== 15)
+        ov = (p === base + 3) ? ballBefore : (ballBefore || hvid);
+      if (ov && !act) this.hitBegin(s); else if (!ov && act) this.hitEnd(s);
+    }
+    // Werte am Ende des Takts
+    const eff = (p === 454) ? 0 : ((p & 0x7F) | hiPrev);
+    this.s256 = (eff >> 8) & 1;
+    const v = this.v;
+    let vid = (hvid && vvid) ? 1 : 0;
+    if (!this.attract && ((p >= 129 && p <= 131) || (p >= 385 && p <= 387))) {
+      const s = p < 256 ? 0 : 1;
+      if (!this.pq[s] && this.pc[s] !== 15) vid = 1;
+    }
+    if (p === 257 && !this.vblank && !(v & 4)) vid = 1;          // Netz: F3b/G3b/G2b
+    const sc = this.scoreAt(eff, v);
+    // Monitor wie in Teil B: HSYNC_n und VSYNC_n am Ende des Takts
+    const hs = (this.hblank && ((eff >> 5) & 1)) ? 0 : 1;
+    const vs = (this.vblank && ((v >> 2) & 1) && !((v >> 3) & 1)) ? 0 : 1;
+    if (this.lh && !hs) { this.mx = 0; this.my++; }
+    if (this.lv && !vs) { this.my = 0; this.frames++; this.ball = this.ballSeen; this.ballSeen = null; if (this.cap) { this.cap.ready = { n: this.cap.n, ln: this.cap.ln }; this.cap.n = 0; this.cap.ln = 0; } if (this.onFrame) this.onFrame(this); }
+    this.lh = hs; this.lv = vs;
+    if (this.mx < this.W && this.my < this.H) this.frame[this.my * this.W + this.mx] = vid | (sc << 1);
+    if (hvid && vvid && !this.ballSeen) this.ballSeen = { x: this.mx, y: this.my };
+    if (this.cap) {                                              // Aufzeichnung für den Logikanalysator
+      const cp = this.cap;
+      if (v === cp.v && cp.n < 455) {
+        const i = cp.n++;
+        cp.d[0][i] = hs; cp.d[1][i] = this.hblank; cp.d[2][i] = this.hreset; cp.d[3][i] = hvid; cp.d[4][i] = vvid;
+        cp.d[5][i] = (!this.attract && p >= 129 && p <= 131 && !this.pq[0] && this.pc[0] !== 15) ? 1 : 0;
+        cp.d[6][i] = (!this.attract && p >= 385 && p <= 387 && !this.pq[1] && this.pc[1] !== 15) ? 1 : 0;
+        cp.d[7][i] = (p === 257 && !this.vblank && !(v & 4)) ? 1 : 0; cp.d[8][i] = sc; cp.d[9][i] = vid; cp.h[i] = eff;
+      }
+      if (p === 300) { const l = cp.ln < 262 ? cp.ln++ : 261; cp.L[0][l] = vs; cp.L[1][l] = this.vblank; cp.L[2][l] = this.vreset; cp.L[3][l] = vvid; cp.L[4][l] = (v >> 8) & 1; cp.L[5][l] = this.pq[0] ? 0 : (this.pc[0] !== 15 ? 1 : 0); cp.L[6][l] = this.soundLevel() ^ 1; cp.vv[l] = v; }
+    }
+    this.mx++;
+    if (p === 454) { const sound = this.soundLevel(); if (this.sndN < this.snd.length) this.snd[this.sndN++] = sound; }
+    this.pixels++;
+  }
+  soundLevel() {                                                 // C3/C4/C1: Rechtecktöne aus den Zählern
+    const vp16 = (this.vc >> 4) & 1, vp32 = (this.vc >> 5) & 1, v32 = (this.v >> 5) & 1;
+    const hitS = (!this.c2 && vp16) ? 0 : 1, scS = (this.mg4 && v32) ? 0 : 1, tbS = (this.f3a && vp32) ? 0 : 1;
+    const sum = (hitS && scS && tbS) ? 0 : 1;
+    return (!this.attract && sum) ? 0 : 1;
+  }
+  runFrame() { const f = this.frames; let guard = 0; while (this.frames === f && guard++ < 200000) this.step(); }
+}
+const SEG7448 = [0x7E, 0x30, 0x6D, 0x79, 0x33, 0x5B, 0x1F, 0x70, 0x7F, 0x73, 0x0D, 0x19, 0x23, 0x4B, 0x0F, 0x00];
+PongTTL.prototype.startCapture = function (line) {
+  const mk = (k, n) => Array.from({ length: k }, () => new Uint8Array(n));
+  this.cap = { v: line, n: 0, ln: 0, d: mk(10, 455), h: new Uint16Array(455), L: mk(7, 262), vv: new Uint16Array(262), ready: null };
+};
+// Einschaltzustand wie in der Gattersimulation (Teil B): alle Flipflops 0, dann stellt die
+// Logik einige Latches beim Einschwingen ein (MISS_n ist anfangs 0 und stößt die Monoflops an).
+PongTTL.prototype.powerOn = function () {
+  this.reset();
+  Object.assign(this, { c7: 1, d7: 1, f1: 1, pq: [1, 1], pc: [0, 0], pz: [254, 254], mf4: 1, mg4: 1, mf4f: 1, mg4f: 1, vblank: 1, hblank: 1, h3a: 1, h3b: 1, d12: 1 });
+  this.settle();
+  if (!this.hblank && !this.hballReset) this.bc++;       // erste steigende Flanke CLK
+  this.hreset = 0; this.hresetFall();                       // E7b übernimmt F7 = 1: HRESET fällt, V zählt
+};
+
+
+</script>
+<script id="machines">
+// ════════════════════════ HEIMGERÄTE: Home Pong, Super Pong, AY-3-8500 ════════════════════════
+// Diese Geräte stecken in einem einzigen Chip (Atari 3659, Atari C010073,
+// GI AY-3-8500), deren Gatternetzlisten nicht veröffentlicht sind. Nachgebildet
+// wird deshalb das Verhalten der Zählerlogik Zeile für Zeile und Bildpunkt für
+// Bildpunkt: Ein Bildpunkt-Zähler (H) und ein Zeilenzähler (V) laufen durch,
+// jedes Objekt ist ein Vergleicher „Zähler im Fenster?“. Trifft der Ball einen
+// leuchtenden Bildpunkt eines Schlägers oder einer Wand, setzt das wie in der
+// Hardware ein Koinzidenz-Flipflop, das im senkrechten Rücklauf ausgewertet
+// wird. Töne sind Bits der Zähler (Rechtecke), z. B. 976 Hz = Zeilentakt / 16.
+const FONT_HOME = {   // Ziffern 4×5 Blöcke (Home Pong / C010073)
+  0: ['1111', '1001', '1001', '1001', '1111'], 1: ['0010', '0110', '0010', '0010', '0111'], 2: ['1111', '0001', '1111', '1000', '1111'],
+  3: ['1111', '0001', '0111', '0001', '1111'], 4: ['1001', '1001', '1111', '0001', '0001'], 5: ['1111', '1000', '1111', '0001', '1111'],
+  6: ['1000', '1000', '1111', '1001', '1111'], 7: ['1111', '0001', '0001', '0001', '0001'], 8: ['1111', '1001', '1111', '1001', '1111'],
+  9: ['1111', '1001', '1111', '0001', '0001'] };
+const FONT_SEG = {    // 7-Segment-artig 3×5 (AY-3-8500)
+  0: ['111', '101', '101', '101', '111'], 1: ['001', '001', '001', '001', '001'], 2: ['111', '001', '111', '100', '111'],
+  3: ['111', '001', '111', '001', '111'], 4: ['101', '101', '111', '001', '001'], 5: ['111', '100', '111', '001', '111'],
+  6: ['111', '100', '111', '101', '111'], 7: ['111', '001', '001', '001', '001'], 8: ['111', '101', '111', '101', '111'],
+  9: ['111', '101', '111', '001', '111'] };
+
+class BallPaddleChip {
+  // cfg: Rasterdaten und Spielregeln; game: Variante
+  constructor(cfg) {
+    this.cfg = cfg;
+    this.W = cfg.lineClocks; this.H = cfg.lines;
+    this.frame = new Uint8Array(this.W * this.H);
+    this.snd = new Uint8Array(this.H); this.sndN = 0;
+    this.pot = [0.5, 0.5]; this.serveBtn = 0; this.shot = null; this.opt = Object.assign({}, cfg.defaults);
+    this.game = cfg.games[0].id;
+    this.reset();
+  }
+  setGame(id) { this.game = id; this.reset(); }
+  reset() {
+    const c = this.cfg;
+    this.score = [0, 0]; this.over = c.attractAtStart ? 1 : 0; this.hits = 0;
+    this.bx = c.x0 + c.xw / 2; this.by = c.y0 + c.yh / 2; this.dx = 0; this.dy = 0;
+    this.wait = 90; this.serveTo = 1; this.turn = 1; this.lastHit = -1;
+    this.coin = { pad: [-1, -1], wall: 0, goal: -1, hole: 0, net: 0 };
+    this.sound = { kind: 0, left: 0 }; this.lc = 0; this.frames = 0; this.blank = 0;
+    this.wallH = 20; this.shots = 0; this.hitsRifle = 0; this.targetOff = 0; this.attractT = 0;
+    this.scoreShow = this.cfg.scoreAlways ? 1 : 0;
+  }
+  start() { this.reset(); this.over = 0; this.wait = 60; this.scoreShow = this.cfg.scoreAlways ? 1 : 1; }
+  // ------------------------------------------------------------ Spielfeld je Variante
+  layout() {
+    const c = this.cfg, g = this.game, L = { walls: [], pads: [], net: c.net, goals: null };
+    const top = c.y0, bot = c.y0 + c.yh, left = c.x0, right = c.x0 + c.xw;
+    const big = this.opt.bigBats !== false;
+    const ph = c.padH * (big ? 1 : 0.5), pw = c.padW;
+    const py = (i) => top + c.wallT + (c.yh - 2 * c.wallT - ph) * this.pot[i];
+    if (c.boundary) { L.walls.push([left, top, c.xw, c.wallT, 'tb'], [left, bot - c.wallT, c.xw, c.wallT, 'tb']); }
+    const padAt = (i, x) => L.pads.push({ side: i, x, y: py(i), w: pw, h: ph });
+    switch (g) {
+      case 'pong': case 'tennis':
+        padAt(0, left + c.padInset); padAt(1, right - c.padInset - pw); break;
+      case 'superpong':
+        padAt(0, left + c.padInset); padAt(0, left + c.xw * 0.32); padAt(1, right - c.xw * 0.32 - pw); padAt(1, right - c.padInset - pw); break;
+      case 'soccer': {
+        padAt(0, left + c.padInset); padAt(0, left + c.xw * 0.62); padAt(1, right - c.xw * 0.62 - pw); padAt(1, right - c.padInset - pw);
+        const gh = c.yh * 0.36, gy = top + (c.yh - gh) / 2;
+        L.walls.push([left, top, c.wallT, gy - top, 'side'], [left, gy + gh, c.wallT, bot - gy - gh, 'side'],
+                     [right - c.wallT, top, c.wallT, gy - top, 'side'], [right - c.wallT, gy + gh, c.wallT, bot - gy - gh, 'side']);
+        L.goals = [gy, gy + gh]; L.net = 'line'; break;
+      }
+      case 'squash': case 'practice':
+        L.walls.push([left, top, c.wallT, c.yh, 'back']);
+        padAt(0, right - c.padInset - pw - c.xw * 0.18); if (g === 'squash') padAt(1, right - c.padInset - pw); L.net = null; break;
+      case 'catch': {
+        // jeder Spieler führt zwei lange Balken; der Spalt dazwischen fängt den Ball
+        for (let i = 0; i < 2; i++) {
+          const x = i ? right - c.padInset - pw : left + c.padInset, gap = c.padH * 0.55, len = c.padH * 1.1, y = top + c.wallT + (c.yh - 2 * c.wallT - (2 * len + gap)) * this.pot[i];
+          L.pads.push({ side: i, x, y, w: pw, h: len, bar: 1 }, { side: i, x, y: y + len + gap, w: pw, h: len, bar: 1 });
+          L.pads.push({ side: i, x, y: y + len, w: pw, h: gap, catcher: 1, invisible: 1 });
+        }
+        L.walls.push([left, top, c.wallT / 2, c.yh, 'side'], [right - c.wallT / 2, top, c.wallT / 2, c.yh, 'side']);
+        break;
+      }
+      case 'solitaire': {
+        padAt(0, left + c.padInset);
+        const wh = Math.min(c.yh - 2 * c.wallT - 14, this.wallH * c.yh / 120);
+        L.walls.push([right - c.wallT, bot - c.wallT - wh, c.wallT, wh, 'solwall']);
+        L.hole = [top + c.wallT, bot - c.wallT - wh]; L.net = null; break;
+      }
+      case 'rifle1': case 'rifle2': L.net = null; L.walls = []; break;
+    }
+    return L;
+  }
+  // ------------------------------------------------------------ ein Bild, Zeile für Zeile
+  runFrame() {
+    const c = this.cfg, W = this.W, H = this.H, F = this.frame, L = this.layout();
+    this.L = L;
+    F.fill(0);
+    const bs = c.ball, bx = Math.round(this.bx), by = Math.round(this.by), bh = c.ballH;
+    const showBall = !this.blank && (this.game !== 'rifle1' || this.targetOff <= 0) && !(this.wait > 0 && !this.over && c.hideBallWait);
+    const col = null;
+    const isRifle = this.game === 'rifle1' || this.game === 'rifle2';
+    const tsz = isRifle && this.game === 'rifle1' ? 3 : 1;
+    let shotHit = 0;
+    for (let y = 0; y < H; y++) {
+      const row = y * W;
+      const inField = y >= c.y0 && y < c.y0 + c.yh;
+      // Netz / Mittellinie
+      if (inField && L.net) { const nx = Math.round(c.x0 + c.xw / 2 - c.netW / 2);
+        const on = L.net === 'line' ? true : ((y >> c.netDash) & 1) === 0;
+        if (on) for (let k = 0; k < c.netW; k++) F[row + nx + k] = 1; }
+      for (const wl of L.walls) if (y >= wl[1] && y < wl[1] + wl[3]) for (let x = Math.round(wl[0]); x < Math.round(wl[0] + wl[2]); x++) F[row + x] = 1;
+      for (const p of L.pads) if (!p.invisible && y >= p.y && y < p.y + p.h) for (let x = Math.round(p.x); x < Math.round(p.x + p.w); x++) F[row + x] = 1;
+      // Ball (beim Gewehrspiel: Zielscheibe) – mit Koinzidenzprüfung gegen alles, was in dieser Zeile leuchtet
+      if (showBall && y >= by && y < by + bh * tsz) {
+        for (let x = bx; x < bx + bs * tsz; x++) {
+          if (x < 0 || x >= W) continue;
+          F[row + x] = 1;
+        }
+      }
+      // Punkteanzeige
+      if (this.scoreShow || this.over) this.drawScore(y, row);
+      // Lichtpistole: die Fotozelle sieht, ob der Bildpunkt unter dem Zielpunkt leuchtet, während der Strahl vorbeiläuft
+      if (this.shot && y === this.shot.y && F[row + this.shot.x]) shotHit = 1;
+      // Ton: Zählerbit des Zeilenzählers, solange der Tongeber läuft
+      this.lc = (this.lc + 1) & 0xFFFF;
+      let s = 0;
+      if (this.sound.left > 0) s = (this.lc >> this.sound.kind) & 1;
+      this.snd[y] = s;
+      if (this.sound.left > 0 && y === H - 1) this.sound.left--;
+    }
+    this.sndN = H;
+    if (this.over && this.cfg.endPattern) this.drawEndPattern();
+    this.frames++;
+    this.vblank(col, shotHit);
+    if (this.shot) this.shot = null;
+  }
+  drawScore(y, row) {
+    const c = this.cfg, f = c.font, sc = c.scorePx, sy = c.scoreY;
+    const rows = 5 * sc.h; if (y < sy || y >= sy + rows) return;
+    const fy = Math.floor((y - sy) / sc.h);
+    const isRifle = this.game === 'rifle1' || this.game === 'rifle2';
+    const vals = isRifle ? [this.hitsRifle, this.shots] : this.score;
+    for (let s = 0; s < 2; s++) {
+      if (!isRifle && (this.game === 'practice' || this.game === 'solitaire') && s === 1 && this.game === 'practice') continue;
+      const v = vals[s], digits = v >= 10 ? [Math.floor(v / 10), v % 10] : [v];
+      const cx = c.scoreX[s];
+      digits.forEach((d, k) => {
+        const pat = f[d][fy], gw = pat.length * sc.w + sc.gap;
+        const x0 = Math.round(cx - (digits.length * gw) / 2 + k * gw);
+        for (let i = 0; i < pat.length; i++) if (pat[i] === '1') for (let q = 0; q < sc.w; q++) this.frame[row + x0 + i * sc.w + q] = 1;
+      });
+    }
+  }
+  drawEndPattern() {   // Home Pong: Klötzchen, die nach Spielende über den Schirm wandern
+    const c = this.cfg, t = this.frames, s = 24;
+    for (let y = c.y0; y < c.y0 + c.yh; y++) for (let x = c.x0; x < c.x0 + c.xw; x++) {
+      const gx = Math.floor((x - c.x0 + t) / s), gy = Math.floor((y - c.y0 + (t >> 1)) / (s * 0.6));
+      if (((gx + gy) & 1) && ((x - c.x0 + t) % s) < s * 0.55 && ((y - c.y0 + (t >> 1)) % Math.round(s * 0.6)) < s * 0.33) this.frame[y * this.W + x] = 1;
+    }
+  }
+  beep(kind, frames) { this.sound.kind = kind; this.sound.left = frames; }
+  // ------------------------------------------------------------ senkrechter Rücklauf: Koinzidenzen auswerten, Ball bewegen
+  vblank(col, shotHit) {
+    const c = this.cfg, g = this.game, L = this.L;
+    if (g === 'rifle1' || g === 'rifle2') return this.rifleLogic(shotHit);
+    if (this.over) { this.attractMove(); return; }
+    if (this.wait > 0) {
+      this.wait--;
+      if (this.wait === 0) {
+        if (this.opt.autoServe === false && !this.serveBtn) { this.wait = 1; return; }
+        this.serve(); this.scoreShow = this.cfg.scoreAlways ? 1 : 0;
+      }
+      return;
+    }
+    // Ball in Teilschritten bewegen; nach jedem Schritt vergleichen, ob sich Ballfenster und
+    // Schläger-/Wandfenster überdecken (dasselbe, was die Koinzidenzgatter im Chip melden)
+    const n = Math.max(1, Math.ceil(Math.max(Math.abs(this.dx), Math.abs(this.dy) / 3)));
+    for (let k = 0; k < n; k++) { if (this.subStep(this.dx / n, this.dy / n)) return; }
+  }
+  overlap(r) { const c = this.cfg; return this.bx < r.x + r.w && this.bx + c.ball > r.x && this.by < r.y + r.h && this.by + c.ballH > r.y; }
+  subStep(sx, sy) {
+    const c = this.cfg, g = this.game, L = this.L;
+    this.bx += sx; this.by += sy;
+    for (const p of L.pads) {
+      if (!this.overlap(p)) continue;
+      const s = p.side;
+      if (p.catcher) { if (g === 'catch') { this.point(s, s); return 1; } continue; }
+      if (g === 'squash' && s !== this.turn) continue;
+      const toward = (g === 'squash' || g === 'practice') ? this.dx > 0 : ((s === 0 && this.dx < 0) || (s === 1 && this.dx > 0));
+      if (!toward) continue;
+      if (p.bar) { this.dx = -this.dx; this.beep(c.sndHit, 2); continue; }
+      const z = Math.max(0, Math.min(7, Math.floor((this.by + c.ballH / 2 - p.y) / p.h * 8)));
+      this.hits++;
+      let sp = 1;
+      if (c.speedups) sp = this.hits >= 12 ? 1.6 : this.hits >= 4 ? 1.3 : 1;
+      this.dx = -Math.sign(this.dx) * this.baseDx() * sp;
+      this.dy = this.zoneDy(z) * sp;
+      if (g === 'squash') this.turn ^= 1;
+      this.beep(c.sndHit, 2);
+      return 0;
+    }
+    for (const wl of L.walls) {
+      const r = { x: wl[0], y: wl[1], w: wl[2], h: wl[3] }; if (!this.overlap(r)) continue;
+      if (wl[4] === 'tb') { this.dy = (this.by < c.y0 + c.yh / 2) ? Math.abs(this.dy) : -Math.abs(this.dy); this.beep(c.sndWall, 2); }
+      else if (wl[4] === 'back' && this.dx < 0) { this.dx = -this.dx; this.beep(c.sndWall, 2); }
+      else if (wl[4] === 'side') { this.dx = (this.bx < c.x0 + c.xw / 2) ? Math.abs(this.dx) : -Math.abs(this.dx); this.beep(c.sndWall, 2); }
+      else if (wl[4] === 'solwall' && this.dx > 0) { this.dx = -this.dx; this.beep(c.sndWall, 2); }
+    }
+    const top = c.y0 + (c.boundary ? c.wallT : 0), bot = c.y0 + c.yh - (c.boundary ? c.wallT : 0) - c.ballH;
+    if (!c.boundary) {
+      if (this.by < top) { this.by = top; this.dy = Math.abs(this.dy); this.beep(c.sndWall, 2); }
+      if (this.by > bot) { this.by = bot; this.dy = -Math.abs(this.dy); this.beep(c.sndWall, 2); }
+    } else { if (this.by < c.y0) this.by = c.y0; if (this.by > c.y0 + c.yh - c.ballH) this.by = c.y0 + c.yh - c.ballH; }
+    const left = c.x0, right = c.x0 + c.xw - c.ball;
+    if (g === 'solitaire' && this.bx >= right - c.wallT && this.dx > 0) {
+      this.score[0]++; this.wallH += 10; this.beep(c.sndScore, c.sndLen || 14); this.wait = 40; this.scoreShow = 1; this.bx = -100;
+      if (this.score[0] >= c.winScore) this.gameOver(); return 1;
+    }
+    if (g === 'soccer' && L.goals) {
+      const inGoal = this.by + c.ballH > L.goals[0] && this.by < L.goals[1];
+      if (this.bx < left - c.ball) { if (inGoal) { this.point(1, 0); return 1; } this.bx = left; this.dx = Math.abs(this.dx); }
+      if (this.bx > right + c.ball) { if (inGoal) { this.point(0, 1); return 1; } this.bx = right; this.dx = -Math.abs(this.dx); }
+      return 0;
+    }
+    if (this.bx < left - c.ball) { this.point(1, 0); return 1; }
+    if (this.bx > right + c.ball) {
+      if (g === 'squash') { this.point(this.turn ^ 1, this.turn); return 1; }
+      if (g === 'practice') { this.point(1, 0); return 1; }
+      this.point(0, 1); return 1;
+    }
+    return 0;
+  }
+  baseDx() { const c = this.cfg; return (this.opt.fast ? c.dxFast : c.dxSlow); }
+  speed() { return Math.abs(this.dx) / this.baseDx(); }
+  zoneDy(z) {
+    const c = this.cfg, four = this.opt.angles4 !== false;
+    // Schlägerabschnitt → Winkel. Zwei Winkel (±20°): obere/untere Hälfte. Vier: zusätzlich ±40° an den Enden.
+    const t20 = c.dyPerDx20 * this.baseDx(), t40 = c.dyPerDx40 * this.baseDx();
+    if (c.zones === 'pong') { const tab = [-3, -2, -1, 0, 0, 1, 2, 3]; return tab[z] * c.dyStep; }
+    if (!four) return z < 4 ? -t20 : t20;
+    return [-t40, -t40, -t20, -t20, t20, t20, t40, t40][z];
+  }
+  serve() {
+    const c = this.cfg, g = this.game;
+    this.bx = (g === 'squash' || g === 'practice') ? c.x0 + c.xw * 0.3 : (g === 'solitaire' ? c.x0 + c.xw * 0.6 : c.x0 + c.xw / 2 - c.ball / 2);
+    this.by = c.y0 + c.yh * (0.3 + 0.4 * ((this.frames * 37) % 100) / 100);
+    const dir = (g === 'squash' || g === 'practice') ? 1 : (g === 'solitaire' ? -1 : (this.serveTo ? 1 : -1));
+    this.dx = dir * this.baseDx(); this.dy = ((this.frames & 1) ? 1 : -1) * c.dyStep; this.hits = 0;
+    if (g === 'squash') this.turn = 1;
+  }
+  point(scorer, loser) {
+    const c = this.cfg;
+    this.score[scorer]++; this.beep(c.sndScore, c.sndLen || 14); this.scoreShow = 1;
+    this.serveTo = this.game === 'catch' ? (scorer ? 1 : 0) : (c.serveToMissed ? (loser ? 1 : 0) : (scorer ? 0 : 1));
+    this.wait = c.serveWait;
+    this.bx = -100;
+    if (this.score[scorer] >= c.winScore) this.gameOver();
+  }
+  gameOver() { this.over = 1; this.scoreShow = 1; this.bx = this.cfg.x0 + this.cfg.xw / 2; this.dx = this.baseDx(); this.dy = this.cfg.dyStep; }
+  attractMove() {   // nach Spielende läuft der Ball weiter, gezählt wird nicht
+    const c = this.cfg;
+    this.bx += this.dx; this.by += this.dy;
+    if (this.bx < c.x0 || this.bx > c.x0 + c.xw - c.ball) this.dx = -this.dx;
+    if (this.by < c.y0 + c.wallT || this.by > c.y0 + c.yh - c.wallT - c.ballH) this.dy = -this.dy;
+  }
+  rifleLogic(shotHit) {
+    const c = this.cfg;
+    if (this.targetOff > 0) this.targetOff--;
+    if (this.shotPending) {
+      this.shotPending = 0;
+      if (this.shots < 15) { this.shots++; if (shotHit && this.targetOff <= 0) { this.hitsRifle++; this.targetOff = 12; this.beep(c.sndHit, 3); } else this.beep(c.sndWall, 1); }
+      if (this.shots >= 15) this.scoreShow = 1;
+    }
+    if (this.game === 'rifle1') {         // große Zielscheibe springt zufällig umher
+      if (!this.dx) { this.dx = this.baseDx(); this.dy = c.dyStep * 1.5; }
+      this.bx += this.dx; this.by += this.dy;
+      if (this.bx < c.x0 || this.bx > c.x0 + c.xw - c.ball * 3) { this.dx = -this.dx; if (((this.frames * 13) & 7) < 3) this.dy = -this.dy; }
+      if (this.by < c.y0 || this.by > c.y0 + c.yh - c.ballH * 3) this.dy = -this.dy;
+    } else {                              // Ball läuft nach manuellem Aufschlag von links nach rechts
+      if (this.serveBtn && !this.dx) { this.bx = c.x0; this.by = c.y0 + c.yh * (0.2 + 0.6 * ((this.frames * 29) % 100) / 100); this.dx = this.baseDx(); this.dy = ((this.frames & 1) ? 1 : -1) * c.dyStep * 0.5; }
+      if (this.dx) { this.bx += this.dx; this.by += this.dy; if (this.by < c.y0 || this.by > c.y0 + c.yh - c.ballH) this.dy = -this.dy; if (this.bx > c.x0 + c.xw) { this.dx = 0; this.bx = -100; } }
+    }
+    this.scoreShow = 1;
+  }
+  fire(px, py) { this.shot = { x: Math.max(0, Math.min(this.W - 1, px | 0)), y: Math.max(0, Math.min(this.H - 1, py | 0)) }; this.shotPending = 1; }
+  ballInfo() { return { x: this.bx, y: this.by + this.cfg.ballH / 2, dx: this.dx, active: !this.wait && !this.over }; }
+}
+
+const HOME_CFG = {   // Atari 3659 (Sears Tele-Games Pong 1975 / Atari C-100): NTSC-Raster wie der Automat
+  name: 'Home Pong', lineClocks: 228, lines: 262, fps: 60, x0: 40, xw: 180, y0: 22, yh: 232,
+  wallT: 0, boundary: false, net: 'dash', netW: 2, netDash: 3, padW: 3, padH: 22, padInset: 10, ball: 3, ballH: 4,
+  dxSlow: 1.6, dxFast: 2.4, dyStep: 1.1, zones: 'pong', speedups: true, winScore: 15, serveWait: 100, serveToMissed: true,
+  font: FONT_HOME, scorePx: { w: 3, h: 4, gap: 3 }, scoreX: [92, 168], scoreY: 26, scoreAlways: false, endPattern: true, attractAtStart: true,
+  sndHit: 4, sndWall: 5, sndScore: 5, sndLen: 0, hideBallWait: true,     // Zeilentakt 15 734 Hz: /32 = 491 Hz, /64 = 246 Hz
+  defaults: { fast: false, autoServe: true },
+  games: [{ id: 'pong', name: 'Pong' }],
+};
+const SUPER_CFG = Object.assign({}, HOME_CFG, {
+  name: 'Super Pong', games: [{ id: 'pong', name: 'Pong' }, { id: 'superpong', name: 'Super Pong (zwei Schläger je Spieler)' },
+                              { id: 'catch', name: 'Catch (Ball im Spalt fangen)' }, { id: 'solitaire', name: 'Solitaire (Loch über der Wand)' }],
+  wallT: 4, scoreAlways: true, endPattern: false,
+});
+const AY_CFG = {     // GI AY-3-8500 (625-Zeilen-Fassung): 2 MHz, 128 Takte je Zeile, 312 Zeilen
+  name: 'AY-3-8500', lineClocks: 128, lines: 312, fps: 50, x0: 22, xw: 100, y0: 44, yh: 236,
+  wallT: 4, boundary: true, net: 'dash', netW: 1, netDash: 3, padW: 2, padH: 48, padInset: 4, ball: 2, ballH: 5,
+  dxSlow: 100 / 65, dxFast: 100 / 32.5, dyStep: 1.4, dyPerDx20: 1.42, dyPerDx40: 3.27, zones: 'ay', speedups: false, winScore: 15, serveWait: 60, serveToMissed: true,
+  font: FONT_SEG, scorePx: { w: 2, h: 6, gap: 2 }, scoreX: [52, 92], scoreY: 10, scoreAlways: true, endPattern: false, attractAtStart: false,
+  sndHit: 3, sndWall: 4, sndScore: 2, sndLen: 2, hideBallWait: false,     // Zeilentakt 15 625 Hz: /16 = 976 Hz, /32 = 488 Hz, /8 = 1,95 kHz (je 32 ms)
+  defaults: { fast: false, autoServe: true, bigBats: true, angles4: true },
+  games: [{ id: 'tennis', name: 'Tennis' }, { id: 'soccer', name: 'Fußball' }, { id: 'squash', name: 'Squash' }, { id: 'practice', name: 'Übung' },
+          { id: 'rifle1', name: 'Schießen 1 (Zielscheibe)' }, { id: 'rifle2', name: 'Schießen 2 (Ball)' }],
+};
+
+
+</script>
+<script>
+'use strict';
+const $ = (s) => document.querySelector(s);
+// ════════════════════════ Geräte ════════════════════════
+// Jedes Gerät liefert pro Bild einen Bildpuffer (W×H, Pegel je Bildpunkt),
+// pro Zeile einen Tonpegel und nimmt zwei Drehreglerwerte 0…1 entgegen.
+const arcade = {
+  id: 'arcade', name: 'Pong-Automat (1972)', fps: 7159090 / (455 * 262), eng: new PongTTL(),
+  crop: [44, 10, 384, 250], aspect: 4 / 3, lines: 262,
+  init() { this.eng.powerOn(); },
+  setPots(p) { this.eng.paddle = [Math.round(p[0] * 255), Math.round(p[1] * 255)]; },
+  frame() { this.eng.runFrame(); },
+  pixel(i) { const v = this.eng.frame[i]; return v === 0 ? 0 : (v & 1) ? 1 : 0.83; },
+  W: 455, H: 262,
+  sound() { return { data: this.eng.snd, n: this.eng.sndN, reset: () => { this.eng.sndN = 0; } }; },
+  coin(on) { this.eng.coin = on ? 1 : 0; this.eng.settle(); },
+  start() { this.coin(1); setTimeout(() => this.coin(0), 120); },
+  serve() {},
+  ball() {
+    const b = this.eng.ball; if (!b || this.eng.attract) return null;
+    return { x: b.x, y: b.y, dir: this.eng.h3b ? -1 : 1 };
+  },
+  // Schläger-Oberkante in Bildzeilen für einen Reglerwert (Schläger-Baustein: T = P − P/8 + 29)
+  potFor(i, y) { const T = y - 2; const P = (T - 29) * 8 / 7; return Math.max(0, Math.min(1, P / 255)); },
+  status() {
+    const e = this.eng, s1 = e.c7 + 10 * e.c8a, s2 = e.d7 + 10 * e.c8b;
+    return `Punkte <b>${s1} : ${s2}</b> · ${e.attract ? 'Attract-Modus – Münze einwerfen' : 'Spiel läuft'} · Treffer bisher (F1) ${e.f1} · Ziel ${e.sw15 ? 15 : 11} Punkte`;
+  },
+  save() { return plain(this.eng); }, load(o) { Object.assign(this.eng, o); },
+  sndFilter: 'tv',
+};
+function chipMachine(id, cfg, crop) {
+  const m = new BallPaddleChip(cfg);
+  return {
+    id, name: cfg.name, fps: cfg.fps, eng: m, crop, aspect: 4 / 3, lines: cfg.lines, W: cfg.lineClocks, H: cfg.lines,
+    init() { m.reset(); if (!cfg.attractAtStart) m.start(); },
+    setPots(p) { m.pot = [p[0], p[1]]; },
+    frame() { m.runFrame(); },
+    pixel(i) { return m.frame[i]; },
+    sound() { return { data: m.snd, n: m.sndN, reset: () => { m.sndN = 0; } }; },
+    coin() { m.start(); }, start() { m.start(); }, serve(on) { m.serveBtn = on ? 1 : 0; },
+    ball() { const b = m.ballInfo(); if (!b.active || b.x < 0) return null; return { x: b.x, y: b.y, dir: Math.sign(b.dx) || 1, fieldY: [cfg.y0, cfg.y0 + cfg.yh], padH: cfg.padH * (m.opt.bigBats === false ? 0.5 : 1), wallT: cfg.wallT }; },
+    potFor(i, y) {
+      if (m.game === 'catch') { const gap = cfg.padH * 0.55, len = cfg.padH * 1.1, span = 2 * len + gap; return Math.max(0, Math.min(1, (y - cfg.y0 - cfg.wallT - len - gap / 2) / (cfg.yh - 2 * cfg.wallT - span))); }
+      const ph = cfg.padH * (m.opt.bigBats === false ? 0.5 : 1); const t = (y - ph / 2 - cfg.y0 - cfg.wallT) / (cfg.yh - 2 * cfg.wallT - ph); return Math.max(0, Math.min(1, t)); },
+    status() {
+      const g = cfg.games.find(x => x.id === m.game);
+      if (m.game.startsWith('rifle')) return `${g.name} · Treffer <b>${m.hitsRifle}</b> von <b>${m.shots}</b> Schüssen${m.shots >= 15 ? ' · fertig' : ''}`;
+      return `${g.name} · Punkte <b>${m.score[0]} : ${m.score[1]}</b>${m.over ? ' · Spielende – Start drücken' : ''}`;
+    },
+    save() { const o = plain(m); delete o.L; return o; }, load(o) { Object.assign(m, o); },
+    sndFilter: id === 'ay' ? 'tv' : 'speaker',
+  };
+}
+function plain(obj) {
+  const o = {};
+  for (const k of Object.keys(obj)) {
+    const v = obj[k];
+    if (k === 'cfg' || k === 'frame' || k === 'snd' || k === 'cap' || k === 'onFrame' || typeof v === 'function') continue;
+    if (v instanceof Uint8Array || v instanceof Uint16Array) continue;
+    o[k] = (v && typeof v === 'object') ? JSON.parse(JSON.stringify(v)) : v;
+  }
+  return o;
+}
+const machines = {
+  arcade,
+  home: chipMachine('home', HOME_CFG, [30, 14, 200, 246]),
+  super: chipMachine('super', SUPER_CFG, [30, 14, 200, 246]),
+  ay: chipMachine('ay', AY_CFG, [18, 4, 108, 300]),
+};
+let M = arcade, tab = 'arcade';
+
+// ════════════════════════ Bild ════════════════════════
+const scr = $('#screen'), sctx = scr.getContext('2d');
+const off = document.createElement('canvas'), octx = off.getContext('2d');
+let glow = null, img = null;
+function draw() {
+  const [cx, cy, cw, ch] = M.crop, crt = $('#disp').value === 'crt';
+  if (off.width !== cw || off.height !== ch) { off.width = cw; off.height = ch; img = octx.createImageData(cw, ch); glow = new Float32Array(cw * ch); }
+  const d = img.data;
+  for (let y = 0; y < ch; y++) for (let x = 0; x < cw; x++) {
+    const sx = cx + x, sy = cy + y, k = y * cw + x;
+    let v = (sx < M.W && sy < M.H) ? M.pixel(sy * M.W + sx) : 0;
+    if (crt) { glow[k] = Math.max(v, glow[k] * 0.42); v = glow[k]; }
+    const c = Math.round(v * 255);
+    d[k * 4] = c; d[k * 4 + 1] = c; d[k * 4 + 2] = crt ? Math.round(c * 0.94) : c; d[k * 4 + 3] = 255;
+  }
+  octx.putImageData(img, 0, 0);
+  const W = scr.width, H = scr.height;
+  sctx.fillStyle = '#000'; sctx.fillRect(0, 0, W, H);
+  sctx.imageSmoothingEnabled = crt;
+  if (crt) { sctx.filter = 'blur(0.7px)'; }
+  sctx.drawImage(off, 0, 0, W, H);
+  sctx.filter = 'none';
+  if (crt) {
+    // Zeilenstruktur und Wölbung der Röhre
+    const lh = H / ch;
+    sctx.fillStyle = 'rgba(0,0,0,0.32)';
+    for (let y = 0; y < ch; y++) sctx.fillRect(0, y * lh + lh * 0.62, W, lh * 0.38);
+    const g = sctx.createRadialGradient(W / 2, H / 2, H * 0.35, W / 2, H / 2, H * 0.78);
+    g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(0,0,0,0.55)');
+    sctx.fillStyle = g; sctx.fillRect(0, 0, W, H);
+  }
+  scr.classList.toggle('sharp', !crt);
+}
+
+// ════════════════════════ Ton (AudioWorklet) ════════════════════════
+const audio = { ctx: null, node: null, on: false, filt: null };
+async function audioToggle() {
+  if (audio.on) { audio.on = false; audio.ctx && audio.ctx.suspend(); $('#bSnd').textContent = '🔇 Ton aus'; return; }
+  if (!audio.ctx) {
+    audio.ctx = new AudioContext();
+    const code = `class Sq extends AudioWorkletProcessor {
+      constructor() { super(); this.q = new Float32Array(1 << 16); this.r = 0; this.w = 0; this.l = 0;
+        this.port.onmessage = (e) => { const d = e.data; for (let i = 0; i < d.length; i++) { this.q[this.w] = d[i]; this.w = (this.w + 1) & 65535; }
+          const fill = (this.w - this.r) & 65535; if (fill > 9600) this.r = (this.w - 4800) & 65535; }; }
+      process(i, o) { const out = o[0][0]; for (let k = 0; k < out.length; k++) { if (this.r !== this.w) { this.l = this.q[this.r]; this.r = (this.r + 1) & 65535; } else this.l *= 0.99; out[k] = this.l; } return true; } }
+      registerProcessor('sq', Sq);`;
+    await addWorklet(audio.ctx, code);
+    audio.node = new AudioWorkletNode(audio.ctx, 'sq');
+    audio.filt = audio.ctx.createBiquadFilter();
+    const gain = audio.ctx.createGain(); gain.gain.value = 0.22;
+    audio.node.connect(audio.filt).connect(gain).connect(audio.ctx.destination);
+    setFilter();
+  }
+  await audio.ctx.resume(); audio.on = true; $('#bSnd').textContent = '🔊 Ton an';
+}
+function setFilter() {
+  if (!audio.filt) return;
+  // Home Pong und Super Pong: Ton aus dem kleinen Lautsprecher der Konsole (blechern); Automat und AY über Lautsprecher/Fernseher
+  if (M.sndFilter === 'speaker') { audio.filt.type = 'bandpass'; audio.filt.frequency.value = 1400; audio.filt.Q.value = 0.9; }
+  else { audio.filt.type = 'lowpass'; audio.filt.frequency.value = 6000; audio.filt.Q.value = 0.5; }
+}
+function pushSound() {
+  const s = M.sound(); const n = s.n; if (!n) return;
+  if (audio.on) {
+    const sr = audio.ctx.sampleRate, ns = Math.round(sr / M.fps), out = new Float32Array(ns);
+    for (let i = 0; i < ns; i++) { const li = Math.min(n - 1, Math.floor(i * n / ns)); out[i] = s.data[li] ? 0.5 : -0.5; }
+    // DC entfernen: Ruhe = konstanter Pegel → ohne Ton still
+    let mean = 0; for (let i = 0; i < ns; i++) mean += out[i]; mean /= ns;
+    for (let i = 0; i < ns; i++) out[i] -= mean;
+    audio.node.port.postMessage(out);
+  }
+  s.reset();
+}
+
+// ════════════════════════ Eingabe ════════════════════════
+const pots = [0.5, 0.5], keys = new Set();
+let mouseY = null, mouseX = null;
+scr.addEventListener('mousemove', (e) => { const r = scr.getBoundingClientRect(); mouseY = (e.clientY - r.top) / r.height; mouseX = (e.clientX - r.left) / r.width; });
+scr.addEventListener('mouseleave', () => { mouseY = null; });
+scr.addEventListener('mousedown', (e) => {
+  if (M.id === 'ay' && M.eng.game.startsWith('rifle')) {     // Lichtpistole: Schuss auf den Bildpunkt unter dem Mauszeiger
+    const r = scr.getBoundingClientRect(), [cx, cy, cw, ch] = M.crop;
+    M.eng.fire(cx + (e.clientX - r.left) / r.width * cw, cy + (e.clientY - r.top) / r.height * ch);
+  }
+});
+window.addEventListener('keydown', (e) => {
+  if (e.target.tagName === 'INPUT' && e.target.type === 'number') return;
+  keys.add(e.code);
+  if (['ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
+  if (e.repeat) return;
+  if (e.code === 'Digit5' || e.code === 'KeyM') { M.coin(1); }
+  if (e.code === 'Space') M.start();
+  if (e.code === 'KeyA') M.serve(1);
+  if (e.code === 'KeyP') togglePause();
+  if (e.code === 'KeyF') toggleFull();
+});
+window.addEventListener('keyup', (e) => {
+  keys.delete(e.code);
+  if (e.code === 'Digit5' || e.code === 'KeyM') M.coin(0);
+  if (e.code === 'KeyA') M.serve(0);
+});
+function readInputs() {
+  const pads = navigator.getGamepads ? [...navigator.getGamepads()].filter(Boolean) : [];
+  const src = [$('#inL').value, $('#inR').value];
+  for (let i = 0; i < 2; i++) {
+    const ai = i === 0 ? $('#aiL').checked : ($('#aiR').checked || $('#players').value === '1');
+    if (ai) { aiMove(i); continue; }
+    if (src[i] === 'maus' && mouseY !== null) pots[i] = Math.max(0, Math.min(1, (mouseY - 0.08) / 0.84));
+    if (src[i] === 'tasten') {
+      const up = i ? keys.has('ArrowUp') : keys.has('KeyW'), dn = i ? keys.has('ArrowDown') : keys.has('KeyS');
+      pots[i] = Math.max(0, Math.min(1, pots[i] + (dn - up) * 0.022));
+    }
+    if (src[i] === 'pad') {
+      const gp = pads[i] || (i === 1 && pads[0]);
+      if (gp) { const ax = (i === 1 && !pads[1]) ? (gp.axes[3] ?? 0) : (gp.axes[1] ?? 0); pots[i] = Math.max(0, Math.min(1, (ax + 1) / 2)); if (gp.buttons[0] && gp.buttons[0].pressed && !readInputs.gpb) { M.start(); } readInputs.gpb = gp.buttons[0] && gp.buttons[0].pressed; }
+    }
+  }
+  $('#potL').value = Math.round(pots[0] * 1000); $('#potR').value = Math.round(pots[1] * 1000);
+  M.setPots(pots);
+}
+$('#potL').oninput = (e) => { pots[0] = e.target.value / 1000; $('#inL').value = 'tasten'; };
+$('#potR').oninput = (e) => { pots[1] = e.target.value / 1000; $('#inR').value = 'tasten'; };
+// einfacher Computergegner: folgt dem Ball, wenn er auf ihn zukommt, mit begrenzter Drehgeschwindigkeit
+const aiState = [{ err: 0, t: 0 }, { err: 0, t: 0 }];
+function aiMove(i) {
+  const b = M.ball(), st = aiState[i];
+  let target = 0.5;
+  if (b) {
+    const toward = (i === 0 && b.dir < 0) || (i === 1 && b.dir > 0) || (M.id !== 'arcade' && /squash|practice/.test(M.eng.game));
+    if (++st.t % 50 === 0) st.err = (Math.random() - 0.5) * 0.05;
+    target = toward ? M.potFor(i, b.y) + st.err : 0.5 + (M.potFor(i, b.y) - 0.5) * 0.4;
+  }
+  const d = Math.max(-0.028, Math.min(0.028, target - pots[i]));
+  pots[i] = Math.max(0, Math.min(1, pots[i] + d));
+}
+
+// ════════════════════════ Ablauf ════════════════════════
+let paused = false, acc = 0, lastT = 0, fpsN = 0, fpsT = 0, fps = 0;
+function loop(t) {
+  requestAnimationFrame(loop);
+  if (tab === 'bild') { bildLoop(t); return; }
+  const dt = Math.min(100, t - (lastT || t)); lastT = t;
+  if (!paused) {
+    acc += dt;
+    const fd = 1000 / M.fps; let n = 0;
+    readInputs();
+    while (acc >= fd && n < 4) { M.frame(); pushSound(); acc -= fd; n++; fpsN++; }
+    if (n) draw();
+  }
+  if (t - fpsT > 1000) { fps = fpsN * 1000 / (t - fpsT); fpsN = 0; fpsT = t; }
+  if ((t | 0) % 4 === 0 || true) $('#status').innerHTML = M.status() + ` · ${fps.toFixed(1)} Bilder/s`;
+}
+function togglePause() { paused = !paused; $('#bPause').textContent = paused ? '▶ Weiter' : '⏸ Pause'; }
+$('#bPause').onclick = togglePause;
+$('#bSnd').onclick = audioToggle;
+// Vollbild: nur der Bildschirm, Seitenverhältnis 4:3 bleibt
+function toggleFull() {
+  const w = $('#screenwrap');
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (w.requestFullscreen) w.requestFullscreen().catch(() => {});
+}
+$('#bFull').onclick = toggleFull;
+document.addEventListener('fullscreenchange', () => { $('#bFull').textContent = document.fullscreenElement ? '⛶ Vollbild aus' : '⛶ Vollbild'; });
+$('#bReset').onclick = () => { M.init(); };
+$('#bCoin').onmousedown = () => M.coin(1); $('#bCoin').onmouseup = () => M.coin(0); $('#bCoin').onmouseleave = () => M.coin(0);
+$('#bStart').onclick = () => M.start();
+$('#bServe').onmousedown = () => M.serve(1); $('#bServe').onmouseup = () => M.serve(0);
+$('#disp').onchange = () => { glow = null; off.width = 0; };
+
+// ════════════════════════ Gerätespezifische Optionen ════════════════════════
+function buildOpts() {
+  const box = $('#machineOpts'); box.innerHTML = '';
+  const add = (html) => { const d = document.createElement('div'); d.className = 'ctrls'; d.innerHTML = html; box.appendChild(d); return d; };
+  $('#bCoin').classList.toggle('hidden', M.id !== 'arcade');
+  $('#bStart').classList.toggle('hidden', M.id === 'arcade');
+  $('#bServe').classList.toggle('hidden', M.id !== 'ay');
+  if (M.id === 'arcade') {
+    const d = add(`<label><input type="checkbox" id="sw15"> SW1: Spiel bis 15 Punkte (sonst 11)</label>`);
+    d.querySelector('#sw15').checked = !!M.eng.sw15;
+    d.querySelector('#sw15').onchange = (e) => { M.eng.sw15 = e.target.checked ? 1 : 0; M.eng.settle(); };
+    $('#machineNote').innerHTML = 'Jeder Takt wird gerechnet: 7,159 MHz, 455 Takte je Zeile, 262 Zeilen je Bild. Die Zählerstände stimmen Takt für Takt mit der <a href="pong_logisim_web.html">Gatterschaltung</a> überein.';
+    return;
+  }
+  const m = M.eng, cfg = m.cfg;
+  const sel = add(`<label>Spiel <select id="gameSel">${cfg.games.map(g => `<option value="${g.id}">${g.name}</option>`).join('')}</select></label>`).querySelector('select');
+  sel.value = m.game; sel.onchange = () => { m.setGame(sel.value); m.start(); buildOpts(); };
+  if (M.id === 'ay') {
+    const d = add(`<label><input type="checkbox" id="oBig"> große Schläger</label><label><input type="checkbox" id="oFast"> schneller Ball</label>
+      <label><input type="checkbox" id="oAng"> vier Abprallwinkel</label><label><input type="checkbox" id="oAuto"> Aufschlag automatisch</label>`);
+    const bind = (id, key) => { const el = d.querySelector(id); el.checked = m.opt[key] !== false && !!m.opt[key] || (m.opt[key] === undefined); el.checked = !!m.opt[key]; el.onchange = () => { m.opt[key] = el.checked; }; };
+    bind('#oBig', 'bigBats'); bind('#oFast', 'fast'); bind('#oAng', 'angles4'); bind('#oAuto', 'autoServe');
+    $('#machineNote').innerHTML = m.game.startsWith('rifle') ? 'Lichtpistole: mit der Maus zielen und klicken. Getroffen ist, wenn der Bildpunkt unter dem Zeiger leuchtet, während der Strahl vorbeiläuft – so arbeitet die Fotozelle im Gewehr.' :
+      'Die Schalter entsprechen den Anschlüssen 13 (Schlägergröße), 7 (Ballgeschwindigkeit), 5 (Abprallwinkel) und 8 (Aufschlag) des Chips.';
+  } else {
+    const d = add(`<label><input type="checkbox" id="oFast"> schneller Ball</label>`);
+    const el = d.querySelector('#oFast'); el.checked = !!m.opt.fast; el.onchange = () => { m.opt.fast = el.checked; };
+    $('#machineNote').innerHTML = M.id === 'home' ? 'Der Ton kommt wie beim Original aus dem Lautsprecher der Konsole, nicht aus dem Fernseher (hier blechern gefiltert). Start drücken beginnt ein Spiel bis 15.' :
+      'Vier Spiele, jeweils bis 15 Punkte. Bei Catch zählt ein Ball, der in den Spalt zwischen den eigenen Balken fällt.';
+  }
+}
+
+// ════════════════════════ Reiter ════════════════════════
+function setTab(t) {
+  tab = t;
+  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  $('#viewPlay').classList.toggle('hidden', t === 'bild');
+  $('#viewBild').classList.toggle('hidden', t !== 'bild');
+  if (t !== 'bild') { M = machines[t]; buildOpts(); setFilter(); $('#info').innerHTML = INFO[t]; glow = null; off.width = 0; if (!M.started) { M.init(); M.started = true; } }
+  else { M = arcade; $('#infoBild').innerHTML = INFO.bild; if (!arcade.started) { arcade.init(); arcade.started = true; } arcade.eng.startCapture(+$('#laV').value); }
+  acc = 0;
+}
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => setTab(b.dataset.tab));
+
+// ════════════════════════ Zustand speichern/laden (nur Dateien) ════════════════════════
+$('#bSave').onclick = () => {
+  const data = { format: 'pong-werkbank', version: 1, geraet: M.id, zustand: M.save(), regler: pots, optionen: M.eng.opt || null };
+  const blob = new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `pong-${M.id}-zustand.json`;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+$('#bLoad').onclick = () => $('#file').click();
+$('#file').onchange = async (e) => {
+  const f = e.target.files[0]; e.target.value = ''; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text());
+    if (d.format !== 'pong-werkbank' || !machines[d.geraet]) throw new Error('unbekanntes Format');
+    setTab(d.geraet); machines[d.geraet].load(d.zustand); if (d.regler) { pots[0] = d.regler[0]; pots[1] = d.regler[1]; }
+    if (d.optionen && M.eng.opt) Object.assign(M.eng.opt, d.optionen);
+    buildOpts();
+  } catch (err) { alert('Datei konnte nicht gelesen werden: ' + err.message); }
+};
+
+// ════════════════════════ So entsteht das Bild ════════════════════════
+const rc = $('#raster'), rctx = rc.getContext('2d'), rimg = rctx.createImageData(455, 262);
+const rOff = document.createElement('canvas'); rOff.width = 455; rOff.height = 262;
+let bildAcc = 0, bildLast = 0;
+function bildLoop(t) {
+  const e = arcade.eng, dt = Math.min(100, t - (bildLast || t)); bildLast = t;
+  readInputs();
+  const f = parseFloat($('#slow').value);
+  if (f > 0) { bildAcc += dt / 1000 * 7159090 * f; let n = Math.floor(bildAcc); bildAcc -= n; n = Math.min(n, 600000); for (let i = 0; i < n; i++) e.step(); }
+  drawRaster(); drawLA(); bildStatus();
+  if (audio.on) { const s = arcade.sound(); s.reset(); }
+}
+function bstep(kind) {
+  const e = arcade.eng;
+  if (kind === 'px') e.step();
+  else if (kind === 'ln') { const v = e.v; let g = 0; do e.step(); while ((e.v === v || e.p !== 0) && g++ < 1000); }
+  else { const f = e.frames; let g = 0; while (e.frames === f && g++ < 200000) e.step(); }
+}
+$('#bStepPx').onclick = () => bstep('px'); $('#bStepLn').onclick = () => bstep('ln'); $('#bStepFr').onclick = () => bstep('fr');
+$('#laV').onchange = () => arcade.eng.startCapture(Math.max(0, Math.min(261, +$('#laV').value)));
+$('#laBall').onclick = () => {
+  const e = arcade.eng; let line = 0;
+  // Zeile, in der der senkrechte Ballzähler VVID liefert (Ballzähler ≥ 0xFC): aus der letzten Bildaufzeichnung
+  const c = e.cap && e.cap.ready ? e.cap : null;
+  if (c) for (let l = 0; l < 262; l++) if (c.L[3][l]) { line = c.vv[l]; break; }
+  $('#laV').value = line; e.startCapture(line);
+};
+function drawRaster() {
+  const e = arcade.eng, d = rimg.data, zones = $('#showZones').checked;
+  // Bildpunkte nach Zählerständen (H = Spalte, V = Zeile) statt nach Bildschirmlage
+  const fr = e.frame;
+  for (let V = 0; V < 262; V++) for (let H = 0; H < 455; H++) {
+    // Monitor-Lage: x = H − 32, Zeile y = V − 3
+    let x = H - 32, y = V - 3; if (x < 0) { x += 455; y -= 1; } if (y < 0) y += 262;
+    const v = fr[y * 455 + x] || 0, k = (V * 455 + H) * 4;
+    let r = 0, g = 0, b = 0;
+    if (zones) {
+      const hb = H < 81 || H === 454, vb = V < 16, hs = H >= 32 && H < 64, vs = vb && V >= 4 && V < 8;
+      if (hb || vb) { r = 22; g = 28; b = 48; } if (hs) { r = 80; g = 30; b = 30; } if (vs) { r = 90; g = 30; b = 90; }
+    }
+    if (v) { const c = (v & 1) ? 255 : 210; r = c; g = c; b = c; }
+    d[k] = r; d[k + 1] = g; d[k + 2] = b; d[k + 3] = 255;
+  }
+  rOff.getContext('2d').putImageData(rimg, 0, 0);
+  rctx.imageSmoothingEnabled = false; rctx.drawImage(rOff, 0, 0, rc.width, rc.height);
+  // Strahl
+  const sx = rc.width / 455, sy = rc.height / 262;
+  rctx.strokeStyle = '#ffb347'; rctx.lineWidth = 1.5;
+  rctx.beginPath(); rctx.moveTo(e.p * sx, 0); rctx.lineTo(e.p * sx, rc.height); rctx.moveTo(0, e.v * sy); rctx.lineTo(rc.width, e.v * sy); rctx.stroke();
+  rctx.fillStyle = '#ffb347'; rctx.beginPath(); rctx.arc(e.p * sx, e.v * sy, 5, 0, 7); rctx.fill();
+  rctx.font = '13px ui-monospace,monospace'; rctx.fillStyle = '#9fc6e0';
+  rctx.fillText('HBLANK 0…80', 6, rc.height - 8); rctx.fillText('HSYNC 32…63', 32 * sx + 2, 30 * sy);
+  rctx.fillText('VBLANK 0…15, VSYNC 4…7', 92 * sx, 11 * sy);
+  rctx.fillText(`H = ${e.p}, V = ${e.v}`, rc.width - 150, rc.height - 8);
+}
+function bits(v, n, names) { let s = ''; for (let i = n - 1; i >= 0; i--) s += ((v >> i) & 1) ? `<b>1</b>` : '0'; return s; }
+function bildStatus() {
+  const e = arcade.eng;
+  const led = (n, on, t) => `<span class="led ${on ? 'on' : ''}" title="${t || ''}"><i></i>${n}</span>`;
+  const hs = e.hblank && e.p >= 32 && e.p < 64, vs = e.vblank && (e.v & 4) && !(e.v & 8);
+  $('#leds').innerHTML = led('HSYNC', hs, 'H5d') + led('HBLANK', e.hblank, 'H5') + led('VSYNC', vs, 'G5a') + led('VBLANK', e.vblank, 'F5') +
+    led('HRESET', e.hreset, 'E7b') + led('VRESET', e.vreset, 'E7a') + led('HVID', e.bc >= 0x1FC, 'H6') + led('VVID', e.vc >= 0xFC, 'E2b') +
+    led('MOVE', !(e.h2a && e.h2b), 'H4a') + led('ATTRACT', e.attract, 'D1b') + led('SERVE', !e.b5b, 'B5b') + led('L', e.h3b, 'H3b');
+  $('#bitsH').innerHTML = `H-Zähler F8/F9/F6 (256H…1H): ${bits(e.p === 454 && e.hreset ? 0 : e.p, 9)} = ${e.p}`;
+  $('#bitsV').innerHTML = `V-Zähler E8/E9/D9 (256V…1V): ${bits(e.v, 9)} = ${e.v}`;
+  $('#bitsB').innerHTML = `Ball waagrecht G7/H7/G6: ${bits(e.bc, 9)} = 0x${e.bc.toString(16)} · senkrecht B3/A3: ${bits(e.vc, 8)} = 0x${e.vc.toString(16)}`;
+}
+const LA_NAMES = ['HSYNC_n', 'HBLANK', 'HRESET', 'HVID', 'VVID', 'PAD1', 'PAD2', 'NET', 'SCORE', 'VIDEO'];
+const LF_NAMES = ['VSYNC_n', 'VBLANK', 'VRESET', 'VVID', '256V', 'Schläger 1', 'Ton'];
+function drawTraces(cv, names, rows, n, info, xUnit) {
+  const c = cv.getContext('2d'), W = cv.width, H = cv.height, left = 96, rh = (H - 22) / names.length;
+  c.fillStyle = '#0b0f14'; c.fillRect(0, 0, W, H);
+  c.font = '12px ui-monospace,monospace';
+  for (let r = 0; r < names.length; r++) {
+    const y = 4 + r * rh, d = rows[r];
+    c.fillStyle = '#79c0ff'; c.fillText(names[r], 4, y + rh * 0.62);
+    c.strokeStyle = r % 2 ? '#3fb950' : '#56d364'; c.beginPath();
+    let prev = -1;
+    for (let k = 0; k < n; k++) {
+      const v = d[k], x = left + k * (W - left) / n, yy = y + (v ? 3 : rh - 5);
+      if (prev < 0) c.moveTo(x, yy); else if (v !== prev) { c.lineTo(x, y + (prev ? 3 : rh - 5)); c.lineTo(x, yy); }
+      prev = v;
+    }
+    c.lineTo(W, y + (prev ? 3 : rh - 5)); c.stroke();
+  }
+  c.fillStyle = '#8b949e';
+  for (let k = 0; k <= n; k += xUnit) { const x = left + k * (W - left) / n; c.fillRect(x, H - 18, 1, 5); c.fillText(String(k), x + 2, H - 4); }
+}
+function drawLA() {
+  const e = arcade.eng, cp = e.cap; if (!cp || !cp.ready) return;
+  drawTraces($('#laLine'), LA_NAMES, cp.d, cp.ready.n || 455, null, 50);
+  drawTraces($('#laFrame'), LF_NAMES, cp.L, cp.ready.ln || 262, null, 25);
+  const d = cp.d[0], edges = []; for (let k = 1; k < 455; k++) if (d[k - 1] && !d[k]) edges.push(k);
+  $('#laLineInfo').textContent = `Zeile V = ${cp.v}: HSYNC ist 32 Takte lang (H = 32…63, ${(32 / 7.15909).toFixed(2)} µs) und kommt alle 455 Takte (${(455 / 7.15909).toFixed(2)} µs). Waagrechte Achse: H-Zähler.`;
+  $('#laFrameInfo').textContent = `VSYNC 4 Zeilen lang, alle 262 Zeilen (${(262 * 455 / 7159.09).toFixed(3)} ms = ${(7159090 / 455 / 262).toFixed(2)} Hz). Waagrechte Achse: Zeile V.`;
+}
+
+// ════════════════════════ Infotexte ════════════════════════
+const INFO = {
+arcade: `<h3>Pong, 1972: ein Spiel ohne Programm</h3>
+<p>Nolan Bushnell gab Al Alcorn 1972 als Übungsaufgabe ein Tischtennis-Spiel auf, angeregt von der Tennis-Vorführung der Magnavox Odyssey. Alcorn baute daraus Pong. Im Herbst 1972 stand das erste Gerät in Andy Capp’s Tavern in Sunnyvale. Die bekannte Geschichte: Es fiel bald aus, weil die Münzkasse überquoll.</p>
+<p>Pong hat keinen Prozessor und kein Programm. Mikroprozessoren gab es zwar (Intel 4004 seit 1971), sie waren aber viel zu langsam, um ein Fernsehbild Bildpunkt für Bildpunkt zu erzeugen. Alcorn verdrahtete deshalb 62 TTL-Bausteine (gezählt nach der DICE-Netzliste), vier Zeitgeber NE555 und ein paar Transistoren so, dass Zähler, Vergleicher und Flipflops das Bild direkt im Takt des Elektronenstrahls ausrechnen.</p>
+<h3>Wie aus Zählern ein Bild wird</h3>
+<p>Ein Quarz mit 14,318 MHz wird in F6 halbiert: 7,159 MHz, das ist ein Bildpunkt. Der H-Zähler (F8, F9, F6) zählt 0 bis 454, dann setzt E7 ihn zurück: 455 Takte = 63,6 µs je Zeile. Der V-Zähler (E8, E9, D9) zählt die Zeilen 0 bis 261: 262 Zeilen, 60,1 Bilder je Sekunde. Gatter vergleichen die Zählerbits: H&nbsp;=&nbsp;0…80 ist Austastung (HBLANK), H&nbsp;=&nbsp;32…63 der Zeilensync, V&nbsp;=&nbsp;0…15 die Bildaustastung, V&nbsp;=&nbsp;4…7 der Bildsync.</p>
+<p>Das Netz ist der Takt nach H&nbsp;=&nbsp;256, gestrichelt durch das Bit 4V. Ein Schläger erscheint, wenn H in einem 4-Takt-Fenster bei 128 (links) oder 384 (rechts) liegt und sein Zeilenzähler B8 bzw. A8 läuft. Der Ball ist ein eigener 9-Bit-Zähler (G7, H7, G6). Er zählt in jeder Zeile 374 sichtbare Takte und wird dann neu geladen. Weil die Zeile ebenfalls 374 Zähltakte hat, steht der Ball still. Lädt die Bewegungslogik (H1, H2, H4) in ein bis drei Zeilen je Bild einen um eins kleineren oder größeren Wert, wandert er nach links oder rechts. Senkrecht arbeitet der Zähler B3/A3 genauso, sein Ladewert kommt aus dem Addierer B4 und hängt davon ab, wo der Schläger getroffen wurde (A5, B5 speichern die Trefferzone).</p>
+<h3>Analoges in der Digitaltechnik</h3>
+<p>Die Schläger sind Monoflops NE555 (B9, A9). Der Drehregler ändert ihre Zeitkonstante, und damit die Zeile, in der der Schläger beginnt. Ein dritter 555 (F4) verzögert den Aufschlag um 1,7&nbsp;s, ein vierter (G4) macht den Punkt-Ton. Der Ton selbst ist rein digital: Bits des senkrechten Ballzählers ergeben Rechtecke (VPOS16 ≈ 491 Hz beim Treffer, VPOS32 ≈ 246 Hz an der Wand, 32V ≈ 246 Hz beim Punkt).</p>
+<p>F1 zählt die Treffer. Nach 4 und nach 12 Treffern bewegt die Logik den Ball in mehr Zeilen je Bild, er wird schneller. Gespielt wird bis 11 Punkte (Schalter SW1: 15). Ohne Münze läuft der Attract-Modus: Der Ball springt, die Schläger fehlen.</p>
+<p><b>Gatterlaufzeiten:</b> Pong verlässt sich an einer Stelle auf sie. Das HBLANK-Flipflop H5 („the time critical one“ in MAMEs Netzliste) wird erst nach der Taktflanke frei, bei der der Ballzähler zählen würde. Ohne diese Verzögerung zählte der Ball 375 Takte und liefe davon. Diese Werkbank rechnet das so nach, wie es die Gattersimulation mit Datenblatt-Laufzeiten zeigt.</p>`,
+home: `<h3>Home Pong: der Automat auf einem Chip</h3>
+<p>Harold Lee schlug 1973 vor, Pong für den Fernseher daheim zu bauen. Lee, Al Alcorn und Bob Brown entwickelten 1974 unter dem Decknamen „Darlene“ einen Prototyp, dessen Logik dann in einen einzigen Chip wanderte. Die ersten Muster fertigte AMI.</p>
+<p>Spielzeug- und Elektronikhändler lehnten zunächst ab. Erst Tom Quinn von Sears griff zu: Sears bestellte für Weihnachten 1975 rund 150 000 Geräte, verkauft unter der Marke Tele-Games, mit dem Namen Atari nur auf dem Einschalter. 1976 brachte Atari das Gerät als Pong C-100 selbst heraus.</p>
+<p>Eigenheiten der Heimgeräte: Die Punkte erscheinen als Ziffern auf dem Schirm, nachdem ein Punkt gefallen ist. Der Ton kommt aus einem Lautsprecher in der Konsole, der Fernseher bleibt stumm. Gespielt wird bis 15 Punkte, danach wandern Klötzchen über den Schirm wie nach dem Einschalten. Es gibt einen Startknopf statt eines Münzprüfers.</p>
+<p><b>Zum Chip:</b> In den Geräten von 1975/76 steckt der Atari-Chip 3659 (Fassungen 3659-1, -1B, -1C, später -2 und -3). Die Nummer C010765 gehört nach den Sammlerlisten zum späteren Ultra Pong (1977). Eine Gatternetzliste des 3659 ist nicht veröffentlicht. Nachgebildet ist hier deshalb das Verhalten auf Zeilen- und Bildpunktebene, mit demselben NTSC-Raster und Tönen aus dem Zeilenzähler (491 und 246 Hz).</p>`,
+super: `<h3>Super Pong (Atari C-140, 1976)</h3>
+<p>Nach dem Erfolg von Home Pong brachte Atari 1976 Super Pong heraus, wieder auch bei Sears. Im Gerät arbeitet der Atari-Chip C010073. Es bietet vier Spiele für zwei Spieler, die ein Drehschalter wählt:</p>
+<table><tr><th>Spiel</th><th>Regel</th></tr>
+<tr><td>Pong</td><td>wie der Automat</td></tr>
+<tr><td>Super Pong</td><td>jeder Spieler führt zwei Schläger, einen hinten und einen weiter vorn</td></tr>
+<tr><td>Catch</td><td>kein Zurückschlagen: Der Ball soll in den Spalt zwischen zwei langen Balken fallen; wer fängt, punktet und bekommt den nächsten Aufschlag</td></tr>
+<tr><td>Solitaire</td><td>für einen Spieler: rechts steht eine Wand, getroffen werden muss das Loch darüber; mit jedem Treffer wird die Wand höher</td></tr></table>
+<p>In allen vier Spielen gewinnt, wer zuerst 15 Punkte hat. Die Spielregeln stammen aus den Gerätebeschreibungen; wie beim Home Pong ist das Verhalten nachgebildet, nicht der Chip selbst.</p>`,
+ay: `<h3>General Instrument AY-3-8500 (1976)</h3>
+<p>Mit dem AY-3-8500 konnte jeder Hersteller eine Telespielkonsole bauen: ein Chip, ein paar Schalter, Drehregler, ein HF-Modulator. Er steckte in Hunderten Geräten, gerade in Europa, und wurde rund fünf Millionen Mal verkauft. Der AY-3-8500 ist die 625-Zeilen-Fassung (312 Zeilen je Halbbild), der AY-3-8500-1 die für 525 Zeilen.</p>
+<p>Der Chip läuft mit 2 MHz. 128 Takte bilden eine Zeile (64 µs), entsprechend grob ist die waagrechte Auflösung. Die Töne sind Bits des Zeilenzählers: Treffer 976 Hz (Zeilentakt / 16), Abprall an der Bande 488 Hz (/ 32), Punkt 1,95 kHz (/ 8), jeweils 32 ms lang.</p>
+<table><tr><th>Spiel</th><th>Spieler</th><th>Ablauf</th></tr>
+<tr><td>Tennis</td><td>2</td><td>Pong mit Banden oben und unten</td></tr>
+<tr><td>Fußball</td><td>2</td><td>je zwei Schläger, Tore in den Seitenbanden</td></tr>
+<tr><td>Squash</td><td>2</td><td>beide schlagen abwechselnd gegen die linke Wand, rechts beginnt</td></tr>
+<tr><td>Übung</td><td>1</td><td>Squash allein</td></tr>
+<tr><td>Schießen 1</td><td>1</td><td>große Zielscheibe springt umher, 15 Schuss</td></tr>
+<tr><td>Schießen 2</td><td>1</td><td>Ball läuft nach Aufschlag von links nach rechts</td></tr></table>
+<p>Schalter laut Datenblatt: Schlägergröße (groß/klein), Ballgeschwindigkeit (Überquerung in 1,3 s oder 0,65 s), Abprallwinkel (zwei: ±20°, vier: ±20° und ±40°; der getroffene Schlägerabschnitt bestimmt den Winkel, unabhängig vom alten), Aufschlag automatisch oder per Taste. Nach einem Punkt geht der Ball zu dem, der verfehlt hat. Bei 15 endet das Spiel, der Ball springt weiter.</p>
+<p>Die Lichtpistole enthält eine Fotozelle: Sie gibt einen Impuls, wenn der Elektronenstrahl genau den Bildpunkt hell schreibt, auf den sie zielt. Hier ersetzt die Maus das Gewehr, geprüft wird genau dieser Bildpunkt.</p>`,
+bild: `<h3>So entsteht das Bild</h3>
+<p>Links ist das Bild nicht nach Bildschirmlage, sondern nach Zählerständen aufgetragen: waagrecht der H-Zähler (0…454), senkrecht der V-Zähler (0…261). Dunkelblau ist die Austastung, rot der Zeilensync, violett der Bildsync. Der gelbe Punkt ist der Strahl, also die aktuelle Stellung der beiden Zähler. Stelle das Tempo auf 1/1000 oder schalte einzeln weiter, dann siehst du, wie der Strahl Zeile für Zeile das Bild schreibt.</p>
+<p>Jedes Objekt ist ein Vergleich: Das Netz leuchtet, wenn H = 257 und 4V = 0. Der Ball leuchtet, wenn der waagrechte Ballzähler auf 0x1FC…0x1FF steht und der senkrechte auf 0xFC…0xFF. Die Ziffern entstehen aus den Bits 4H, 8H, 16H, 4V, 8V, 16V, die das Segmentmuster des 7448 abtasten.</p>
+<p>Rechts zeigt der Logikanalysator die Signale einer Zeile und eines ganzen Bildes, so wie sie die Werkbank Takt für Takt ausrechnet. Dieselben Leitungen kannst du in der <a href="pong_logisim_web.html">Gatterschaltung im Logisim-Simulator</a> messen: Die Zählerstände sind dort bei gleichem Ablauf dieselben.</p>`,
+};
+
+// Start
+setTab('arcade');
+requestAnimationFrame(loop);
+
+// AudioWorklet-Modul laden: blob:-Adresse (bei https), sonst data:-Adresse (bei file://, Herkunft "null")
+async function addWorklet(ctx, code) {
+  try { await ctx.audioWorklet.addModule(URL.createObjectURL(new Blob([code], { type: 'application/javascript' }))); }
+  catch (e) { await ctx.audioWorklet.addModule('data:application/javascript;charset=utf-8,' + encodeURIComponent(code)); }
+}
+
+</script>
+</body>
+</html>
