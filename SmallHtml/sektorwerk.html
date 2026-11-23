@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sektorwerk – Geld, Schulden und Japan zum Ausprobieren</title>
+<style>
+:root{
+  --papier:#f4efe4; --karte:#fffdf7; --tinte:#1f2a33; --leise:#5d6873; --linie:#d8cfbd;
+  --staat:#b5432f; --privat:#2f6f8f; --ausland:#6b8f3a; --gold:#c08a2b; --warn:#a33;
+  --mono:"JetBrains Mono","Fira Code",Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--papier);color:var(--tinte);font:15px/1.5 Georgia,"Iowan Old Style","Palatino Linotype",serif}
+header{padding:22px 24px 10px;border-bottom:3px double var(--linie);background:linear-gradient(#efe7d6,var(--papier))}
+header h1{margin:0;font-size:28px;letter-spacing:.5px}
+header h1 span{color:var(--staat)}
+header p{margin:4px 0 0;color:var(--leise);max-width:900px}
+nav{display:flex;flex-wrap:wrap;gap:6px;padding:12px 24px 0}
+nav button{font:inherit;border:1px solid var(--linie);border-bottom:none;background:#e9e1cf;padding:8px 14px;border-radius:8px 8px 0 0;cursor:pointer;color:var(--tinte)}
+nav button.aktiv{background:var(--karte);font-weight:bold;border-color:#bfb39b}
+main{padding:0 24px 24px}
+.tab{display:none;background:var(--karte);border:1px solid #bfb39b;border-radius:0 10px 10px 10px;padding:18px}
+.tab.aktiv{display:block}
+.raster{display:grid;grid-template-columns:minmax(260px,330px) 1fr;gap:18px}
+@media(max-width:860px){.raster{grid-template-columns:1fr}}
+.kasten{border:1px solid var(--linie);border-radius:8px;padding:12px;background:#fffaf0}
+.kasten h3{margin:0 0 8px;font-size:15px;text-transform:uppercase;letter-spacing:1px;color:var(--leise)}
+label.regler{display:block;margin:8px 0}
+label.regler .kopf{display:flex;justify-content:space-between;font-size:13.5px}
+label.regler b{font-family:var(--mono);font-weight:normal}
+input[type=range]{width:100%;accent-color:var(--staat)}
+.knoepfe{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.knoepfe button,button.k{font:13px Georgia,serif;padding:6px 10px;border:1px solid #a99c80;border-radius:6px;background:#efe6d2;cursor:pointer;color:var(--tinte)}
+.knoepfe button:hover,button.k:hover{background:#e4d8bd}
+canvas{width:100%;display:block;background:#fffdf8;border:1px solid var(--linie);border-radius:8px}
+.zahlen{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:10px 0}
+.zahl{border:1px solid var(--linie);border-radius:8px;padding:8px 10px;background:#fffaf0}
+.zahl small{display:block;color:var(--leise);font-size:12px}
+.zahl span{font:18px var(--mono)}
+.gleichung{font:15px var(--mono);background:#1f2a33;color:#f4efe4;padding:10px 12px;border-radius:8px;overflow-x:auto;white-space:pre}
+.hinweis{font-size:13.5px;color:var(--leise)}
+.meldung{padding:8px 12px;border-radius:6px;margin:8px 0;font-size:14px}
+.meldung.gut{background:#e5efdc;border:1px solid #9fbf86}
+.meldung.warn{background:#f6e0da;border:1px solid #d79b8c}
+.meldung.info{background:#e1ecf2;border:1px solid #9bbcd0}
+.konten{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.tkonto{border:1px solid var(--linie);border-radius:8px;background:#fffaf0;overflow:hidden}
+.tkonto h4{margin:0;padding:6px 10px;background:#ece3cf;font-size:14px}
+.tkonto table{width:100%;border-collapse:collapse;font:13px var(--mono)}
+.tkonto td{padding:4px 8px;border-top:1px dashed var(--linie)}
+.tkonto td.w{text-align:right}
+.tkonto tr.neu td{background:#fbe9b7;transition:background .6s}
+.log{font:13px var(--mono);background:#fffaf0;border:1px solid var(--linie);border-radius:8px;padding:8px 10px;max-height:190px;overflow:auto}
+.legende{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;margin:6px 0}
+.legende i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+details{margin-top:12px}
+summary{cursor:pointer;font-weight:bold}
+footer{padding:14px 24px 30px;color:var(--leise);font-size:13.5px;border-top:1px solid var(--linie)}
+footer a{color:var(--staat)}
+select{font:inherit;padding:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Sektor<span>werk</span></h1>
+  <p>Ausprobieren statt glauben: Sektorensalden, Zentralbank-Konten, Schuldendynamik (mit Japan-Vergleich) und Inflation als Verteilungskonflikt. Begleitseite zum Artikel über die Thesen von Maurice Höfgen. Alle Modelle sind bewusst einfach gehalten und dienen dem Verständnis, nicht der Prognose.</p>
+</header>
+
+<nav id="reiter">
+  <button data-tab="t1" class="aktiv">① Sektorensalden</button>
+  <button data-tab="t2">② Zentralbank-Konten</button>
+  <button data-tab="t3">③ Schuldendynamik &amp; Japan</button>
+  <button data-tab="t4">④ Inflation als Verteilungskonflikt</button>
+</nav>
+
+<main>
+<!-- ================= TAB 1 ================= -->
+<section class="tab aktiv" id="t1">
+ <div class="raster">
+  <div>
+   <div class="kasten">
+    <h3>Stellschrauben (Mrd. € pro Jahr)</h3>
+    <label class="regler"><span class="kopf">Staatsausgaben G <b id="vG"></b></span><input type="range" id="G" min="200" max="2200" step="10" value="1080"></label>
+    <label class="regler"><span class="kopf">Private Investitionen I <b id="vI"></b></span><input type="range" id="I" min="200" max="1600" step="10" value="840"></label>
+    <label class="regler"><span class="kopf">Exporte X <b id="vX"></b></span><input type="range" id="X" min="0" max="2500" step="10" value="1700"></label>
+    <h3 style="margin-top:12px">Verhalten (Quoten)</h3>
+    <label class="regler"><span class="kopf">Nettosteuerquote t (Abgaben minus Transfers) <b id="vt"></b></span><input type="range" id="t" min="0.10" max="0.50" step="0.01" value="0.25"></label>
+    <label class="regler"><span class="kopf">Private Sparquote s (Haushalte + Firmen) <b id="vs"></b></span><input type="range" id="s" min="0.10" max="0.60" step="0.005" value="0.373"></label>
+    <label class="regler"><span class="kopf">Importquote m <b id="vm"></b></span><input type="range" id="m" min="0.05" max="0.50" step="0.005" value="0.375"></label>
+    <label class="regler"><span class="kopf">Produktionspotenzial Y* <b id="vP"></b></span><input type="range" id="P" min="2500" max="5500" step="50" value="4000"></label>
+    <div class="knoepfe">
+     <button data-preset="de">Deutschland-ähnlich</button>
+     <button data-preset="jp">Japan-ähnlich</button>
+     <button data-preset="spar">Sparpaket (G −150)</button>
+     <button data-preset="sparwelle">Alle sparen mehr</button>
+     <button data-preset="invest">Investitionsoffensive</button>
+    </div>
+   </div>
+   <p class="hinweis">Modell: Einkommen bildet sich aus Nachfrage. Y = (G + I + X) / (t + s·(1−t) + m). Steuern, Ersparnis und Importe sind „Abflüsse“ und hängen am Einkommen.</p>
+  </div>
+  <div>
+   <div class="zahlen">
+    <div class="zahl"><small>Einkommen / BIP Y</small><span id="oY"></span></div>
+    <div class="zahl"><small>Auslastung Y / Y*</small><span id="oA"></span></div>
+    <div class="zahl"><small>Arbeitslosenquote (grob)</small><span id="oU"></span></div>
+    <div class="zahl"><small>Steuereinnahmen T</small><span id="oT"></span></div>
+   </div>
+   <canvas id="c1" height="300"></canvas>
+   <div class="legende"><span><i style="background:var(--staat)"></i>Staat (T − G)</span><span><i style="background:var(--privat)"></i>Privat (S − I)</span><span><i style="background:var(--ausland)"></i>Ausland (M − X), aus Sicht des Auslands</span></div>
+   <div class="gleichung" id="gl1"></div>
+   <div id="m1"></div>
+   <details><summary>Was zeigt das?</summary>
+    <p>Die drei Salden addieren sich immer zu null: Jeder Euro, den ein Sektor mehr einnimmt als ausgibt, muss ein anderer Sektor mehr ausgeben als einnehmen. Ein Staatsdefizit ist also spiegelbildlich ein Überschuss bei Privaten und/oder Ausland.</p>
+    <p>Probiere das <b>Sparpaket</b>: Das Einkommen sinkt, damit sinken auch die Steuereinnahmen, und das Defizit schrumpft viel weniger als die Kürzung. Bei <b>Alle sparen mehr</b> zeigt sich das Sparparadox: Die Haushalte wollen mehr sparen, aber das Einkommen fällt, bis die tatsächliche Ersparnis wieder zu den Defiziten der anderen Sektoren passt.</p>
+    <p>Die MMT-Grenze ist die <b>Auslastung</b>: Steigt die Nachfrage über das Potenzial Y*, entsteht keine zusätzliche Produktion mehr, sondern Inflationsdruck.</p>
+   </details>
+  </div>
+ </div>
+</section>
+
+<!-- ================= TAB 2 ================= -->
+<section class="tab" id="t2">
+ <p>Das Beispiel aus „Mythos Geldknappheit“, Schritt für Schritt: Wie verändern Staatsausgaben, Anleihen, Zinsen und Steuern die Konten? Jede Buchung berührt mindestens zwei Konten.</p>
+ <div class="knoepfe">
+  <button id="schrittZurueck">◀ zurück</button>
+  <button id="schrittVor">Nächster Schritt ▶</button>
+  <button id="schrittReset">Neu beginnen</button>
+  <span class="hinweis" id="schrittAnz" style="align-self:center"></span>
+ </div>
+ <div class="meldung info" id="schrittText"></div>
+ <div class="konten" id="konten"></div>
+ <h3 style="margin:16px 0 6px;font-size:15px">Buchungsprotokoll</h3>
+ <div class="log" id="log"></div>
+ <details><summary>Die Kernaussage</summary>
+  <p>Banken können Staatsanleihen nur mit Zentralbankgeld (Reserven) kaufen, das vorher durch Staatsausgaben entstanden ist. In dieser Sicht „finanziert“ das Defizit den Anleihekauf, nicht umgekehrt. Die Anleihe tauscht verfügbare Reserven gegen ein verzinstes, gebundenes Guthaben. So kann die Zentralbank den Interbankenzins steuern. Steuern vernichten Zentralbankgeld wieder.</p>
+  <p><b>Gegenposition:</b> In der Eurozone sind Staat und Zentralbank rechtlich getrennt, und der direkte Ankauf von Anleihen ist verboten. Was in der konsolidierten Bilanz eine Umbuchung ist, bleibt für den einzelnen Euro-Staat ein Kredit zu Marktkonditionen.</p>
+ </details>
+</section>
+
+<!-- ================= TAB 3 ================= -->
+<section class="tab" id="t3">
+ <div class="raster">
+  <div>
+   <div class="kasten">
+    <h3>Ausgangslage</h3>
+    <div class="knoepfe">
+     <button data-land="jp">Japan</button>
+     <button data-land="it">Italien</button>
+     <button data-land="de">Deutschland</button>
+     <button data-land="us">USA</button>
+    </div>
+    <label class="regler"><span class="kopf">Schuldenquote heute (% BIP) <b id="vd0"></b></span><input type="range" id="d0" min="0" max="260" step="1" value="203"></label>
+    <label class="regler"><span class="kopf">Ø Zins auf Altschulden heute <b id="vi0"></b></span><input type="range" id="i0" min="0" max="6" step="0.05" value="0.9"></label>
+    <label class="regler"><span class="kopf">Marktzins für Neuschulden <b id="vr"></b></span><input type="range" id="r" min="0" max="8" step="0.05" value="2.2"></label>
+    <label class="regler"><span class="kopf">Ø Restlaufzeit (Jahre) <b id="vL"></b></span><input type="range" id="L" min="1" max="15" step="0.5" value="9"></label>
+    <label class="regler"><span class="kopf">Nominales Wachstum g <b id="vg"></b></span><input type="range" id="g" min="-2" max="8" step="0.1" value="3.0"></label>
+    <label class="regler"><span class="kopf">Primärsaldo (% BIP, − = Defizit) <b id="vpb"></b></span><input type="range" id="pb" min="-6" max="4" step="0.1" value="-1.0"></label>
+    <label class="regler"><span class="kopf">Anteil bei der eigenen Zentralbank <b id="vcb"></b></span><input type="range" id="cb" min="0" max="80" step="1" value="45"></label>
+    <label class="regler"><span class="kopf">Eigene Währung (monetär souverän)? <b id="vsouv"></b></span><input type="range" id="souv" min="0" max="1" step="1" value="1"></label>
+    <div class="knoepfe">
+     <button id="schock">Zinsschock +2 Pkt.</button>
+     <button id="wachstum">Wachstumsdelle (g −2)</button>
+    </div>
+   </div>
+   <p class="hinweis">Formel: d<sub>t+1</sub> = d<sub>t</sub> · (1 + i<sub>t</sub>) / (1 + g) − Primärsaldo. Der Durchschnittszins i passt sich mit der Laufzeit an den Marktzins an: i<sub>t+1</sub> = i<sub>t</sub> + (r − i<sub>t</sub>) / L. Startwerte sind gerundete Spielwerte (Stand etwa 2026), keine Prognose.</p>
+  </div>
+  <div>
+   <div class="zahlen">
+    <div class="zahl"><small>Schuldenquote in 30 J.</small><span id="o3d"></span></div>
+    <div class="zahl"><small>Zinslast heute / in 30 J. (% BIP)</small><span id="o3z"></span></div>
+    <div class="zahl"><small>davon an Private / Ausland (heute)</small><span id="o3p"></span></div>
+    <div class="zahl"><small>stabilisierender Primärsaldo</small><span id="o3s"></span></div>
+   </div>
+   <canvas id="c3" height="300"></canvas>
+   <div class="legende"><span><i style="background:var(--staat)"></i>Schuldenquote (linke Achse)</span><span><i style="background:var(--gold)"></i>Zinslast % BIP (rechte Achse)</span><span><i style="background:var(--privat)"></i>Ø Zins (rechte Achse)</span></div>
+   <div id="m3"></div>
+   <details open><summary>Warum Japan (noch) funktioniert – und was sich 2026 ändert</summary>
+    <ul>
+     <li><b>Zins unter Wachstum:</b> Solange i &lt; g ist, sinkt die Quote sogar bei kleinen Primärdefiziten. Schieb den Marktzins über das Wachstum und sieh zu, wie die Kurve kippt, und zwar langsam, weil die langen Laufzeiten bremsen.</li>
+     <li><b>Zentralbank als Gläubigerin:</b> Zinsen an die eigene Zentralbank fließen großteils als Gewinn an den Staat zurück. Laut BoJ-Statistik hielt sie Ende 2025 knapp unter 50 % der Staatsanleihen.</li>
+     <li><b>Eigene Währung:</b> Ein Euro-Staat kann sich nicht auf die eigene Zentralbank stützen. Mit dem Regler „monetär souverän = 0“ siehst du, warum ein hoher Marktzins für Italien gefährlicher ist als für Japan.</li>
+     <li><b>Die Grenze kommt über Inflation und Wechselkurs:</b> 2026 hat die Bank of Japan den Leitzins auf etwa 1,25 % angehoben, und zehnjährige Anleihen rentieren rund 3 %. Der Zinsschock-Knopf zeigt, wie sich das über die Jahre in die Zinslast frisst.</li>
+    </ul>
+   </details>
+  </div>
+ </div>
+</section>
+
+<!-- ================= TAB 4 ================= -->
+<section class="tab" id="t4">
+ <div class="raster">
+  <div>
+   <div class="kasten">
+    <h3>Ansprüche an den „Kuchen“</h3>
+    <label class="regler"><span class="kopf">Zielanteil Löhne <b id="vw"></b></span><input type="range" id="w" min="40" max="75" step="0.5" value="60"></label>
+    <label class="regler"><span class="kopf">Zielanteil Gewinne <b id="vp"></b></span><input type="range" id="p" min="15" max="45" step="0.5" value="30"></label>
+    <label class="regler"><span class="kopf">Anteil Importkosten (Energie) vorher <b id="ve"></b></span><input type="range" id="e" min="0" max="25" step="0.5" value="10"></label>
+    <label class="regler"><span class="kopf">Energieschock: zusätzlicher Anteil <b id="vsh"></b></span><input type="range" id="sh" min="0" max="15" step="0.5" value="5"></label>
+    <label class="regler"><span class="kopf">Dauer des Schocks (Jahre) <b id="vdu"></b></span><input type="range" id="du" min="0" max="10" step="1" value="2"></label>
+    <label class="regler"><span class="kopf">Verhandlungsmacht Arbeitnehmer <b id="vbm"></b></span><input type="range" id="bm" min="0" max="1" step="0.05" value="0.4"></label>
+    <label class="regler"><span class="kopf">Trägheit / Indexierung ρ <b id="vrho"></b></span><input type="range" id="rho" min="0" max="0.9" step="0.05" value="0.5"></label>
+    <h3 style="margin-top:12px">Politik-Antwort</h3>
+    <label><input type="checkbox" id="pol_deckel"> Preisdeckel / Entlastung (halbiert den Schock)</label><br>
+    <label><input type="checkbox" id="pol_steuer"> Übergewinnsteuer (dämpft Gewinnanspruch −3 Pkt.)</label><br>
+    <label><input type="checkbox" id="pol_zins"> Zinserhöhung (drückt Lohnanspruch −3 Pkt., kostet Jobs)</label><br>
+    <label><input type="checkbox" id="pol_konzert"> Konzertierte Aktion (Ansprüche einigen sich auf 100 %)</label>
+   </div>
+   <p class="hinweis">Modell (Konflikt-Inflation, stark vereinfacht): Summe der Ansprüche − 100 % = „Anspruchslücke“. Inflation<sub>t</sub> = 2 % + ρ·(Inflation<sub>t−1</sub> − 2 %) + κ·Lücke. Wer mehr Macht hat, schiebt die Lücke auf die andere Seite.</p>
+  </div>
+  <div>
+   <div class="zahlen">
+    <div class="zahl"><small>Höchste Inflationsrate</small><span id="o4max"></span></div>
+    <div class="zahl"><small>Preisniveau nach 12 J. (Start 100)</small><span id="o4pn"></span></div>
+    <div class="zahl"><small>Reallohnanteil im Schock</small><span id="o4rl"></span></div>
+    <div class="zahl"><small>Arbeitslosigkeit (Zusatz)</small><span id="o4al"></span></div>
+   </div>
+   <canvas id="c4" height="300"></canvas>
+   <div class="legende"><span><i style="background:var(--staat)"></i>Inflationsrate %</span><span><i style="background:var(--privat)"></i>Lohnanteil %</span><span><i style="background:var(--gold)"></i>Gewinnanteil %</span><span><i style="background:var(--ausland)"></i>Importkosten %</span></div>
+   <div id="m4"></div>
+   <details><summary>Höfgens Unterscheidung: Preisschock ≠ Inflation</summary>
+    <p>Ein Energieschock nimmt der heimischen Wirtschaft einen Teil des Kuchens weg. Wollen Löhne <i>und</i> Gewinne ihren alten Anteil behalten, übersteigen die Ansprüche 100 %, und es entsteht eine Lohn-Preis-Spirale. Ohne Trägheit (ρ = 0) verschwindet die Teuerung mit dem Schock wieder, mit Indexierung zieht sie sich hin.</p>
+    <p>In Höfgens Lesart lösen Zinserhöhungen das Problem, indem sie die Verhandlungsmacht der Beschäftigten schwächen. Die Alternative sind Entlastungen, Übergewinnsteuern oder eine Absprache der Tarifpartner. Mainstream-Ökonomen betonen dagegen die Rolle der Inflationserwartungen und der Nachfrage. Beide Kanäle lassen sich hier nur grob nachspielen.</p>
+   </details>
+  </div>
+ </div>
+</section>
+</main>
+
+<footer>
+ Sektorwerk · Begleitseite zum Artikel auf <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a> ·
+ Quellen der Thesen: Maurice Höfgen, „Mythos Geldknappheit“ (2020) und „Teuer!“ (2023). Japan-Startwerte gerundet nach IWF und Bank of Japan (2026). Alle Modelle sind didaktische Vereinfachungen.
+</footer>
+
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const fmt = (x, d = 0) => x.toLocaleString("de-DE", {minimumFractionDigits: d, maximumFractionDigits: d});
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll("#reiter button").forEach(b => b.addEventListener("click", () => {
+  document.querySelectorAll("#reiter button").forEach(x => x.classList.toggle("aktiv", x === b));
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("aktiv", t.id === b.dataset.tab));
+  alleZeichnen();
+}));
+
+/* ---------- Canvas helper ---------- */
+function bereite(canvas) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = canvas.clientWidth || 600, h = canvas.getAttribute("height") * 1;
+  canvas.width = w * dpr; canvas.height = h * dpr; canvas.style.height = h + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  ctx.font = "12px Georgia, serif";
+  return {ctx, w, h};
+}
+function linienChart(canvas, reihen, opt) {
+  // reihen: [{daten:[], farbe, achse:'l'|'r', breite}]
+  const {ctx, w, h} = bereite(canvas);
+  const pl = 48, pr = 52, pt = 14, pb = 28, W = w - pl - pr, H = h - pt - pb;
+  const n = reihen[0].daten.length;
+  const bereich = a => {
+    const vals = reihen.filter(r => r.achse === a).flatMap(r => r.daten);
+    if (!vals.length) return null;
+    let lo = Math.min(0, ...vals), hi = Math.max(...vals);
+    if (opt && opt[a + "min"] !== undefined) lo = opt[a + "min"];
+    if (hi - lo < 1e-9) hi = lo + 1;
+    hi = hi + (hi - lo) * 0.08;
+    return [lo, hi];
+  };
+  const bl = bereich("l"), br = bereich("r");
+  ctx.strokeStyle = css("--linie"); ctx.fillStyle = css("--leise"); ctx.lineWidth = 1;
+  for (let k = 0; k <= 4; k++) {
+    const y = pt + H - H * k / 4;
+    ctx.beginPath(); ctx.moveTo(pl, y); ctx.lineTo(pl + W, y); ctx.stroke();
+    if (bl) { ctx.textAlign = "right"; ctx.fillText(fmt(bl[0] + (bl[1] - bl[0]) * k / 4), pl - 6, y + 4); }
+    if (br) { ctx.textAlign = "left"; ctx.fillText(fmt(br[0] + (br[1] - br[0]) * k / 4, 1), pl + W + 6, y + 4); }
+  }
+  ctx.textAlign = "center";
+  const schritt = Math.max(1, Math.ceil(n / 10));
+  for (let i = 0; i < n; i += schritt) ctx.fillText((opt && opt.xlabel ? opt.xlabel(i) : i), pl + W * i / (n - 1), h - 8);
+  if (opt && opt.markierung) {
+    const [a, b] = opt.markierung;
+    ctx.fillStyle = "rgba(192,138,43,.13)";
+    ctx.fillRect(pl + W * a / (n - 1), pt, W * (b - a) / (n - 1), H);
+  }
+  reihen.forEach(r => {
+    const [lo, hi] = r.achse === "l" ? bl : br;
+    ctx.strokeStyle = r.farbe; ctx.lineWidth = r.breite || 2.5; ctx.setLineDash(r.strich || []);
+    ctx.beginPath();
+    r.daten.forEach((v, i) => {
+      const x = pl + W * i / (n - 1), y = pt + H - H * (v - lo) / (hi - lo);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke(); ctx.setLineDash([]);
+  });
+}
+
+/* =============== TAB 1: Sektorensalden =============== */
+const t1ids = ["G", "I", "X", "t", "s", "m", "P"];
+const presets1 = {
+  de: {G: 1080, I: 840, X: 1700, t: 0.25, s: 0.373, m: 0.375, P: 4000},
+  jp: {G: 1220, I: 960, X: 880, t: 0.28, s: 0.4236, m: 0.18, P: 4000},
+};
+let basis1 = null;
+document.querySelectorAll("[data-preset]").forEach(b => b.addEventListener("click", () => {
+  const p = b.dataset.preset;
+  if (presets1[p]) { setze1(presets1[p]); basis1 = null; }
+  else {
+    basis1 = rechne1(lies1());
+    if (p === "spar") $("G").value = +$("G").value - 150;
+    if (p === "sparwelle") $("s").value = Math.min(0.6, +$("s").value + 0.04).toFixed(3);
+    if (p === "invest") { $("G").value = +$("G").value + 150; $("I").value = +$("I").value + 80; }
+  }
+  zeichne1();
+}));
+function setze1(o) { for (const k in o) $(k).value = o[k]; }
+function lies1() { const o = {}; t1ids.forEach(k => o[k] = +$(k).value); return o; }
+function rechne1(p) {
+  const Y = (p.G + p.I + p.X) / (p.t + p.s * (1 - p.t) + p.m);
+  const T = p.t * Y, M = p.m * Y, S = p.s * (1 - p.t) * Y;
+  const A = Y / p.P;
+  const U = Math.max(2, 3.5 + 60 * (1 - A));
+  return {Y, T, M, S, A, U, staat: T - p.G, privat: S - p.I, ausland: M - p.X, G: p.G};
+}
+function zeichne1() {
+  const p = lies1();
+  $("vG").textContent = fmt(p.G); $("vI").textContent = fmt(p.I); $("vX").textContent = fmt(p.X);
+  $("vt").textContent = fmt(p.t * 100) + " %"; $("vs").textContent = fmt(p.s * 100, 1) + " %";
+  $("vm").textContent = fmt(p.m * 100) + " %"; $("vP").textContent = fmt(p.P);
+  const r = rechne1(p);
+  $("oY").textContent = fmt(r.Y) + " Mrd";
+  $("oA").textContent = fmt(r.A * 100, 1) + " %";
+  $("oU").textContent = r.A > 1.0 ? "≈ 2 % (Engpass)" : "≈ " + fmt(r.U, 1) + " %";
+  $("oT").textContent = fmt(r.T) + " Mrd";
+  $("gl1").textContent =
+    `(T−G) + (S−I) + (M−X) = 0\n(${fmt(r.staat)}) + (${fmt(r.privat)}) + (${fmt(r.ausland)}) = ${fmt(r.staat + r.privat + r.ausland)}\n` +
+    `Staatssaldo: ${fmt(r.staat / r.Y * 100, 1)} % BIP   Leistungsbilanz: ${fmt(-r.ausland / r.Y * 100, 1)} % BIP`;
+  // Balkendiagramm
+  const {ctx, w, h} = bereite($("c1"));
+  const werte = [["Staat", r.staat, css("--staat")], ["Privat", r.privat, css("--privat")], ["Ausland", r.ausland, css("--ausland")]];
+  const vergleich = basis1 ? [basis1.staat, basis1.privat, basis1.ausland] : null;
+  const maxv = Math.max(100, ...werte.map(x => Math.abs(x[1])), ...(vergleich || []).map(Math.abs)) * 1.15;
+  const mitte = h / 2, sk = (h / 2 - 28) / maxv;
+  ctx.strokeStyle = css("--tinte"); ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(30, mitte); ctx.lineTo(w - 20, mitte); ctx.stroke();
+  ctx.fillStyle = css("--leise"); ctx.textAlign = "left";
+  ctx.fillText("Überschuss ↑", 34, 16); ctx.fillText("Defizit ↓", 34, h - 8);
+  const bw = Math.min(110, (w - 80) / 5);
+  werte.forEach((x, i) => {
+    const cx = 60 + (w - 100) * (i + 0.5) / 3;
+    if (vergleich) {
+      ctx.strokeStyle = x[2]; ctx.setLineDash([4, 3]); ctx.lineWidth = 1.5;
+      const vh = vergleich[i] * sk;
+      ctx.strokeRect(cx - bw / 2 - 6, mitte - Math.max(vh, 0), bw + 12, Math.abs(vh));
+      ctx.setLineDash([]);
+    }
+    const bh = x[1] * sk;
+    ctx.fillStyle = x[2];
+    ctx.fillRect(cx - bw / 2, mitte - Math.max(bh, 0), bw, Math.abs(bh));
+    ctx.fillStyle = css("--tinte"); ctx.textAlign = "center";
+    ctx.font = "bold 13px Georgia, serif"; ctx.fillText(x[0], cx, mitte + (bh >= 0 ? 16 : -6));
+    ctx.font = "12px " + css("--mono");
+    ctx.fillText((x[1] >= 0 ? "+" : "") + fmt(x[1]), cx, mitte - bh + (bh >= 0 ? -6 : 14));
+    ctx.font = "12px Georgia, serif";
+  });
+  if (vergleich) { ctx.fillStyle = css("--leise"); ctx.textAlign = "right"; ctx.fillText("gestrichelt: vor der Maßnahme", w - 24, 16); }
+  // Meldungen
+  let html = "";
+  if (r.A > 1.02) html += `<div class="meldung warn">Die Nachfrage liegt ${fmt((r.A - 1) * 100, 1)} % über dem Produktionspotenzial. Das ist die reale Grenze: Jetzt entsteht Inflationsdruck statt zusätzlicher Produktion. Nach MMT müsste der Staat Ausgaben senken oder Steuern erhöhen.</div>`;
+  else if (r.A < 0.95) html += `<div class="meldung warn">Unterauslastung (${fmt(r.A * 100, 1)} %): Arbeitskräfte und Maschinen liegen brach. Nach Höfgen ist hier Spielraum für zusätzliche Staatsausgaben, ohne dass Inflation droht.</div>`;
+  else html += `<div class="meldung gut">Die Wirtschaft läuft nahe am Potenzial (${fmt(r.A * 100, 1)} %).</div>`;
+  if (basis1) {
+    const dG = p.G - basis1.G, dSaldo = r.staat - basis1.staat, dY = r.Y - basis1.Y;
+    html += `<div class="meldung info">Gegenüber vorher: Staatsausgaben ${dG >= 0 ? "+" : ""}${fmt(dG)} Mrd → Staatssaldo ${dSaldo >= 0 ? "+" : ""}${fmt(dSaldo)} Mrd, BIP ${dY >= 0 ? "+" : ""}${fmt(dY)} Mrd. ` +
+      (dG < 0 ? `Von jeder gekürzten Milliarde verbessert nur ${fmt(Math.abs(dSaldo / dG) * 100)} % den Haushalt, der Rest geht durch sinkende Einnahmen verloren.` :
+       dG > 0 ? `Mehrausgaben belasten den Saldo nur zu ${fmt(Math.abs(dSaldo / dG) * 100)} %, weil das Einkommen und damit die Steuern steigen.` :
+       `Mehr Sparen senkt das Einkommen um ${fmt(Math.abs(dY))} Mrd, die tatsächliche Ersparnis ändert sich aber kaum (Sparparadox).`) + `</div>`;
+  }
+  $("m1").innerHTML = html;
+}
+t1ids.forEach(k => $(k).addEventListener("input", zeichne1));
+
+/* =============== TAB 2: Zentralbank-Konten =============== */
+const konten0 = () => ({
+  ZB: {titel: "Zentralbank", posten: {"Konto Finanzministerium": 0, "Reserven der Bank („Girokonto“)": 0, "Anleihen der Bank („Sparkonto“)": 0}},
+  FM: {titel: "Finanzministerium", posten: {"Saldo Zentralbankkonto": 0, "Ausstehende Staatsanleihen": 0}},
+  B:  {titel: "Geschäftsbank", posten: {"Reserven bei der ZB": 0, "Staatsanleihen": 0, "Einlage Handwerkerin (Schuld)": 0}},
+  H:  {titel: "Handwerkerin (Haushalt)", posten: {"Girokonto": 0, "Nettogeldvermögen": 0}},
+});
+const schritte = [
+  {text: "Ausgangslage: Alle Konten stehen auf null. Der Staat beauftragt eine Handwerkerin, eine Schule zu renovieren (1.000 €).", buch: []},
+  {text: "① Der Staat bezahlt: Die Zentralbank belastet das Konto des Finanzministeriums und schreibt der Bank 1.000 € Reserven gut. Die Bank schreibt sie der Handwerkerin gut. Neues Geld ist entstanden, das Ministerium steht im Minus.",
+   buch: [["ZB", "Konto Finanzministerium", -1000], ["ZB", "Reserven der Bank („Girokonto“)", 1000], ["FM", "Saldo Zentralbankkonto", -1000], ["B", "Reserven bei der ZB", 1000], ["B", "Einlage Handwerkerin (Schuld)", 1000], ["H", "Girokonto", 1000], ["H", "Nettogeldvermögen", 1000]]},
+  {text: "② Der Staat verkauft eine einjährige Anleihe, die Bank kauft sie mit ihren Reserven. Bei der Zentralbank ist das eine Umbuchung vom „Girokonto“ aufs „Sparkonto“. Das Ministerium ist wieder ausgeglichen, hat aber eine Anleiheschuld.",
+   buch: [["ZB", "Reserven der Bank („Girokonto“)", -1000], ["ZB", "Anleihen der Bank („Sparkonto“)", 1000], ["B", "Reserven bei der ZB", -1000], ["B", "Staatsanleihen", 1000], ["FM", "Saldo Zentralbankkonto", 1000], ["FM", "Ausstehende Staatsanleihen", 1000], ["ZB", "Konto Finanzministerium", 1000], ["ZB", "Anleihen der Bank („Sparkonto“)", -1000]]},
+  {text: "③ Zinsen (1 % = 10 €): Der Staat schreibt der Bank 10 € neue Reserven gut. Auch Zinszahlungen sind Staatsausgaben und schaffen Geld.",
+   buch: [["ZB", "Konto Finanzministerium", -10], ["FM", "Saldo Zentralbankkonto", -10], ["ZB", "Reserven der Bank („Girokonto“)", 10], ["B", "Reserven bei der ZB", 10]]},
+  {text: "④ Fälligkeit: Die Anleihe wird zurückgezahlt. Die Bank bekommt ihre 1.000 € Reserven zurück, das Ministerium belastet sein Zentralbankkonto. Für den Währungsherausgeber ist das eine interne Buchung.",
+   buch: [["B", "Staatsanleihen", -1000], ["B", "Reserven bei der ZB", 1000], ["FM", "Ausstehende Staatsanleihen", -1000], ["FM", "Saldo Zentralbankkonto", -1000], ["ZB", "Konto Finanzministerium", -1000], ["ZB", "Reserven der Bank („Girokonto“)", 1000]]},
+  {text: "⑤ Die Handwerkerin zahlt 400 € Steuern. Ihr Girokonto sinkt, die Bank verliert Reserven, das Konto des Ministeriums steigt. Geld wird vernichtet. Übrig bleibt: Staatsdefizit = privater Überschuss.",
+   buch: [["H", "Girokonto", -400], ["H", "Nettogeldvermögen", -400], ["B", "Einlage Handwerkerin (Schuld)", -400], ["B", "Reserven bei der ZB", -400], ["ZB", "Reserven der Bank („Girokonto“)", -400], ["ZB", "Konto Finanzministerium", 400], ["FM", "Saldo Zentralbankkonto", 400]]},
+];
+let schritt = 0;
+function zeichne2() {
+  const k = konten0(); const neu = new Set(); const log = [];
+  for (let i = 1; i <= schritt; i++) schritte[i].buch.forEach(([s, p, v]) => {
+    k[s].posten[p] += v;
+    if (i === schritt) neu.add(s + "|" + p);
+    log.push(`Schritt ${i}: ${k[s].titel.padEnd(18)} ${p.padEnd(34)} ${(v >= 0 ? "+" : "") + fmt(v)} €`);
+  });
+  $("konten").innerHTML = Object.entries(k).map(([s, o]) =>
+    `<div class="tkonto"><h4>${o.titel}</h4><table>${Object.entries(o.posten).map(([p, v]) =>
+      `<tr class="${neu.has(s + "|" + p) ? "neu" : ""}"><td>${p}</td><td class="w">${fmt(v)} €</td></tr>`).join("")}</table></div>`).join("");
+  $("schrittText").textContent = schritte[schritt].text;
+  $("schrittAnz").textContent = `Schritt ${schritt} von ${schritte.length - 1}`;
+  $("log").textContent = log.length ? log.join("\n") : "(noch keine Buchungen)";
+  $("log").style.whiteSpace = "pre";
+  $("schrittVor").disabled = schritt >= schritte.length - 1;
+  $("schrittZurueck").disabled = schritt <= 0;
+  if (schritt === schritte.length - 1) {
+    $("schrittText").textContent += `  Bilanz: Der Staat hat 1.010 € ausgegeben und 400 € eingenommen, also 610 € Defizit. Die privaten Konten (Handwerkerin 600 € + Bank 10 € Zinsgewinn) sind um genau 610 € gewachsen.`;
+  }
+}
+$("schrittVor").onclick = () => { if (schritt < schritte.length - 1) schritt++; zeichne2(); };
+$("schrittZurueck").onclick = () => { if (schritt > 0) schritt--; zeichne2(); };
+$("schrittReset").onclick = () => { schritt = 0; zeichne2(); };
+
+/* =============== TAB 3: Schuldendynamik =============== */
+const laender = {
+  jp: {d0: 203, i0: 0.9, r: 2.2, L: 9, g: 3.0, pb: -1.0, cb: 45, souv: 1},
+  it: {d0: 137, i0: 2.9, r: 3.6, L: 7, g: 2.8, pb: 0.8, cb: 20, souv: 0},
+  de: {d0: 64, i0: 1.6, r: 2.7, L: 7, g: 3.0, pb: -1.5, cb: 20, souv: 0},
+  us: {d0: 122, i0: 3.3, r: 4.3, L: 6, g: 4.2, pb: -3.5, cb: 15, souv: 1},
+};
+const t3ids = ["d0", "i0", "r", "L", "g", "pb", "cb", "souv"];
+let schock3 = null;
+document.querySelectorAll("[data-land]").forEach(b => b.addEventListener("click", () => {
+  const o = laender[b.dataset.land]; for (const k in o) $(k).value = o[k]; schock3 = null; zeichne3();
+}));
+$("schock").onclick = () => { schock3 = schock3 === "zins" ? null : "zins"; zeichne3(); };
+$("wachstum").onclick = () => { schock3 = schock3 === "g" ? null : "g"; zeichne3(); };
+t3ids.forEach(k => $(k).addEventListener("input", zeichne3));
+function zeichne3() {
+  const p = {}; t3ids.forEach(k => p[k] = +$(k).value);
+  $("vd0").textContent = fmt(p.d0) + " %"; $("vi0").textContent = fmt(p.i0, 2) + " %";
+  $("vr").textContent = fmt(p.r, 2) + " %"; $("vL").textContent = fmt(p.L, 1);
+  $("vg").textContent = fmt(p.g, 1) + " %"; $("vpb").textContent = fmt(p.pb, 1) + " %";
+  $("vcb").textContent = fmt(p.cb) + " %"; $("vsouv").textContent = p.souv ? "ja" : "nein (Euro-Staat)";
+  const N = 30; const d = [p.d0], iz = [p.i0], last = [p.d0 * p.i0 / 100];
+  let i = p.i0 / 100, dd = p.d0, r = p.r / 100;
+  // Ohne eigene Zentralbank: Risikoaufschlag, der mit der Schuldenquote steigt
+  for (let t = 1; t <= N; t++) {
+    let rt = r, gt = p.g / 100;
+    if (schock3 === "zins" && t >= 1) rt += 0.02;
+    if (schock3 === "g" && t >= 1 && t <= 3) gt -= 0.02;
+    if (!p.souv) rt += Math.max(0, (dd - 90) / 100) * 0.015;
+    i = i + (rt - i) / p.L;
+    dd = dd * (1 + i) / (1 + gt) - p.pb;
+    d.push(dd); iz.push(i * 100); last.push(dd * i);
+  }
+  linienChart($("c3"), [
+    {daten: d, farbe: css("--staat"), achse: "l", breite: 3},
+    {daten: last, farbe: css("--gold"), achse: "r"},
+    {daten: iz, farbe: css("--privat"), achse: "r", strich: [5, 4]},
+  ], {xlabel: k => 2026 + k, markierung: schock3 === "g" ? [1, 3] : null});
+  const rEff = p.r + (schock3 === "zins" ? 2 : 0);
+  const stab = p.d0 * ((rEff / 100) - p.g / 100) / (1 + p.g / 100);
+  $("schock").style.fontWeight = schock3 === "zins" ? "bold" : "normal";
+  $("wachstum").style.fontWeight = schock3 === "g" ? "bold" : "normal";
+  $("o3d").textContent = fmt(d[N]) + " %";
+  $("o3z").textContent = fmt(last[0], 1) + " → " + fmt(last[N], 1);
+  $("o3p").textContent = fmt(last[0] * (1 - p.cb / 100), 1) + " % BIP";
+  $("o3s").textContent = (stab >= 0 ? "+" : "") + fmt(stab, 1) + " % BIP";
+  let html = "";
+  const igap = (rEff - p.g);
+  if (igap < 0) html += `<div class="meldung gut">Marktzins (${fmt(rEff, 1)} %) &lt; Wachstum (${fmt(p.g, 1)} %): Der „Schneeballeffekt“ arbeitet für den Staat: Ein Primärsaldo von ${fmt(stab, 1)} % des BIP genügt, um die Quote auf heutigem Niveau zu halten${p.pb > stab ? ", mit dem eingestellten Saldo sinkt sie" : ", mit dem eingestellten Saldo steigt sie trotzdem"}.</div>`;
+  else html += `<div class="meldung warn">Marktzins ≥ Wachstum: Die Zinsen wachsen schneller als die Wirtschaft. Zum Stabilisieren braucht es einen Primärüberschuss von etwa ${fmt(stab, 1)} % des BIP, oder die Zentralbank müsste die Zinsen drücken (was bei Inflation über dem Ziel kaum geht).</div>`;
+  if (!p.souv) html += `<div class="meldung warn">Ohne eigene Zentralbank verlangt der Markt ab etwa 90 % Schuldenquote einen Risikoaufschlag (hier eingebaut). Genau das meint Höfgen mit der „Fehlkonstruktion“ der Eurozone. Für Japan gibt es diesen Aufschlag in dieser Form nicht, weil die BoJ notfalls kauft.</div>`;
+  else html += `<div class="meldung info">Monetär souverän: kein Ausfallrisiko in eigener Währung. Etwa ${fmt(p.cb)} % der Zinsen gehen an die eigene Zentralbank und fließen großteils zurück. Die Grenze zeigt sich hier über Inflation und Wechselkurs, nicht über Zahlungsunfähigkeit.</div>`;
+  if (schock3 === "zins") html += `<div class="meldung info">Zinsschock aktiv: Wegen der langen Laufzeiten steigt der Durchschnittszins nur langsam. Japans Schuldenquote reagiert deshalb mit Verzögerung, die Zinslast steigt aber über Jahre stetig.</div>`;
+  $("m3").innerHTML = html;
+}
+
+/* =============== TAB 4: Verteilungskonflikt =============== */
+const t4ids = ["w", "p", "e", "sh", "du", "bm", "rho"];
+t4ids.forEach(k => $(k).addEventListener("input", zeichne4));
+["pol_deckel", "pol_steuer", "pol_zins", "pol_konzert"].forEach(k => $(k).addEventListener("change", zeichne4));
+function zeichne4() {
+  const p = {}; t4ids.forEach(k => p[k] = +$(k).value);
+  $("vw").textContent = fmt(p.w, 1) + " %"; $("vp").textContent = fmt(p.p, 1) + " %";
+  $("ve").textContent = fmt(p.e, 1) + " %"; $("vsh").textContent = "+" + fmt(p.sh, 1) + " Pkt.";
+  $("vdu").textContent = p.du + " J."; $("vbm").textContent = fmt(p.bm, 2); $("vrho").textContent = fmt(p.rho, 2);
+  const N = 12, start = 1, kappa = 0.9;
+  const infl = [], lohn = [], gew = [], imp = [];
+  let pi = 2, pn = 100, maxpi = 2, minLohn = 100, zusatzAL = 0;
+  for (let t = 0; t <= N; t++) {
+    let e = p.e + ((t >= start && t < start + p.du) ? p.sh : 0);
+    if ($("pol_deckel").checked && t >= start && t < start + p.du) e -= p.sh / 2;
+    let wz = p.w, pz = p.p;
+    if ($("pol_steuer").checked && t >= start) pz -= 3;
+    if ($("pol_zins").checked && t >= start) { wz -= 3; zusatzAL = 1.5; }
+    let luecke = wz + pz + e - 100;
+    if ($("pol_konzert").checked && t >= start) luecke = Math.min(luecke, 0) * 0.5;
+    pi = 2 + p.rho * (pi - 2) + kappa * luecke;
+    pi = Math.max(-3, Math.min(40, pi));
+    // tatsächliche Anteile: Lücke wird nach Macht verteilt
+    const verfuegbar = 100 - e;
+    const ueber = wz + pz - verfuegbar;
+    const lw = wz - ueber * (1 - p.bm), lg = pz - ueber * p.bm;
+    if (t > 0) pn *= 1 + pi / 100;
+    infl.push(pi); lohn.push(lw); gew.push(lg); imp.push(e);
+    maxpi = Math.max(maxpi, pi); minLohn = Math.min(minLohn, lw);
+  }
+  linienChart($("c4"), [
+    {daten: lohn, farbe: css("--privat"), achse: "l"},
+    {daten: gew, farbe: css("--gold"), achse: "l"},
+    {daten: imp, farbe: css("--ausland"), achse: "l"},
+    {daten: infl, farbe: css("--staat"), achse: "r", breite: 3},
+  ], {xlabel: k => "J" + k, markierung: p.du > 0 ? [start, Math.min(N, start + p.du)] : null, rmin: Math.min(0, ...infl)});
+  $("o4max").textContent = fmt(maxpi, 1) + " %";
+  $("o4pn").textContent = fmt(pn, 1);
+  $("o4rl").textContent = fmt(minLohn, 1) + " % (Ziel " + fmt(p.w, 1) + ")";
+  $("o4al").textContent = zusatzAL ? "+" + fmt(zusatzAL, 1) + " Pkt." : "±0";
+  const anspr = p.w + p.p + p.e;
+  let html = "";
+  if (anspr > 100.5) html += `<div class="meldung warn">Schon vor dem Schock wollen Löhne, Gewinne und Importe zusammen ${fmt(anspr, 1)} % des Kuchens. Das ergibt Dauerinflation über dem Ziel.</div>`;
+  else if (anspr < 99.5) html += `<div class="meldung info">Die Ansprüche liegen unter 100 % (${fmt(anspr, 1)} %): Die Inflation fällt unter das Ziel, bis hin zur Deflation, Japans altes Problem.</div>`;
+  if (p.sh > 0 && p.du > 0) {
+    html += `<div class="meldung info">Der Energieschock nimmt ${fmt(p.sh, 1)} Punkte des Kuchens weg, die ins Ausland fließen. ${p.rho > 0.6 ? "Bei hoher Indexierung zieht sich die Teuerung weit über das Schockende hinaus: Aus dem Preisschock wird eine Spirale." : "Endet der Schock, sinkt die Rate wieder. Das Preisniveau bleibt aber erhöht, so wie es Höfgen im Ausblick von „Teuer!“ beschreibt."}</div>`;
+  }
+  if ($("pol_zins").checked) html += `<div class="meldung warn">Die Zinserhöhung wirkt hier über geschwächte Lohnansprüche: Die Inflation sinkt, aber auf Kosten von Reallöhnen und Jobs. Genau diesen Kanal kritisiert Höfgen.</div>`;
+  $("m4").innerHTML = html;
+}
+
+/* ---------- Start ---------- */
+function alleZeichnen() { zeichne1(); zeichne2(); zeichne3(); zeichne4(); }
+let rt; window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(alleZeichnen, 120); });
+alleZeichnen();
+</script>
+</body>
+</html>
