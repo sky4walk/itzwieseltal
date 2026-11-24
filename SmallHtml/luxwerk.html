@@ -409,7 +409,8 @@ footer a,a{color:var(--acc)}
 --http 8088          Port der Brücke
 --bind 0.0.0.0       auch von Handy/Tablet im Heimnetz erreichbar
 --rec 30             Daueraufzeichnung für „Analyse“ alle 30 s (Standard, Ordner luxdata)
---data /pfad         anderer Datenordner
+--data /pfad         anderer Datenordner, z. B. auf NAS oder USB-Laufwerk
+--mount /mnt/nas     nur schreiben, wenn dieses Laufwerk eingehängt ist
 --no-rec             keine Daueraufzeichnung
 --log verlauf.csv    zusätzlich einfache CSV (--interval 60)
 --expert             alle Parameter schreibbar (sonst nur Betriebsarten und Sollwerte)</pre>
@@ -448,7 +449,8 @@ sudo mv /tmp/luxbridge.py /tmp/luxwerk.html /opt/luxwerk/
 sudo useradd -r -s /usr/sbin/nologin luxwerk
 sudo chown -R luxwerk: /opt/luxwerk</pre>
     <p class="hint">Dienstdatei anlegen mit <code>sudo nano /etc/systemd/system/luxwerk.service</code> und diesen Inhalt einfügen
-      (IP und Port des Reglers ggf. anpassen):</p>
+      (IP und Port des Reglers ggf. anpassen). Ohne NAS bzw. USB-Laufwerk die beiden Optionen <code>--data</code> und <code>--mount</code> weglassen,
+      dann landet die Aufzeichnung in <code>/opt/luxwerk/luxdata</code> (siehe Abschnitt 5).</p>
     <pre id="svcView"></pre>
     <div class="row"><button id="btnSvcDl">luxwerk.service herunterladen</button>
       <span class="hint">alternativ: herunterladen und mit <code>sudo cp luxwerk.service /etc/systemd/system/</code> einspielen</span></div>
@@ -480,8 +482,35 @@ sudo systemctl restart luxwerk</pre>
     <pre>sudo systemctl disable --now luxwerk
 sudo rm /etc/systemd/system/luxwerk.service
 sudo systemctl daemon-reload
-sudo rm -r /opt/luxwerk        # löscht auch die Aufzeichnung in luxdata!
+sudo rm -r /opt/luxwerk        # löscht auch die Aufzeichnung in luxdata! (auf dem NAS bleibt sie liegen)
 sudo userdel luxwerk</pre>
+
+    <h2 style="margin-top:16px">5 · Aufzeichnung auf NAS oder USB-Laufwerk (SD-Karte schonen)</h2>
+    <p>Die Daueraufzeichnung schreibt alle 30 s eine Zeile. Über Wochen und Monate ist das für die SD-Karte des Pi unnötige Last.
+      Mit <code>--data</code> legt die Brücke ihre Daten auf ein eingehängtes Laufwerk, <code>--mount</code> nennt dessen Einhängepunkt.</p>
+    <p class="hint">Warum <code>--mount</code>? Ist das Laufwerk nicht eingehängt (NAS aus, Netzwerk weg, USB-Stick abgezogen),
+      ist <code>/mnt/nas</code> nur ein leerer Ordner auf der SD-Karte, und die Brücke würde unbemerkt wieder dorthin schreiben.
+      Mit <code>--mount</code> pausiert sie stattdessen die Aufzeichnung und meldet das einmal im Journal. Live-Anzeige und Bedienen laufen weiter.
+      Sobald das Laufwerk wieder da ist, schreibt sie von selbst weiter. Der Datenordner muss unterhalb von <code>--mount</code> liegen.</p>
+    <p class="hint">Beispiel <code>/etc/fstab</code> für eine Windows/Samba-Freigabe (FRITZ!Box-NAS, Synology …).
+      Wichtig ist <code>uid</code>/<code>gid</code>, damit der Dienstbenutzer <code>luxwerk</code> schreiben darf:</p>
+    <pre>//192.168.178.10/daten  /mnt/nas  cifs  credentials=/etc/nas-cred,uid=luxwerk,gid=luxwerk,iocharset=utf8,_netdev,nofail,x-systemd.automount  0  0</pre>
+    <p class="hint"><code>/etc/nas-cred</code> enthält zwei Zeilen <code>username=…</code> und <code>password=…</code> (danach <code>sudo chmod 600 /etc/nas-cred</code>).
+      Für NFS sieht die Zeile so aus; dort muss der Ordner auf dem NAS der UID von <code>luxwerk</code> gehören (<code>id luxwerk</code> zeigt sie):</p>
+    <pre>192.168.178.10:/volume1/daten  /mnt/nas  nfs  _netdev,nofail,x-systemd.automount  0  0</pre>
+    <p class="hint">Einrichten, vorhandene Aufzeichnung umziehen, Dienst neu starten:</p>
+    <pre>sudo mkdir -p /mnt/nas
+sudo systemctl daemon-reload
+sudo mount /mnt/nas
+sudo -u luxwerk mkdir -p /mnt/nas/luxdata          # testet zugleich das Schreibrecht
+sudo systemctl stop luxwerk
+sudo cp -a /opt/luxwerk/luxdata/. /mnt/nas/luxdata/
+sudo nano /etc/systemd/system/luxwerk.service     # ExecStart: --data /mnt/nas/luxdata --mount /mnt/nas
+sudo systemctl daemon-reload
+sudo systemctl start luxwerk
+journalctl -u luxwerk -n 20                       # zeigt „Daueraufzeichnung … nach /mnt/nas/luxdata“</pre>
+    <p class="hint">Den Ordner <code>/opt/luxwerk/luxdata</code> danach löschen, sobald die Analyse mit den Daten auf dem NAS funktioniert.
+      Im Reiter „Analyse“ steht hinter der Zahl der Messpunkte, aus welchem Ordner gelesen wurde.</p>
 
     <p class="hint"><b>Sicherheit:</b> Die Brücke hat keinen Passwortschutz. Port 8088 nicht in der FRITZ!Box nach außen freigeben – für unterwegs das VPN der FRITZ!Box nutzen.
       Wer im Dienst <code>--expert</code> ergänzt, erlaubt allen im Heimnetz, jeden Parameter zu schreiben; besser nur vorübergehend.</p>
@@ -512,10 +541,16 @@ Nur Python-Standardbibliothek. Start:
     python3 luxbridge.py 192.168.178.50 --log verlauf.csv
     python3 luxbridge.py 192.168.178.50 --expert     # alle Parameter schreibbar
     python3 luxbridge.py 192.168.178.50 --no-rec     # ohne Daueraufzeichnung
+    python3 luxbridge.py 192.168.178.50 --data /mnt/nas/luxdata --mount /mnt/nas
 
 Daueraufzeichnung (Standard: alle 30 s) für den Reiter „Analyse“:
     luxdata/JJJJ-MM-TT.csv   ein Datei pro Tag, Rohwerte (Temperaturen ×10)
     luxdata/zaehler.json     eingetragene Stromzählerstände für die JAZ
+
+Mit --data liegt der Ordner woanders, z. B. auf einem NAS oder USB-Laufwerk,
+damit die SD-Karte des Raspberry Pi geschont wird. --mount nennt den
+Einhängepunkt dieses Laufwerks: Ist es nicht eingehängt, wird nichts
+geschrieben (statt unbemerkt auf die SD-Karte in den leeren Mount-Ordner).
 
 Dann im Browser: http://localhost:8088/
 
@@ -625,20 +660,43 @@ class Luxtronik:
 
 
 class Bridge:
-    def __init__(self, lux, expert, logfile, interval, datadir=None, rec=30):
+    def __init__(self, lux, expert, logfile, interval, datadir=None, rec=30, mount=None):
         self.lux, self.expert = lux, expert
         self.cache, self.cache_t = None, 0.0
         self.cache_lock = threading.Lock()
         self.logfile, self.interval = logfile, interval
         self.datadir, self.rec = datadir, rec
+        self.mount = mount
+        self._mount_missing = False
         self.file_lock = threading.Lock()
+
+    # ---- Datenlaufwerk ----
+    def storage_ok(self):
+        """True, wenn geschrieben werden darf. Mit --mount nur, solange das Laufwerk eingehängt ist."""
+        if not self.mount:
+            return True
+        ok = os.path.ismount(self.mount)
+        if not ok and not self._mount_missing:
+            print("WARNUNG: %s ist nicht eingehängt – Aufzeichnung pausiert, nichts wird auf die SD-Karte geschrieben"
+                  % self.mount, file=sys.stderr)
+        elif ok and self._mount_missing:
+            print("%s ist wieder eingehängt – Aufzeichnung läuft weiter" % self.mount, file=sys.stderr)
+        self._mount_missing = not ok
+        return ok
+
+    def _need_storage(self):
+        if not self.storage_ok():
+            raise OSError("Datenlaufwerk %s ist nicht eingehängt" % self.mount)
 
     # ---- Daueraufzeichnung ----
     def recorder(self):
-        os.makedirs(self.datadir, exist_ok=True)
         while True:
             t0 = time.time()
             try:
+                if not self.storage_ok():
+                    time.sleep(self.rec)
+                    continue
+                os.makedirs(self.datadir, exist_ok=True)
                 c = self.data(max_age=1)["calcs"]
                 now = int(time.time())
                 row = [now] + [c[i] if i < len(c) else "" for _, i in REC_COLS[1:]]
@@ -657,6 +715,7 @@ class Bridge:
     def history(self, days):
         if not self.datadir:
             return {"cols": [n for n, _ in REC_COLS], "rows": [], "rec": 0}
+        self._need_storage()
         since = time.time() - days * 86400
         rows = []
         for d in range(int(days) + 1, -1, -1):
@@ -675,14 +734,17 @@ class Bridge:
                                      for k in idx])
                     except (ValueError, IndexError):
                         pass
-        return {"cols": [n for n, _ in REC_COLS], "rows": rows, "rec": self.rec}
+        return {"cols": [n for n, _ in REC_COLS], "rows": rows, "rec": self.rec, "dir": self.datadir}
 
     # ---- Stromzählerstände (für die Jahresarbeitszahl) ----
     def _meter_file(self):
         return os.path.join(self.datadir, "zaehler.json")
 
     def meters(self):
-        if not self.datadir or not os.path.exists(self._meter_file()):
+        if not self.datadir:
+            return []
+        self._need_storage()
+        if not os.path.exists(self._meter_file()):
             return []
         with self.file_lock, open(self._meter_file()) as f:
             return json.load(f)
@@ -697,6 +759,8 @@ class Bridge:
     def add_meter(self, kwh, note=""):
         if not self.datadir:
             raise ValueError("Brücke läuft ohne Datenordner (--no-rec)")
+        if not self.storage_ok():
+            raise ValueError("Datenlaufwerk %s ist nicht eingehängt – Zählerstand nicht gespeichert" % self.mount)
         kwh = float(kwh)
         c = self.data(max_age=1)["calcs"]
         lst = self.meters()
@@ -710,6 +774,8 @@ class Bridge:
         return entry
 
     def del_meter(self, ts):
+        if not self.storage_ok():
+            raise ValueError("Datenlaufwerk %s ist nicht eingehängt" % self.mount)
         with self.file_lock:
             lst = [m for m in self.meters_unlocked() if m["ts"] != int(ts)]
             self._save_meters(lst)
@@ -744,9 +810,14 @@ class Bridge:
                 ("ruecklauf_soll", 12), ("warmwasser", 17), ("warmwasser_soll", 18),
                 ("wq_ein", 19), ("wq_aus", 20), ("heissgas", 14), ("verdichter", 44),
                 ("betriebszustand", 80)]
+        on_mount = bool(self.mount) and os.path.commonpath([self.mount, os.path.abspath(self.logfile)]) == self.mount
         new = not os.path.exists(self.logfile)
         while True:
             try:
+                if on_mount and not self.storage_ok():
+                    time.sleep(self.interval)
+                    continue
+                new = new or not os.path.exists(self.logfile)
                 c = self.data(max_age=1)["calcs"]
                 row = [time.strftime("%Y-%m-%d %H:%M:%S")]
                 for name, i in cols[1:]:
@@ -830,6 +901,8 @@ def make_handler(bridge, html_path):
             elif path == "/api/info":
                 self._json(200, {"expert": bridge.expert,
                                  "host": "%s:%d" % (bridge.lux.host, bridge.lux.port),
+                                 "data": bridge.datadir, "mount": bridge.mount,
+                                 "mounted": os.path.ismount(bridge.mount) if bridge.mount else None,
                                  "safe": {str(k): v for k, v in SAFE_WRITE.items()}})
             else:
                 self._json(404, {"error": "unbekannt"})
@@ -882,12 +955,18 @@ def main():
     ap.add_argument("--data", metavar="ORDNER", help="Datenordner der Daueraufzeichnung (Standard: luxdata neben dem Skript)")
     ap.add_argument("--rec", type=int, default=30, help="Aufzeichnungsintervall in Sekunden (Standard 30)")
     ap.add_argument("--no-rec", action="store_true", help="keine Daueraufzeichnung")
+    ap.add_argument("--mount", metavar="EINHÄNGEPUNKT",
+                    help="nur schreiben, wenn dieses Laufwerk eingehängt ist, z. B. /mnt/nas")
     a = ap.parse_args()
 
     lux = Luxtronik(a.host, a.port)
     here = os.path.dirname(os.path.abspath(__file__))
     datadir = None if a.no_rec else os.path.abspath(a.data or os.path.join(here, "luxdata"))
-    bridge = Bridge(lux, a.expert, a.log, a.interval, datadir, max(5, a.rec))
+    mount = os.path.abspath(a.mount) if a.mount else None
+    if mount and datadir and os.path.commonpath([mount, datadir]) != mount:
+        print("FEHLER: Datenordner %s liegt nicht unter --mount %s" % (datadir, mount))
+        sys.exit(2)
+    bridge = Bridge(lux, a.expert, a.log, a.interval, datadir, max(5, a.rec), mount)
     html = os.path.join(here, "luxwerk.html")
 
     try:
@@ -901,9 +980,11 @@ def main():
 
     if datadir:
         try:
-            os.makedirs(datadir, exist_ok=True)
+            if bridge.storage_ok():
+                os.makedirs(datadir, exist_ok=True)
             threading.Thread(target=bridge.recorder, daemon=True).start()
-            print("Daueraufzeichnung alle %d s nach %s" % (bridge.rec, datadir))
+            print("Daueraufzeichnung alle %d s nach %s%s" % (bridge.rec, datadir,
+                  " (nur wenn %s eingehängt ist)" % mount if mount else ""))
         except OSError as e:
             print("WARNUNG: Datenordner %s nicht nutzbar (%s) – keine Aufzeichnung" % (datadir, e))
             bridge.datadir = None
@@ -1315,7 +1396,7 @@ async function runAnalyse(){
   const step = AN.rec||30, gapMax = Math.max(4*step, 180);
   const span = R[R.length-1][ix.ts]-R[0][ix.ts];
   let covered=0; for(let k=1;k<R.length;k++){ const d=g(R[k],"ts")-g(R[k-1],"ts"); if(d<=gapMax) covered+=d; }
-  $("anInfo").textContent = `${R.length.toLocaleString("de-DE")} Messpunkte, ${tShort(g(R[0],"ts"))} bis ${tShort(g(R[R.length-1],"ts"))}, abgedeckt ${fmtNum(covered/3600,1)} h`+(covered<span*0.9?" (mit Lücken)":"");
+  $("anInfo").textContent = `${R.length.toLocaleString("de-DE")} Messpunkte, ${tShort(g(R[0],"ts"))} bis ${tShort(g(R[R.length-1],"ts"))}, abgedeckt ${fmtNum(covered/3600,1)} h`+(covered<span*0.9?" (mit Lücken)":"")+(AN.dir?" · Daten in "+AN.dir:"");
 
   // Episoden finden: zusammenhängende Abschnitte, in denen pred(row) wahr ist
   function episodes(pred){
@@ -1695,13 +1776,13 @@ $("pyView").textContent = PY;
 $("pyInfo").textContent = PY.split("\n").length+" Zeilen · nur Python-Standardbibliothek";
 const SVC = `[Unit]
 Description=Luxwerk – Brücke zur Luxtronik-Wärmepumpe
-After=network-online.target
+After=network-online.target remote-fs.target
 Wants=network-online.target
 
 [Service]
 User=luxwerk
 WorkingDirectory=/opt/luxwerk
-ExecStart=/usr/bin/python3 /opt/luxwerk/luxbridge.py 192.168.178.95 --port 8888 --bind 0.0.0.0
+ExecStart=/usr/bin/python3 /opt/luxwerk/luxbridge.py 192.168.178.95 --port 8888 --bind 0.0.0.0 --data /mnt/nas/luxdata --mount /mnt/nas
 Restart=always
 RestartSec=10
 
