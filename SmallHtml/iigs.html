@@ -86,6 +86,7 @@ footer a{color:var(--ink)}
     <button id="btnFull" title="Bildschirm als Vollbild, Esc beendet">Vollbild</button>
     <label class="chk" title="Wie der Apple-Joystick bedient wird">Joystick <select id="joyMode"><option value="gamepad">Gamepad</option><option value="keypad">Ziffernblock</option><option value="mouse">Maus</option></select></label>
     <label class="chk" title="Relativer Modus für Spiele: Klick auf den Bildschirm fängt die Maus, Esc gibt sie frei"><input type="checkbox" id="mouseLock"> Maus fangen</label>
+    <label class="chk" title="Geschwindigkeit des Zeigers im gefangenen Modus (Maus fangen). Spiele mit eigenem Mauszeiger wie Middle-earth brauchen oft 2× oder mehr.">Tempo <select id="mouseSpeed"><option value="0.5">0,5×</option><option value="1">1×</option><option value="1.5">1,5×</option><option value="2" selected>2×</option><option value="3">3×</option><option value="4">4×</option><option value="6">6×</option></select></label>
   </div>
 </header>
 
@@ -1953,7 +1954,8 @@ canvas.addEventListener('mousemove',e=>{
   if(joyMode()==='mouse'){mouseJoy(e);return;}
   if(locked()){
     const r=canvas.getBoundingClientRect(),M=machine.mouse;
-    relX+=e.movementX*FB_W/r.width;relY+=e.movementY*FB_H/r.height;
+    const sp=parseFloat($('#mouseSpeed').value)||1;
+    relX+=e.movementX*FB_W/r.width*sp;relY+=e.movementY*FB_H/r.height*sp;
     const dx=Math.trunc(relX),dy=Math.trunc(relY);relX-=dx;relY-=dy;
     if(dx||dy)machine.mouseUpdate(M.x+dx,M.y+dy,mouseBtn);
     return;
