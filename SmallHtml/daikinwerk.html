@@ -1,0 +1,1254 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daikinwerk – Klimaanlage im Heimnetz</title>
+<style>
+:root{
+  --bg:#0e1419; --panel:#151d24; --panel2:#1b252e; --line:#26333f; --text:#dbe6ee; --dim:#7f93a3;
+  --cool:#4cb3ff; --heat:#ff8a4c; --auto:#b78cff; --dry:#5fd1c1; --fan:#c9d36a; --ok:#5fd38a; --bad:#ff5d6c;
+  --acc:var(--cool);
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+a{color:var(--acc)}
+header{display:flex;align-items:center;gap:14px;padding:14px 20px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:19px;margin:0;letter-spacing:.5px}
+header h1 b{color:var(--acc)}
+.dot{width:10px;height:10px;border-radius:50%;background:var(--bad);display:inline-block;margin-right:6px;vertical-align:middle}
+.dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+.meta{color:var(--dim);font-size:13px}
+.sp{flex:1}
+main{max-width:1180px;margin:0 auto;padding:18px;display:grid;grid-template-columns:minmax(320px,420px) 1fr;gap:18px}
+@media (max-width:860px){main{grid-template-columns:1fr}}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px}
+.card h2{font-size:13px;text-transform:uppercase;letter-spacing:1.2px;color:var(--dim);margin:0 0 12px;font-weight:600}
+.remote{display:flex;flex-direction:column;gap:16px}
+.dial{position:relative;width:250px;height:250px;margin:4px auto 0}
+.dial svg{width:100%;height:100%}
+.dial .val{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none}
+.dial .t{font-size:58px;font-weight:300;letter-spacing:-2px}
+.dial .t small{font-size:24px;margin-left:2px}
+.dial .sub{color:var(--dim);font-size:13px}
+.tempbtns{display:flex;justify-content:center;gap:40px;margin-top:-6px}
+.round{width:54px;height:54px;border-radius:50%;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:26px;cursor:pointer}
+.round:hover{border-color:var(--acc)}
+.power{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-size:17px;cursor:pointer;font-weight:600}
+.power.on{background:var(--acc);color:#06121c;border-color:var(--acc)}
+.seg{display:grid;gap:6px}
+.seg.c5{grid-template-columns:repeat(5,1fr)} .seg.c7{grid-template-columns:repeat(7,1fr)} .seg.c4{grid-template-columns:repeat(4,1fr)} .seg.c3{grid-template-columns:repeat(3,1fr)}
+.seg button,.btn{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:9px;padding:9px 4px;cursor:pointer;font-size:13px}
+.seg button:hover,.btn:hover{border-color:var(--acc)}
+.seg button.act{background:var(--acc);color:#06121c;border-color:var(--acc);font-weight:600}
+.seg button[disabled]{opacity:.35;cursor:not-allowed}
+.seg button .i{display:block;font-size:19px;line-height:1.1}
+.lbl{font-size:12px;color:var(--dim);margin:0 0 6px}
+.sensors{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media (max-width:560px){.sensors{grid-template-columns:repeat(2,1fr)}}
+.sens{background:var(--panel2);border-radius:10px;padding:10px 12px;border:1px solid var(--line)}
+.sens .k{font-size:12px;color:var(--dim)}
+.sens .v{font-size:26px;font-weight:300}
+.sens .v small{font-size:14px;color:var(--dim)}
+.right{display:flex;flex-direction:column;gap:18px;min-width:0}
+canvas{width:100%;display:block}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input[type=text],select{background:var(--panel2);border:1px solid var(--line);color:var(--text);border-radius:8px;padding:8px 10px;font-size:14px}
+input[type=text]{min-width:0;flex:1}
+.devs{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+.dev{display:flex;gap:10px;align-items:center;background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:8px 10px;cursor:pointer;font-size:13px}
+.dev:hover{border-color:var(--acc)}
+.dev code{color:var(--acc)}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:#2a1418;border:1px solid var(--bad);color:#ffd5da;padding:10px 16px;border-radius:10px;max-width:90vw;display:none;z-index:9}
+.toast.okk{background:#122519;border-color:var(--ok);color:#cff5dc}
+pre{background:#0a0f13;border:1px solid var(--line);border-radius:10px;padding:10px;max-height:340px;overflow:auto;font-size:12px;color:#a9c0d0;white-space:pre-wrap;word-break:break-all}
+details summary{cursor:pointer;color:var(--dim);font-size:13px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--dim);margin-top:6px;flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:5px;vertical-align:middle}
+.timerinfo{font-size:13px;color:var(--acc);margin-top:8px;min-height:18px}
+.busy{opacity:.6;pointer-events:none}
+footer{text-align:center;color:var(--dim);font-size:13px;padding:10px 0 26px}
+.hidden{display:none!important}
+.hint{font-size:13px;color:var(--dim);margin:8px 0 0}
+</style>
+</head>
+<body>
+<header>
+  <h1>DAIKIN<b>WERK</b></h1>
+  <span class="meta"><span class="dot" id="dot"></span><span id="conn">keine Verbindung</span></span>
+  <span class="sp"></span>
+  <span class="meta" id="devinfo"></span>
+  <a class="meta" href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a>
+</header>
+
+<main>
+  <section class="card remote" id="remote">
+    <button class="power" id="pow">⏻ <span id="powtxt">Aus</span></button>
+
+    <div>
+      <div class="dial">
+        <svg viewBox="0 0 250 250" id="dialsvg">
+          <circle cx="125" cy="125" r="104" fill="none" stroke="var(--line)" stroke-width="12" stroke-dasharray="490 1000" transform="rotate(135 125 125)" stroke-linecap="round"/>
+          <circle id="arc" cx="125" cy="125" r="104" fill="none" stroke="var(--acc)" stroke-width="12" stroke-dasharray="0 1000" transform="rotate(135 125 125)" stroke-linecap="round"/>
+          <circle id="knob" cx="125" cy="21" r="9" fill="var(--text)"/>
+        </svg>
+        <div class="val"><div class="t" id="stemp">--<small>°C</small></div><div class="sub" id="stsub">Solltemperatur</div></div>
+      </div>
+      <div class="tempbtns"><button class="round" id="tminus">−</button><button class="round" id="tplus">+</button></div>
+    </div>
+
+    <div><p class="lbl">Betriebsart</p>
+      <div class="seg c5" id="modes">
+        <button data-v="auto"><span class="i">⟳</span>Auto</button>
+        <button data-v="cool"><span class="i">❄</span>Kühlen</button>
+        <button data-v="heat"><span class="i">☀</span>Heizen</button>
+        <button data-v="dry"><span class="i">💧</span>Entf.</button>
+        <button data-v="fan"><span class="i">✇</span>Lüften</button>
+      </div></div>
+
+    <div id="fanbox"><p class="lbl">Lüfter</p>
+      <div class="seg c7" id="fans">
+        <button data-v="auto">Auto</button><button data-v="quiet">Leise</button>
+        <button data-v="1">1</button><button data-v="2">2</button><button data-v="3">3</button><button data-v="4">4</button><button data-v="5">5</button>
+      </div></div>
+
+    <div id="swingbox"><p class="lbl">Lamellen schwenken</p>
+      <div class="seg c4" id="swings">
+        <button data-v="off">Fest</button><button data-v="vertical">↕ Vertikal</button>
+        <button data-v="horizontal">↔ Horizontal</button><button data-v="both">3D</button>
+      </div></div>
+
+    <div><p class="lbl">Sonderfunktionen</p>
+      <div class="seg c3" id="specials">
+        <button data-k="powerful">Powerful</button>
+        <button data-k="econo">Econo</button>
+        <button data-k="comfort">Komfort</button>
+        <button data-k="quiet">Außen leise</button>
+        <button data-k="streamer">Streamer</button>
+      </div></div>
+  </section>
+
+  <div class="right">
+    <section class="card">
+      <h2>Messwerte</h2>
+      <div class="sensors">
+        <div class="sens"><div class="k">Raum</div><div class="v" id="htemp">--</div></div>
+        <div class="sens"><div class="k">Außen</div><div class="v" id="otemp">--</div></div>
+        <div class="sens"><div class="k">Luftfeuchte</div><div class="v" id="hhum">--</div></div>
+        <div class="sens"><div class="k">Kompressor</div><div class="v" id="cmp">--</div></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>Verlauf (seit Start der Brücke, max. 24 h)</h2>
+      <canvas id="hist" height="210"></canvas>
+      <div class="legend"><span><i style="background:var(--heat)"></i>Raum</span><span><i style="background:var(--cool)"></i>Außen</span><span><i style="background:var(--auto)"></i>Soll</span><span><i style="background:#3a4a57;height:8px"></i>Anlage an</span></div>
+    </section>
+
+    <section class="card">
+      <h2>Verbrauch letzte 7 Tage</h2>
+      <canvas id="week" height="150"></canvas>
+      <div class="meta" id="weeksum"></div>
+    </section>
+
+    <section class="card">
+      <h2>Timer</h2>
+      <div class="row">
+        <select id="tact"><option value="off">Ausschalten</option><option value="on">Einschalten</option></select>
+        <span class="meta">in</span>
+        <div class="seg c4" style="flex:1" id="tmins">
+          <button data-m="30">30 min</button><button data-m="60">1 h</button><button data-m="120">2 h</button><button data-m="0">Stopp</button>
+        </div>
+      </div>
+      <div class="timerinfo" id="tinfo"></div>
+      <p class="hint">Der Timer läuft in der Brücke – die Seite darf also zu sein.</p>
+    </section>
+
+    <section class="card">
+      <h2>Verbindung</h2>
+      <div class="row" id="bridgerow">
+        <span class="meta" style="width:70px">Brücke</span>
+        <input type="text" id="bridge" placeholder="http://localhost:8077">
+        <button class="btn" id="bridgego">Verbinden</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <span class="meta" style="width:70px">Adapter</span>
+        <input type="text" id="ip" placeholder="z. B. 192.168.178.57">
+        <input type="text" id="key" placeholder="Key (nur BRP072C)" style="max-width:150px">
+        <button class="btn" id="connect">Übernehmen</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="btn" id="disc">Suchen (UDP)</button>
+        <button class="btn" id="scan">Netz abklappern</button>
+        <span class="meta" id="discinfo"></span>
+      </div>
+      <div class="devs" id="devs"></div>
+      <div id="nobridge" class="hint hidden" style="color:var(--heat)">Die Brücke läuft nicht. Lade daikinbridge.py herunter, lege es neben diese Seite und starte <code>python3 daikinbridge.py --ip &lt;Adapter-IP&gt;</code>. Danach <code>http://&lt;rechner&gt;:8077/</code> öffnen.</div>
+      <div class="row" style="margin-top:12px">
+        <button class="btn" id="dlpy">⬇ daikinbridge.py herunterladen</button>
+        <button class="btn" id="dlhtml">⬇ diese Seite speichern</button>
+      </div>
+      <p class="hint">Die Brücke braucht nur Python 3, keine Pakete. Sie liefert diese Seite selbst aus, wenn daikinwerk.html im selben Ordner liegt.</p>
+      <details style="margin-top:12px"><summary>Rohdaten des Adapters</summary><pre id="raw">–</pre></details>
+    </section>
+  </div>
+</main>
+<footer>Daikinwerk · lokale Steuerung ohne Cloud · <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a> · <a href="https://zwieselbrau.wordpress.com" target="_blank" rel="noopener">zwieselbrau.wordpress.com</a></footer>
+<div class="toast" id="toast"></div>
+
+<!-- eingebettete Brücke, Download über den Knopf "daikinbridge.py herunterladen" -->
+<script type="text/plain" id="pysrc">
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+daikinbridge.py – Brücke zwischen daikinwerk.html und einem Daikin-WLAN-Adapter
+================================================================================
+
+Der Browser darf den Adapter nicht direkt ansprechen (kein CORS, teils HTTPS mit
+selbstsigniertem Zertifikat), deshalb sitzt dieses kleine Skript dazwischen.
+Es liefert daikinwerk.html aus und übersetzt eine einheitliche JSON-API auf die
+drei lokalen Daikin-Protokolle:
+
+  classic  – BRP069A/B, BRP072A, BRP15B (Airbase nicht): HTTP-GET /aircon/...
+  https    – BRP072C (z. B. Emura): HTTPS + X-Daikin-uuid, Registrierung mit Key
+  dsiot    – BRP069C/BRP084 mit Onecta-Firmware ≥ 2.8: HTTP-POST /dsiot/multireq
+
+Nur Python-Standardbibliothek, keine Pakete nötig.
+
+Start:
+  python3 daikinbridge.py                     # sucht den Adapter per UDP
+  python3 daikinbridge.py --ip 192.168.178.57
+  python3 daikinbridge.py --ip 192.168.178.57 --key 1234567890123   # BRP072C
+Dann im Browser:  http://<rechner>:8077/
+
+Protokollwissen nach pydaikin (github.com/fredrike/pydaikin), Daikin-Adapter
+melden sich im WLAN-Einrichtungsmodus als SSID „DaikinAPxxxxx“.
+
+Blog: https://itzwieseltal.wordpress.com
+"""
+
+import argparse
+import ipaddress
+import json
+import os
+import socket
+import ssl
+import sys
+import threading
+import time
+import uuid
+import urllib.error
+import urllib.parse
+import urllib.request
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+VERSION = "1.0"
+HERE = os.path.dirname(os.path.abspath(__file__))
+HTML_FILE = "daikinwerk.html"
+
+# Proxys aus der Umgebung ignorieren – der Adapter steht im Heimnetz.
+_OPENER_PLAIN = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
+
+class DaikinError(Exception):
+    pass
+
+
+def log(*a):
+    print(time.strftime("%H:%M:%S"), *a, flush=True)
+
+
+# --------------------------------------------------------------------------
+# klassische API (BRP069A/B, BRP072C)
+# --------------------------------------------------------------------------
+
+def parse_kv(body):
+    """ret=OK,pow=1,mode=3,... -> dict"""
+    out = {}
+    for part in body.strip().split(","):
+        if "=" in part:
+            k, v = part.split("=", 1)
+            out[k.strip()] = v
+    return out
+
+
+C_MODE = {"0": "auto", "1": "auto", "7": "auto", "2": "dry", "3": "cool", "4": "heat", "6": "fan"}
+C_MODE_REV = {"auto": "0", "dry": "2", "cool": "3", "heat": "4", "fan": "6"}
+C_RATE = {"A": "auto", "B": "quiet", "3": "1", "4": "2", "5": "3", "6": "4", "7": "5"}
+C_RATE_REV = {v: k for k, v in C_RATE.items()}
+C_DIR = {"0": "off", "1": "vertical", "2": "horizontal", "3": "both"}
+C_DIR_REV = {v: k for k, v in C_DIR.items()}
+
+
+def _num(v):
+    try:
+        f = float(v)
+        return f if f == f else None
+    except (TypeError, ValueError):
+        return None
+
+
+class ClassicDevice:
+    def __init__(self, ip, https=False, key=None, timeout=5):
+        self.ip = ip
+        self.kind = "https" if https else "classic"
+        self.base = ("https://" if https else "http://") + ip
+        self.timeout = timeout
+        self.key = key
+        self.headers = {"User-Agent": "daikinwerk/" + VERSION}
+        self.opener = _OPENER_PLAIN
+        if https:
+            # stabile UUID je Installation, damit der Adapter uns wiedererkennt
+            self.headers["X-Daikin-uuid"] = uuid.uuid3(uuid.NAMESPACE_OID, "daikinwerk").hex
+            ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            ctx.options |= getattr(ssl, "OP_LEGACY_SERVER_CONNECT", 0)
+            try:
+                ctx.set_ciphers("DEFAULT:@SECLEVEL=0")
+            except ssl.SSLError:
+                pass
+            try:
+                ctx.minimum_version = ssl.TLSVersion.TLSv1
+            except (ValueError, AttributeError):
+                pass
+            self.opener = urllib.request.build_opener(
+                urllib.request.ProxyHandler({}), urllib.request.HTTPSHandler(context=ctx))
+        self.lock = threading.Lock()
+        self.static = {}
+        self.registered = False
+
+    def get(self, path, params=None, check=True):
+        url = self.base + "/" + path
+        if params:
+            url += "?" + urllib.parse.urlencode(params, safe="/-")
+        req = urllib.request.Request(url, headers=self.headers)
+        with self.lock:
+            try:
+                with self.opener.open(req, timeout=self.timeout) as r:
+                    body = r.read().decode("utf-8", "replace")
+            except urllib.error.HTTPError as e:
+                raise DaikinError(f"{path}: HTTP {e.code}") from e
+            except (urllib.error.URLError, OSError) as e:
+                raise DaikinError(f"{path}: {getattr(e, 'reason', e)}") from e
+            time.sleep(0.05)  # die alten Adapter mögen keine Salven
+        d = parse_kv(body)
+        if check and d.get("ret") != "OK":
+            raise DaikinError(f"{path}: ret={d.get('ret', body[:60])}")
+        return d
+
+    def raw(self, path):
+        url = self.base + "/" + path.lstrip("/")
+        req = urllib.request.Request(url, headers=self.headers)
+        with self.lock, self.opener.open(req, timeout=self.timeout) as r:
+            return r.read().decode("utf-8", "replace")
+
+    def connect(self):
+        if self.kind == "https" and not self.registered:
+            if not self.key:
+                raise DaikinError("HTTPS-Adapter (BRP072C) braucht den Key vom Aufkleber: --key")
+            self.get("common/register_terminal", {"key": self.key})
+            self.registered = True
+        self.static["basic"] = self.get("common/basic_info")
+        try:
+            self.static["model"] = self.get("aircon/get_model_info")
+        except DaikinError:
+            self.static["model"] = {}
+        self._sync_clock()
+        return self
+
+    def _sync_clock(self):
+        """Adapter ohne Cloud kennen die Uhrzeit nicht -> keine Verbrauchsdaten."""
+        try:
+            st = self.get("common/get_datetime", {"cur": ""}, check=False)
+            if st.get("sta") == "0" or st.get("ret") != "OK":
+                now = datetime.now(timezone.utc)
+                self.get("common/notify_date_time", {
+                    "date": now.strftime("%Y/%m/%d"), "zone": "GMT",
+                    "time": now.strftime("%H:%M:%S")}, check=False)
+                log("Uhr des Adapters gestellt")
+        except DaikinError:
+            pass
+
+    # ---- Status ----
+    def status(self):
+        bi = self.static.get("basic") or self.get("common/basic_info")
+        mi = self.static.get("model", {})
+        ci = self.get("aircon/get_control_info")
+        si = self.get("aircon/get_sensor_info")
+        try:
+            wp = self.get("aircon/get_week_power")
+        except DaikinError:
+            wp = {}
+
+        mode = C_MODE.get(ci.get("mode"), "auto")
+        if "f_dir_ud" in ci:
+            ud, lr = ci.get("f_dir_ud") == "S", ci.get("f_dir_lr") == "S"
+            f_dir = "both" if ud and lr else "vertical" if ud else "horizontal" if lr else "off"
+        else:
+            f_dir = C_DIR.get(ci.get("f_dir"), "off")
+        adv = set(filter(None, ci.get("adv", "").split("/")))
+        week = [int(x) for x in wp.get("datas", "").split("/") if x.strip().lstrip("-").isdigit()]
+
+        caps = {
+            "fan": mi.get("en_frate", "1") == "1" and "f_rate" in ci,
+            "swing": mi.get("en_fdir", "1") == "1" and ("f_dir" in ci or "f_dir_ud" in ci),
+            "powerful": True, "econo": True,
+            "streamer": "en_streamer" in bi or "en_streamer" in ci or "13" in adv,
+            "comfort": False, "quiet": False,
+            "humidity": _num(si.get("hhum")) is not None,
+            "half_degree": True,
+        }
+        return {
+            "ok": True,
+            "api": self.kind,
+            "ip": self.ip,
+            "name": urllib.parse.unquote(bi.get("name", "")),
+            "mac": bi.get("mac", ""),
+            "fw": bi.get("ver", "").replace("_", "."),
+            "model": mi.get("model", "") if mi.get("model", "NOTSUPPORT") != "NOTSUPPORT" else "",
+            "pow": ci.get("pow") == "1",
+            "mode": mode,
+            "stemp": _num(ci.get("stemp")),
+            "f_rate": C_RATE.get(ci.get("f_rate"), "auto"),
+            "f_dir": f_dir,
+            "powerful": "2" in adv,
+            "econo": "12" in adv,
+            "streamer": "13" in adv or bi.get("en_streamer") == "1",
+            "comfort": False, "quiet": False,
+            "htemp": _num(si.get("htemp")),
+            "otemp": _num(si.get("otemp")),
+            "hhum": _num(si.get("hhum")),
+            "cmpfreq": _num(si.get("cmpfreq")),
+            "err": si.get("err", "0"),
+            "week_wh": week,
+            "today_runtime_min": _num(wp.get("today_runtime")),
+            "caps": caps,
+            "raw": {"basic_info": bi, "model_info": mi, "control_info": ci, "sensor_info": si,
+                    "week_power": wp},
+        }
+
+    # ---- Setzen ----
+    def set(self, ch):
+        ci = self.get("aircon/get_control_info")
+        p = {k: ci[k] for k in ("pow", "mode", "stemp", "shum") if k in ci}
+        p.setdefault("shum", "0")
+        if "f_rate" in ci:
+            p["f_rate"] = ci["f_rate"]
+        if "f_dir_ud" in ci:
+            p["f_dir_ud"], p["f_dir_lr"] = ci["f_dir_ud"], ci.get("f_dir_lr", "0")
+        elif "f_dir" in ci:
+            p["f_dir"] = ci["f_dir"]
+
+        if "mode" in ch and ch["mode"] in C_MODE_REV:
+            cur = C_MODE.get(ci.get("mode"))
+            if cur != ch["mode"]:
+                code = C_MODE_REV[ch["mode"]]
+                p["mode"] = code
+                # jede Betriebsart hat ihre eigenen gemerkten Werte dtN/dhN/dfrN/dfdN
+                for src, dst in (("dt", "stemp"), ("dh", "shum"), ("dfr", "f_rate"), ("dfd", "f_dir")):
+                    if src + code in ci and dst in p:
+                        p[dst] = ci[src + code]
+        if "pow" in ch:
+            p["pow"] = "1" if ch["pow"] else "0"
+        if "stemp" in ch and ch["stemp"] is not None:
+            p["stemp"] = f"{float(ch['stemp']):.1f}"
+        if "f_rate" in ch and "f_rate" in p and ch["f_rate"] in C_RATE_REV:
+            p["f_rate"] = C_RATE_REV[ch["f_rate"]]
+        if "f_dir" in ch and ch["f_dir"] in C_DIR_REV:
+            if "f_dir_ud" in p:
+                p["f_dir_ud"] = "S" if ch["f_dir"] in ("vertical", "both") else "0"
+                p["f_dir_lr"] = "S" if ch["f_dir"] in ("horizontal", "both") else "0"
+            elif "f_dir" in p:
+                p["f_dir"] = C_DIR_REV[ch["f_dir"]]
+
+        if any(k in ch for k in ("pow", "mode", "stemp", "f_rate", "f_dir")):
+            try:
+                self.get("aircon/set_control_info", p)
+            except DaikinError as e:
+                # manche Geräte können keine halben Grad -> einmal gerundet nochmal
+                if "stemp" in ch and "PARAM NG" in str(e) and float(p["stemp"]) % 1:
+                    p["stemp"] = f"{round(float(p['stemp']) + 0.01):.1f}"
+                    self.get("aircon/set_control_info", p)
+                else:
+                    raise
+        for key, kind in (("powerful", "1"), ("econo", "2")):
+            if key in ch:
+                self.get("aircon/set_special_mode",
+                         {"set_spmode": "1" if ch[key] else "0", "spmode_kind": kind})
+        if "streamer" in ch:
+            self.get("aircon/set_special_mode", {"en_streamer": "1" if ch["streamer"] else "0"})
+
+
+# --------------------------------------------------------------------------
+# dsiot-API (BRP069C/BRP084, Onecta-Firmware 2.8+)
+# --------------------------------------------------------------------------
+
+A0100 = "/dsiot/edge/adr_0100.dgc_status"
+A0200 = "/dsiot/edge/adr_0200.dgc_status"
+WEEK = "/dsiot/edge/adr_0100.i_power.week_power"
+ADPI = "/dsiot/edge.adp_i"
+
+E1002 = [A0100, "dgc_status", "e_1002"]
+E3001 = E1002 + ["e_3001"]
+E3003 = E1002 + ["e_3003"]
+E1003 = [A0200, "dgc_status", "e_1003"]
+
+D_PATH = {
+    "power": E1002 + ["e_A002", "p_01"],
+    "mode": E3001 + ["p_01"],
+    "htemp": E1002 + ["e_A00B", "p_01"],
+    "hhum": E1002 + ["e_A00B", "p_02"],
+    "otemp": E1003 + ["e_A00D", "p_01"],
+    "comfort": E3003 + ["p_1D"],
+    "econo": E3003 + ["p_24"],
+    "quiet": E1003 + ["e_3002", "p_3D"],
+    "powerful": E1003 + ["e_3002", "p_44"],
+    "cmprun": E1003 + ["e_2006", "p_01"],
+    "cmpfreq": E1003 + ["e_2006", "p_04"],
+    "imodel": E1002 + ["e_A001", "p_01"],
+    "mac": [ADPI, "adp_i", "mac"],
+    "ver": [ADPI, "adp_i", "ver"],
+    "name": [ADPI, "adp_i", "name"],
+    "runtime": [WEEK, "week_power", "today_runtime"],
+    "datas": [WEEK, "week_power", "datas"],
+}
+D_TEMP = {"cool": "p_02", "heat": "p_03", "auto": "p_1D"}
+D_FAN = {"auto": "p_26", "cool": "p_09", "heat": "p_0A", "fan": "p_28"}
+D_SWING = {"auto": ("p_20", "p_21"), "cool": ("p_05", "p_06"), "heat": ("p_07", "p_08"),
+           "fan": ("p_24", "p_25"), "dry": ("p_22", "p_23")}
+D_MODE = {"0300": "auto", "0200": "cool", "0100": "heat", "0000": "fan", "0500": "dry"}
+D_MODE_REV = {v: k for k, v in D_MODE.items()}
+D_RATE = {"0A00": "auto", "0B00": "quiet", "0300": "1", "0400": "2", "0500": "3", "0600": "4", "0700": "5"}
+D_RATE_REV = {v: k for k, v in D_RATE.items()}
+SWING_ON, SWING_OFF = "0F0000", "000000"
+
+
+def _le_signed(hexstr):
+    return int.from_bytes(bytes.fromhex(hexstr), "little", signed=True)
+
+
+class DsiotDevice:
+    def __init__(self, ip, timeout=5):
+        self.ip = ip
+        self.kind = "dsiot"
+        self.url = f"http://{ip}/dsiot/multireq"
+        self.timeout = timeout
+        self.lock = threading.Lock()
+
+    def post(self, payload):
+        data = json.dumps(payload).encode()
+        req = urllib.request.Request(self.url, data=data, method="POST",
+                                     headers={"Content-Type": "application/json",
+                                              "User-Agent": "daikinwerk/" + VERSION})
+        with self.lock:
+            try:
+                with _OPENER_PLAIN.open(req, timeout=self.timeout) as r:
+                    return json.loads(r.read().decode("utf-8", "replace"))
+            except urllib.error.HTTPError as e:
+                raise DaikinError(f"dsiot: HTTP {e.code}") from e
+            except (urllib.error.URLError, OSError, ValueError) as e:
+                raise DaikinError(f"dsiot: {getattr(e, 'reason', e)}") from e
+
+    @staticmethod
+    def find(resp, path):
+        fr, keys = path[0], path[1:]
+        nodes = [x["pc"] for x in resp.get("responses", []) if x.get("fr") == fr and "pc" in x]
+        for i, k in enumerate(keys):
+            hit = next((n for n in nodes if isinstance(n, dict) and n.get("pn") == k), None)
+            if hit is None:
+                return None
+            if i == len(keys) - 1:
+                return hit.get("pv")
+            nodes = hit.get("pch") or []
+        return None
+
+    def read_all(self):
+        return self.post({"requests": [
+            {"op": 2, "to": A0100 + "?filter=pv,pt,md"},
+            {"op": 2, "to": A0200 + "?filter=pv,pt,md"},
+            {"op": 2, "to": WEEK + "?filter=pv,pt,md"},
+            {"op": 2, "to": ADPI},
+        ]})
+
+    def connect(self):
+        r = self.read_all()
+        if self.find(r, D_PATH["mode"]) is None:
+            raise DaikinError("dsiot: keine Betriebsart in der Antwort")
+        return self
+
+    def raw(self, path):
+        return json.dumps(self.read_all(), indent=1)
+
+    def status(self):
+        r = self.read_all()
+        f = lambda key: self.find(r, D_PATH[key])
+        mode = D_MODE.get(f("mode"), "auto")
+        m3001 = lambda p: self.find(r, E3001 + [p])
+
+        stemp = None
+        if mode in D_TEMP and m3001(D_TEMP[mode]):
+            stemp = int(m3001(D_TEMP[mode])[:2], 16) / 2
+        f_rate = D_RATE.get(m3001(D_FAN[mode]) or "", "auto") if mode in D_FAN else "auto"
+        f_dir = "off"
+        if mode in D_SWING:
+            v, h = (m3001(p) for p in D_SWING[mode])
+            v, h = "F" in (v or "").upper(), "F" in (h or "").upper()
+            f_dir = "both" if v and h else "vertical" if v else "horizontal" if h else "off"
+
+        def temp(raw, signed_le):
+            try:
+                return _le_signed(raw) / 2 if signed_le else float(int(raw[:2], 16))
+            except (TypeError, ValueError):
+                return None
+
+        hum = f("hhum")
+        try:
+            hum = int(hum, 16)
+            if hum > 100:
+                hum = int(f("hhum")[:2], 16)
+        except (TypeError, ValueError):
+            hum = None
+        cf = f("cmpfreq")
+        try:
+            cf = int.from_bytes(bytes.fromhex(cf[:4]), "little") if cf else None
+        except ValueError:
+            cf = None
+        datas = f("datas")
+        week = [int(x) for x in datas] if isinstance(datas, list) else []
+
+        def ascii_(v):
+            try:
+                return bytes.fromhex(v).decode("ascii").strip("\x00 ") if v else ""
+            except (ValueError, UnicodeDecodeError):
+                return v or ""
+
+        tog = lambda key: f(key) == "01"
+        has = lambda key: f(key) is not None
+        name = f("name") or ""
+        return {
+            "ok": True, "api": "dsiot", "ip": self.ip,
+            "name": urllib.parse.unquote(name) if isinstance(name, str) else "",
+            "mac": f("mac") or "", "fw": (f("ver") or "").replace("_", "."), "model": ascii_(f("imodel")),
+            "pow": f("power") == "01",
+            "mode": mode, "stemp": stemp, "f_rate": f_rate, "f_dir": f_dir,
+            "powerful": tog("powerful"), "econo": tog("econo"),
+            "comfort": tog("comfort"), "quiet": tog("quiet"), "streamer": False,
+            "htemp": temp(f("htemp"), False), "otemp": temp(f("otemp"), True),
+            "hhum": hum, "cmpfreq": cf, "err": "0",
+            "week_wh": week, "today_runtime_min": _num(f("runtime")),
+            "caps": {"fan": True, "swing": True, "powerful": has("powerful"), "econo": has("econo"),
+                     "comfort": has("comfort"), "quiet": has("quiet"), "streamer": False,
+                     "humidity": hum is not None, "half_degree": True},
+            "raw": r,
+        }
+
+    def set(self, ch):
+        cur = self.status()
+        mode = ch.get("mode") if ch.get("mode") in D_MODE_REV else cur["mode"]
+        attrs = []  # (pfad ohne Blatt, blatt, wert)
+
+        def add(path, val):
+            attrs.append((path[:-1], path[-1], val))
+
+        if "pow" in ch:
+            add(D_PATH["power"], "01" if ch["pow"] else "00")
+        if "mode" in ch and mode != cur["mode"]:
+            add(D_PATH["mode"], D_MODE_REV[mode])
+        if ch.get("stemp") is not None and mode in D_TEMP:
+            add(E3001 + [D_TEMP[mode]], format(int(round(float(ch["stemp"]) * 2)), "02x"))
+        if "f_rate" in ch and mode in D_FAN and ch["f_rate"] in D_RATE_REV:
+            add(E3001 + [D_FAN[mode]], D_RATE_REV[ch["f_rate"]])
+        if "f_dir" in ch and mode in D_SWING:
+            pv, ph = D_SWING[mode]
+            add(E3001 + [pv], SWING_ON if ch["f_dir"] in ("vertical", "both") else SWING_OFF)
+            add(E3001 + [ph], SWING_ON if ch["f_dir"] in ("horizontal", "both") else SWING_OFF)
+
+        # Powerful schließt Komfort/Econo/Flüsterbetrieb aus und umgekehrt
+        tog = {k: ch[k] for k in ("powerful", "econo", "comfort", "quiet") if k in ch}
+        if tog.get("powerful"):
+            for k in ("econo", "comfort", "quiet"):
+                if cur.get(k) and k not in tog:
+                    tog[k] = False
+        if any(tog.get(k) for k in ("econo", "comfort", "quiet")) and cur.get("powerful") \
+                and "powerful" not in tog:
+            tog["powerful"] = False
+        for k, v in tog.items():
+            add(D_PATH[k], "01" if v else "00")
+
+        if not attrs:
+            return
+        reqs = {}
+        for path, leaf, val in attrs:
+            to = path[0]
+            node = reqs.setdefault(to, {"op": 3, "to": to, "pc": {"pn": "dgc_status", "pch": []}})
+            entry = node["pc"]["pch"]
+            for pn in path[2:]:
+                hit = next((e for e in entry if e.get("pn") == pn), None)
+                if hit is None:
+                    hit = {"pn": pn, "pch": []}
+                    entry.append(hit)
+                entry = hit["pch"]
+            entry.append({"pn": leaf, "pv": val})
+        resp = self.post({"requests": list(reqs.values())})
+        bad = [f"{x.get('fr')}: {x.get('rsc')}" for x in resp.get("responses", [])
+               if x.get("rsc") not in (2004, 2000)]
+        if bad:
+            raise DaikinError("Gerät hat abgelehnt: " + "; ".join(bad))
+
+
+# --------------------------------------------------------------------------
+# Suche
+# --------------------------------------------------------------------------
+
+def udp_discover(wait=2.0):
+    found = {}
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
+    s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    try:
+        s.bind(("", 30000))
+    except OSError:
+        s.bind(("", 0))
+    s.settimeout(0.3)
+    targets = {"255.255.255.255"}
+    net = local_net()
+    if net:
+        targets.add(str(net.broadcast_address))
+    for t in targets:
+        try:
+            s.sendto(b"DAIKIN_UDP/common/basic_info", (t, 30050))
+        except OSError:
+            pass
+    end = time.time() + wait
+    while time.time() < end:
+        try:
+            data, addr = s.recvfrom(2048)
+        except socket.timeout:
+            continue
+        d = parse_kv(data.decode("utf-8", "replace"))
+        if "mac" in d or "name" in d:
+            found[addr[0]] = {"ip": addr[0], "name": urllib.parse.unquote(d.get("name", "")),
+                              "mac": d.get("mac", ""), "fw": d.get("ver", ""), "via": "udp"}
+    s.close()
+    return list(found.values())
+
+
+def local_net():
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("192.0.2.1", 9))  # kein Paket, nur Routing-Auswahl
+        ip = s.getsockname()[0]
+        s.close()
+        return ipaddress.ip_network(ip + "/24", strict=False)
+    except OSError:
+        return None
+
+
+def http_scan():
+    """Klappert das eigene /24 ab – findet auch Adapter, die UDP ignorieren."""
+    net = local_net()
+    if not net:
+        return []
+
+    def probe(ip):
+        ip = str(ip)
+        try:
+            body = _OPENER_PLAIN.open(f"http://{ip}/common/basic_info", timeout=0.8).read().decode()
+            d = parse_kv(body)
+            if d.get("ret") == "OK" and "mac" in d:
+                return {"ip": ip, "name": urllib.parse.unquote(d.get("name", "")),
+                        "mac": d.get("mac", ""), "fw": d.get("ver", ""), "via": "classic"}
+        except Exception:
+            pass
+        try:
+            req = urllib.request.Request(f"http://{ip}/dsiot/multireq", method="POST",
+                                         data=json.dumps({"requests": [{"op": 2, "to": ADPI}]}).encode(),
+                                         headers={"Content-Type": "application/json"})
+            r = json.loads(_OPENER_PLAIN.open(req, timeout=0.8).read().decode())
+            mac = DsiotDevice.find(r, D_PATH["mac"])
+            if mac:
+                return {"ip": ip, "name": "", "mac": mac,
+                        "fw": DsiotDevice.find(r, D_PATH["ver"]) or "", "via": "dsiot"}
+        except Exception:
+            pass
+        return None
+
+    with ThreadPoolExecutor(64) as ex:
+        return [x for x in ex.map(probe, net.hosts()) if x]
+
+
+def detect(ip, key=None, force=None):
+    """Probiert die Protokolle der Reihe nach durch."""
+    tries = {"dsiot": lambda: DsiotDevice(ip),
+             "classic": lambda: ClassicDevice(ip),
+             "https": lambda: ClassicDevice(ip, https=True, key=key)}
+    order = [force] if force else (["https"] if key else []) + ["dsiot", "classic"]
+    errors = []
+    for name in order:
+        try:
+            dev = tries[name]().connect()
+            log(f"Adapter {ip} spricht '{name}'")
+            return dev
+        except DaikinError as e:
+            errors.append(f"{name}: {e}")
+    # Port 443 offen, 80 nicht? -> BRP072C ohne Key
+    hint = ""
+    try:
+        with socket.create_connection((ip, 443), 1.5):
+            hint = " – Port 443 ist offen: vermutlich BRP072C, bitte mit --key <Key vom Aufkleber> starten"
+    except OSError:
+        pass
+    raise DaikinError("Kein lokales Protokoll erkannt (" + " | ".join(errors) + ")" + hint)
+
+
+# --------------------------------------------------------------------------
+# Zustand der Brücke: Gerät, Verlauf, Ausschalt-Timer
+# --------------------------------------------------------------------------
+
+class Bridge:
+    def __init__(self, args):
+        self.args = args
+        self.dev = None
+        self.err = ""
+        self.history = []          # [(t, htemp, otemp, stemp, pow, hhum)]
+        self.max_hist = 24 * 60    # 24 h bei 1/min
+        self.timer_at = None
+        self.timer_action = "off"
+        self.last = None
+        self.lock = threading.Lock()
+
+    def ensure(self):
+        if self.dev is None:
+            if not self.args.ip:
+                raise DaikinError("Keine Adresse – bitte suchen oder IP eingeben")
+            self.dev = detect(self.args.ip, self.args.key, self.args.api)
+        return self.dev
+
+    def connect(self, ip, key=None):
+        self.args.ip = ip
+        if key:
+            self.args.key = key
+        self.dev = None
+        with self.lock:
+            self.history.clear()
+        return self.ensure()
+
+    def status(self):
+        try:
+            st = self.ensure().status()
+        except DaikinError:
+            self.dev = None    # beim nächsten Mal neu erkennen
+            raise
+        st["timer"] = ({"at": self.timer_at, "action": self.timer_action,
+                        "left_s": max(0, int(self.timer_at - time.time()))} if self.timer_at else None)
+        st["bridge"] = VERSION
+        self.last = st
+        return st
+
+    def record(self, st):
+        with self.lock:
+            self.history.append([int(time.time()), st.get("htemp"), st.get("otemp"),
+                                 st.get("stemp"), 1 if st.get("pow") else 0, st.get("hhum")])
+            del self.history[:-self.max_hist]
+
+    def poller(self):
+        while True:
+            try:
+                if self.timer_at and time.time() >= self.timer_at:
+                    self.ensure().set({"pow": self.timer_action == "on"})
+                    log(f"Timer: Anlage {'ein' if self.timer_action == 'on' else 'aus'}geschaltet")
+                    self.timer_at = None
+                if self.args.ip:
+                    self.record(self.status())
+            except Exception as e:
+                self.err = str(e)
+            for _ in range(60):
+                time.sleep(1)
+                if self.timer_at and time.time() >= self.timer_at:
+                    break
+
+
+# --------------------------------------------------------------------------
+# HTTP-Server
+# --------------------------------------------------------------------------
+
+def make_handler(bridge):
+    class H(BaseHTTPRequestHandler):
+        server_version = "daikinbridge/" + VERSION
+
+        def log_message(self, fmt, *a):
+            if self.path.startswith("/api/set") or bridge.args.verbose:
+                log(self.address_string(), fmt % a)
+
+        def _send(self, code, body, ctype="application/json; charset=utf-8"):
+            if isinstance(body, (dict, list)):
+                body = json.dumps(body, ensure_ascii=False)
+            if isinstance(body, str):
+                body = body.encode("utf-8")
+            self.send_response(code)
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(body)))
+            self.send_header("Cache-Control", "no-store")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.send_header("Access-Control-Allow-Headers", "Content-Type")
+            self.send_header("Access-Control-Allow-Private-Network", "true")
+            self.end_headers()
+            self.wfile.write(body)
+
+        def do_OPTIONS(self):
+            self._send(204, b"")
+
+        def _json(self):
+            n = int(self.headers.get("Content-Length") or 0)
+            return json.loads(self.rfile.read(n) or b"{}") if n else {}
+
+        def _guard(self, fn):
+            try:
+                self._send(200, fn())
+            except DaikinError as e:
+                self._send(502, {"ok": False, "error": str(e)})
+            except Exception as e:  # noqa
+                self._send(500, {"ok": False, "error": f"{type(e).__name__}: {e}"})
+
+        def do_GET(self):
+            u = urllib.parse.urlparse(self.path)
+            q = dict(urllib.parse.parse_qsl(u.query))
+            if u.path in ("/", "/" + HTML_FILE):
+                fn = os.path.join(HERE, HTML_FILE)
+                if not os.path.exists(fn):
+                    return self._send(404, f"{HTML_FILE} fehlt neben daikinbridge.py", "text/plain")
+                with open(fn, "rb") as fh:
+                    return self._send(200, fh.read(), "text/html; charset=utf-8")
+            if u.path == "/api/ping":
+                return self._send(200, {"ok": True, "bridge": VERSION, "ip": bridge.args.ip,
+                                        "api": bridge.dev.kind if bridge.dev else None})
+            if u.path == "/api/status":
+                return self._guard(bridge.status)
+            if u.path == "/api/history":
+                with bridge.lock:
+                    return self._send(200, {"ok": True, "cols": ["t", "htemp", "otemp", "stemp", "pow", "hhum"],
+                                            "rows": list(bridge.history)})
+            if u.path == "/api/discover":
+                return self._guard(lambda: {"ok": True, "devices": udp_discover()})
+            if u.path == "/api/scan":
+                return self._guard(lambda: {"ok": True, "devices": http_scan()})
+            if u.path == "/api/raw":
+                return self._guard(lambda: {"ok": True, "text": bridge.ensure().raw(q.get("path", "common/basic_info"))})
+            self._send(404, {"ok": False, "error": "unbekannt"})
+
+        def do_POST(self):
+            u = urllib.parse.urlparse(self.path)
+            try:
+                body = self._json()
+            except ValueError:
+                return self._send(400, {"ok": False, "error": "kein JSON"})
+            if u.path == "/api/set":
+                def go():
+                    allowed = {"pow", "mode", "stemp", "f_rate", "f_dir",
+                               "powerful", "econo", "streamer", "comfort", "quiet"}
+                    ch = {k: v for k, v in body.items() if k in allowed}
+                    log("setze", ch)
+                    bridge.ensure().set(ch)
+                    time.sleep(0.4)
+                    st = bridge.status()
+                    bridge.record(st)
+                    return st
+                return self._guard(go)
+            if u.path == "/api/connect":
+                return self._guard(lambda: (bridge.connect(body.get("ip", "").strip(), body.get("key")),
+                                            bridge.status())[1])
+            if u.path == "/api/timer":
+                def t():
+                    m = float(body.get("minutes") or 0)
+                    bridge.timer_at = time.time() + m * 60 if m > 0 else None
+                    bridge.timer_action = "on" if body.get("action") == "on" else "off"
+                    return {"ok": True, "timer": bridge.timer_at}
+                return self._guard(t)
+            self._send(404, {"ok": False, "error": "unbekannt"})
+
+    return H
+
+
+def main():
+    ap = argparse.ArgumentParser(description="Brücke für daikinwerk.html")
+    ap.add_argument("--ip", help="IP des Daikin-Adapters (ohne: UDP-Suche)")
+    ap.add_argument("--key", help="Key vom Aufkleber (nur BRP072C/HTTPS)")
+    ap.add_argument("--api", choices=["classic", "https", "dsiot"], help="Protokoll erzwingen")
+    ap.add_argument("--port", type=int, default=8077, help="Port der Brücke (Standard 8077)")
+    ap.add_argument("--bind", default="0.0.0.0", help="Adresse (Standard: alle)")
+    ap.add_argument("--discover", action="store_true", help="nur suchen und beenden")
+    ap.add_argument("-v", "--verbose", action="store_true")
+    args = ap.parse_args()
+
+    if args.discover or not args.ip:
+        log("Suche Daikin-Adapter per UDP …")
+        devs = udp_discover()
+        if not devs:
+            log("UDP: nichts gefunden, klappere das Netz per HTTP ab …")
+            devs = http_scan()
+        for d in devs:
+            log(f"  {d['ip']:15}  {d['name'] or '-':20}  MAC {d['mac']}  FW {d['fw']}  ({d['via']})")
+        if args.discover:
+            return
+        if len(devs) == 1:
+            args.ip = devs[0]["ip"]
+        elif not devs:
+            log("Kein Adapter gefunden – IP später auf der Seite eintragen.")
+
+    bridge = Bridge(args)
+    if args.ip:
+        try:
+            bridge.ensure()
+        except DaikinError as e:
+            log("Achtung:", e)
+    threading.Thread(target=bridge.poller, daemon=True).start()
+    srv = ThreadingHTTPServer((args.bind, args.port), make_handler(bridge))
+    host = socket.gethostname()
+    log(f"daikinbridge {VERSION} läuft: http://{host}:{args.port}/  (Strg+C beendet)")
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+
+
+if __name__ == "__main__":
+    main()
+</script>
+<script>
+"use strict";
+// ---------- Adresse der Brücke ----------
+// Von der Brücke ausgeliefert -> gleiche Herkunft. Sonst ?bridge=http://host:8077
+const qs = new URLSearchParams(location.search);
+let BRIDGE = qs.get("bridge") || (location.protocol.startsWith("http") ? location.origin : "http://localhost:8077");
+const $ = id => document.getElementById(id);
+$("bridge").value = BRIDGE;
+if (!qs.get("bridge") && location.protocol.startsWith("http")) $("bridgerow").classList.add("hidden");
+
+const MODE_COL = {cool:"--cool", heat:"--heat", auto:"--auto", dry:"--dry", fan:"--fan"};
+const RANGE = {cool:[18,32], heat:[10,30], auto:[18,30]};
+const MODE_TXT = {cool:"Kühlen", heat:"Heizen", auto:"Automatik", dry:"Entfeuchten", fan:"Nur Lüften"};
+let S = null;               // letzter Status
+let pendingTemp = null, tempTimer = null, busy = false;
+
+function toast(msg, ok){
+  const t = $("toast"); t.textContent = msg; t.className = "toast" + (ok ? " okk" : "");
+  t.style.display = "block"; clearTimeout(t._h); t._h = setTimeout(()=>t.style.display="none", ok?1800:6000);
+}
+
+async function api(path, body){
+  const opt = body === undefined ? {} : {method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)};
+  const r = await fetch(BRIDGE + path, opt);
+  const j = await r.json().catch(()=>({ok:false, error:"HTTP "+r.status}));
+  if (!r.ok || j.ok === false) throw new Error(j.error || ("HTTP "+r.status));
+  return j;
+}
+
+function setConn(ok, txt){ $("dot").classList.toggle("on", ok); $("conn").textContent = txt; }
+function fmt(v, unit, d=1){ return v===null || v===undefined ? "--" : (+v).toFixed(d).replace(".",",") + `<small>${unit}</small>`; }
+
+// ---------- Anzeige ----------
+function render(s){
+  S = s;
+  const col = MODE_COL[s.mode] || "--cool";
+  document.documentElement.style.setProperty("--acc", `var(${col})`);
+  setConn(true, `${s.name || "Daikin"} · ${s.api}`);
+  $("devinfo").textContent = [s.model && "Modell "+s.model, s.fw && "FW "+s.fw, s.ip].filter(Boolean).join(" · ");
+  $("pow").classList.toggle("on", s.pow);
+  $("powtxt").textContent = s.pow ? "An · " + (MODE_TXT[s.mode]||s.mode) : "Aus";
+
+  for (const b of $("modes").children) b.classList.toggle("act", b.dataset.v === s.mode);
+  for (const b of $("fans").children) { b.classList.toggle("act", b.dataset.v === s.f_rate); b.disabled = s.mode === "dry"; }
+  for (const b of $("swings").children) b.classList.toggle("act", b.dataset.v === s.f_dir);
+  $("fanbox").classList.toggle("hidden", !s.caps.fan);
+  $("swingbox").classList.toggle("hidden", !s.caps.swing);
+  for (const b of $("specials").children) {
+    const k = b.dataset.k; b.classList.toggle("hidden", !s.caps[k]); b.classList.toggle("act", !!s[k]);
+  }
+  if (pendingTemp === null) drawDial(s.stemp);
+
+  $("htemp").innerHTML = fmt(s.htemp, "°C");
+  $("otemp").innerHTML = fmt(s.otemp, "°C");
+  $("hhum").innerHTML = s.hhum === null ? "--" : fmt(s.hhum, "%", 0);
+  $("cmp").innerHTML = s.cmpfreq === null ? "--" : fmt(s.cmpfreq, "Hz", 0);
+
+  if (s.timer) {
+    const m = Math.floor(s.timer.left_s/60), sec = s.timer.left_s%60;
+    $("tinfo").textContent = `${s.timer.action === "on" ? "Einschalten" : "Ausschalten"} in ${m}:${String(sec).padStart(2,"0")} min`;
+  } else $("tinfo").textContent = "";
+  drawWeek(s.week_wh || [], s.today_runtime_min);
+  $("raw").textContent = JSON.stringify(s.raw, null, 1);
+  if (!$("ip").value) $("ip").value = s.ip;
+}
+
+function drawDial(t){
+  const has = t !== null && t !== undefined && RANGE[S?.mode];
+  $("stemp").innerHTML = has ? `${(+t).toFixed(1).replace(".",",")}<small>°C</small>` : (S && S.mode==="dry" ? "Entf." : S && S.mode==="fan" ? "Lüften" : "--");
+  $("stsub").textContent = has ? "Solltemperatur" + (pendingTemp!==null ? " …" : "") : "keine Solltemperatur";
+  const [lo, hi] = RANGE[S?.mode] || [10, 32];
+  const f = has ? Math.min(1, Math.max(0, (t - lo) / (hi - lo))) : 0;
+  const L = 490;  // 270° des Kreises
+  $("arc").setAttribute("stroke-dasharray", `${(L*f).toFixed(1)} 1000`);
+  const ang = (135 + 270*f) * Math.PI/180;
+  $("knob").setAttribute("cx", 125 + 104*Math.cos(ang)); $("knob").setAttribute("cy", 125 + 104*Math.sin(ang));
+  $("knob").style.display = has ? "" : "none";
+  $("tminus").disabled = $("tplus").disabled = !has;
+}
+
+// ---------- Befehle ----------
+async function send(ch){
+  if (busy) return; busy = true; $("remote").classList.add("busy");
+  try { render(await api("/api/set", ch)); }
+  catch(e){ toast("Fehler: " + e.message); }
+  finally { busy = false; $("remote").classList.remove("busy"); }
+}
+
+$("pow").onclick = () => S && send({pow: !S.pow});
+$("modes").onclick = e => { const b = e.target.closest("button"); if (b && S) send({mode: b.dataset.v, pow: true}); };
+$("fans").onclick = e => { const b = e.target.closest("button"); if (b && !b.disabled) send({f_rate: b.dataset.v}); };
+$("swings").onclick = e => { const b = e.target.closest("button"); if (b) send({f_dir: b.dataset.v}); };
+$("specials").onclick = e => { const b = e.target.closest("button"); if (b && S) send({[b.dataset.k]: !S[b.dataset.k]}); };
+
+function nudge(d){
+  if (!S || !RANGE[S.mode]) return;
+  const [lo, hi] = RANGE[S.mode];
+  const base = pendingTemp ?? S.stemp ?? 22;
+  pendingTemp = Math.min(hi, Math.max(lo, Math.round((base + d)*2)/2));
+  drawDial(pendingTemp);
+  clearTimeout(tempTimer);
+  tempTimer = setTimeout(async () => { const t = pendingTemp; await send({stemp: t}); pendingTemp = null; if (S) drawDial(S.stemp); }, 700);
+}
+$("tminus").onclick = () => nudge(-0.5);
+$("tplus").onclick = () => nudge(+0.5);
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowUp" || e.key === "+") nudge(0.5);
+  if (e.key === "ArrowDown" || e.key === "-") nudge(-0.5);
+});
+// Ziehen am Drehregler
+(() => {
+  const svg = $("dialsvg"); let drag = false;
+  const pick = ev => {
+    if (!S || !RANGE[S.mode]) return;
+    const r = svg.getBoundingClientRect(), x = ev.clientX - r.left - r.width/2, y = ev.clientY - r.top - r.height/2;
+    let a = Math.atan2(y, x) * 180/Math.PI; a = (a - 135 + 720) % 360; if (a > 270) a = a > 315 ? 0 : 270;
+    const [lo, hi] = RANGE[S.mode];
+    pendingTemp = Math.round((lo + (hi-lo)*a/270)*2)/2; drawDial(pendingTemp);
+  };
+  svg.addEventListener("pointerdown", e => { drag = true; svg.setPointerCapture(e.pointerId); pick(e); });
+  svg.addEventListener("pointermove", e => drag && pick(e));
+  svg.addEventListener("pointerup", () => { if (!drag) return; drag = false; if (pendingTemp !== null) nudge(0); });
+})();
+
+$("tmins").onclick = async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  try { await api("/api/timer", {minutes: +b.dataset.m, action: $("tact").value}); toast(+b.dataset.m ? "Timer gestellt" : "Timer gestoppt", true); poll(); }
+  catch(err){ toast("Fehler: " + err.message); }
+};
+
+// ---------- Verbindung / Suche ----------
+$("bridgego").onclick = () => { BRIDGE = $("bridge").value.trim().replace(/\/$/, ""); poll(); loadHist(); };
+$("connect").onclick = async () => {
+  const ip = $("ip").value.trim(); if (!ip) return;
+  $("connect").disabled = true;
+  try { render(await api("/api/connect", {ip, key: $("key").value.trim() || null})); toast("Verbunden", true); loadHist(); }
+  catch(e){ toast(e.message); setConn(false, "Adapter nicht erreichbar"); }
+  finally { $("connect").disabled = false; }
+};
+async function find(path, label){
+  $("discinfo").textContent = label + " …"; $("devs").innerHTML = "";
+  try {
+    const j = await api(path);
+    $("discinfo").textContent = j.devices.length ? `${j.devices.length} gefunden` : "nichts gefunden";
+    for (const d of j.devices) {
+      const el = document.createElement("div"); el.className = "dev";
+      el.innerHTML = `<code>${d.ip}</code><span>${d.name || "Daikin"}</span><span class="meta">MAC ${d.mac} · FW ${d.fw} · ${d.via}</span>`;
+      el.onclick = () => { $("ip").value = d.ip; $("connect").click(); };
+      $("devs").appendChild(el);
+    }
+  } catch(e){ $("discinfo").textContent = ""; toast(e.message); }
+}
+$("disc").onclick = () => find("/api/discover", "suche");
+$("scan").onclick = () => find("/api/scan", "klappere 254 Adressen ab");
+
+// ---------- Diagramme ----------
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+function prep(cv){
+  const dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = +cv.getAttribute("height");
+  cv.width = w*dpr; cv.height = h*dpr; cv.style.height = h+"px";
+  const g = cv.getContext("2d"); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,w,h); return [g, w, h];
+}
+let HIST = [];
+function drawHist(){
+  const [g, w, h] = prep($("hist"));
+  const pl = 34, pr = 8, pt = 8, pb = 20, W = w-pl-pr, H = h-pt-pb;
+  g.font = "11px system-ui"; g.fillStyle = css("--dim");
+  if (HIST.length < 2) { g.fillText("Noch keine Daten – die Brücke speichert jede Minute einen Messpunkt.", pl, h/2); return; }
+  const t0 = HIST[0][0], t1 = HIST[HIST.length-1][0];
+  const vals = HIST.flatMap(r => [r[1], r[2], r[3]]).filter(v => v !== null);
+  let lo = Math.floor(Math.min(...vals) - 1), hi = Math.ceil(Math.max(...vals) + 1);
+  const X = t => pl + (t - t0) / Math.max(1, t1 - t0) * W, Y = v => pt + (hi - v) / (hi - lo) * H;
+  g.fillStyle = "#1f2a33";
+  for (let i = 0; i < HIST.length-1; i++) if (HIST[i][4]) g.fillRect(X(HIST[i][0]), pt, X(HIST[i+1][0]) - X(HIST[i][0]) + .5, H);
+  g.strokeStyle = css("--line"); g.lineWidth = 1; g.fillStyle = css("--dim");
+  const step = hi - lo > 20 ? 5 : 2;
+  for (let v = Math.ceil(lo/step)*step; v <= hi; v += step) { g.beginPath(); g.moveTo(pl, Y(v)); g.lineTo(w-pr, Y(v)); g.stroke(); g.fillText(v+"°", 4, Y(v)+4); }
+  const span = t1 - t0, tick = span > 6*3600 ? 3600*3 : span > 3600 ? 3600 : 600;
+  for (let t = Math.ceil(t0/tick)*tick; t <= t1; t += tick) { const d = new Date(t*1000); g.fillText(d.getHours()+":"+String(d.getMinutes()).padStart(2,"0"), Math.min(w-34, X(t)-12), h-5); }
+  for (const [ix, col] of [[2,"--cool"],[3,"--auto"],[1,"--heat"]]) {
+    g.strokeStyle = css(col); g.lineWidth = ix === 3 ? 1.5 : 2; g.setLineDash(ix === 3 ? [4,3] : []); g.beginPath(); let pen = false;
+    for (const r of HIST) { if (r[ix] === null) { pen = false; continue; } pen ? g.lineTo(X(r[0]), Y(r[ix])) : g.moveTo(X(r[0]), Y(r[ix])); pen = true; }
+    g.stroke();
+  }
+  g.setLineDash([]);
+}
+function drawWeek(wh, runtime){
+  const [g, w, h] = prep($("week"));
+  const pb = 20, pt = 16, n = 7, data = wh.slice(-n);
+  g.font = "11px system-ui";
+  if (!data.length) { g.fillStyle = css("--dim"); g.fillText("Adapter liefert keine Verbrauchsdaten.", 4, h/2); $("weeksum").textContent = ""; return; }
+  const mx = Math.max(500, ...data), bw = w / n;
+  const tage = ["So","Mo","Di","Mi","Do","Fr","Sa"], today = new Date().getDay();
+  data.forEach((v, i) => {
+    const back = data.length - 1 - i, bh = (h - pb - pt) * v / mx, x = i*bw + bw*0.18;
+    g.fillStyle = back === 0 ? css("--acc") : "#33495a"; g.fillRect(x, h - pb - bh, bw*0.64, bh);
+    g.fillStyle = css("--dim");
+    g.fillText(back === 0 ? "heute" : tage[(today - back + 7) % 7], x, h - 5);
+    g.fillText((v/1000).toFixed(1).replace(".",","), x, h - pb - bh - 4);
+  });
+  const sum = data.reduce((a,b)=>a+b,0)/1000;
+  $("weeksum").textContent = `Summe ${sum.toFixed(1).replace(".",",")} kWh` + (runtime !== null && runtime !== undefined ? ` · heute ${Math.floor(runtime/60)} h ${runtime%60} min Laufzeit` : "");
+}
+
+// ---------- Abfrage ----------
+// ---------- Downloads ----------
+function download(name, text, type){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], {type}));
+  a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+$("dlpy").onclick = () => download("daikinbridge.py", $("pysrc").textContent.replace(/^\n/, ""), "text/x-python");
+$("dlhtml").onclick = async () => {
+  let src;
+  try { const r = await fetch(location.href.split("#")[0], {cache: "no-store"}); if (r.ok) src = await r.text(); } catch(e){}
+  download("daikinwerk.html", src || "<!DOCTYPE html>\n" + document.documentElement.outerHTML, "text/html");
+};
+
+async function poll(){
+  try { render(await api("/api/status")); $("nobridge").classList.add("hidden"); }
+  catch(e){
+    setConn(false, e.message.length > 80 ? "Adapter nicht erreichbar" : e.message);
+    if (/Failed to fetch|NetworkError/i.test(e.message)) { setConn(false, "Brücke nicht erreichbar"); $("bridgerow").classList.remove("hidden"); $("nobridge").classList.remove("hidden"); }
+  }
+}
+async function loadHist(){ try { HIST = (await api("/api/history")).rows; drawHist(); } catch(e){} }
+window.addEventListener("resize", () => { drawHist(); if (S) drawWeek(S.week_wh||[], S.today_runtime_min); });
+poll(); loadHist();
+setInterval(() => { if (!busy && pendingTemp === null) poll(); }, 10000);
+setInterval(loadHist, 60000);
+</script>
+</body>
+</html>
