@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bestellwerk – Amazon-Bestellungen auswerten</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f5f4f0; --surface:#ffffff; --surface-2:#f0eee8; --line:#dedbd2; --grid:#ebe8e0;
+  --text:#191919; --text-2:#666666; --accent:#257de0; --accent-ink:#ffffff;
+  --bar:#257de0; --bar-hover:#1a5fb0; --warn:#b35c00; --good:#008a17;
+  --mono: ui-monospace, "SF Mono", Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --bg:#121212; --surface:#191919; --surface-2:#222222; --line:#333333; --grid:#2a2a2a;
+    --text:#efefef; --text-2:#9c9c9c; --accent:#338ced; --accent-ink:#ffffff;
+    --bar:#338ced; --bar-hover:#6aaaf2; --warn:#e8a04a; --good:#0aac23;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{padding:22px 24px 8px;max-width:1280px;margin:0 auto}
+header h1{margin:0;font-size:24px;letter-spacing:.2px}
+header p{margin:6px 0 0;color:var(--text-2);max-width:900px}
+main{max-width:1280px;margin:0 auto;padding:8px 24px 40px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;margin:14px 0}
+.card h2{margin:0 0 10px;font-size:16px}
+.muted{color:var(--text-2)}
+.small{font-size:13px}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:26px;text-align:center;cursor:pointer;transition:border-color .15s, background .15s}
+#drop.over{border-color:var(--accent);background:var(--surface-2)}
+#drop strong{display:block;font-size:16px;margin-bottom:4px}
+button,select,input{font:inherit;color:inherit}
+button{background:var(--surface-2);border:1px solid var(--line);border-radius:7px;padding:6px 12px;cursor:pointer}
+button:hover{border-color:var(--accent)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+button:disabled{opacity:.45;cursor:default}
+select,input[type=date],input[type=text],input[type=number]{background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:5px 8px;min-width:0}
+label.f{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--text-2)}
+label.f > *{font-size:14px;color:var(--text)}
+.filters{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.chk{display:flex;align-items:center;gap:6px;font-size:14px}
+table{border-collapse:collapse;width:100%;font-size:13.5px}
+th,td{padding:6px 8px;border-bottom:1px solid var(--grid);text-align:left;vertical-align:top}
+th{font-weight:600;color:var(--text-2);background:var(--surface);position:sticky;top:0;cursor:default;white-space:nowrap}
+th.sort{cursor:pointer}
+th.sort:hover{color:var(--text)}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tr.click{cursor:pointer}
+tr.click:hover td{background:var(--surface-2)}
+.tablewrap{max-height:560px;overflow:auto;border:1px solid var(--line);border-radius:8px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.kpi{background:var(--surface-2);border-radius:8px;padding:10px 12px}
+.kpi .l{font-size:12px;color:var(--text-2)}
+.kpi .v{font-size:22px;font-weight:650;font-variant-numeric:tabular-nums;margin-top:2px}
+.kpi .s{font-size:12px;color:var(--text-2);margin-top:2px}
+.kpi.hero{background:var(--accent);color:var(--accent-ink)}
+.kpi.hero .l,.kpi.hero .s{color:var(--accent-ink);opacity:.85}
+#chart{width:100%;height:280px;position:relative}
+#chart svg{width:100%;height:100%;display:block}
+#tip{position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-size:13px;box-shadow:0 3px 12px rgba(0,0,0,.15);display:none;white-space:nowrap;z-index:5}
+.files li{margin:3px 0}
+.files select{padding:2px 6px;font-size:13px}
+.tag{display:inline-block;font-size:11px;padding:1px 7px;border-radius:9px;background:var(--surface-2);color:var(--text-2);margin-left:6px}
+.warn{color:var(--warn)}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media (max-width:900px){.grid2{grid-template-columns:1fr}}
+details summary{cursor:pointer;color:var(--text-2);font-size:14px}
+.maprow{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;margin-top:10px}
+.pager{display:flex;gap:8px;align-items:center;margin-top:8px;font-size:13px}
+footer{max-width:1280px;margin:0 auto;padding:10px 24px 30px;color:var(--text-2);font-size:13px}
+footer a{color:var(--accent)}
+.hidden{display:none !important}
+#status{font-size:13px;margin-top:8px;min-height:1.2em}
+a.asin{color:var(--accent);text-decoration:none;font-size:12px}
+a.asin:hover{text-decoration:underline}
+.prod{max-width:520px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Bestellwerk</h1>
+  <p>Amazon-Bestellungen aus der DSGVO-Datenauskunft auswerten: Jahr wählen, filtern, Summen ausrechnen und den gefilterten Bereich als CSV exportieren. Alles läuft lokal in deinem Browser, keine Daten verlassen deinen Rechner.</p>
+</header>
+<main>
+
+<section class="card">
+  <div id="drop" tabindex="0">
+    <strong>ZIP- oder CSV-Dateien hier ablegen oder klicken</strong>
+    <span class="muted small">Am einfachsten die ganze Amazon-ZIP (oder mehrere). Die Seite sucht darin <code>Retail.OrderHistory.*.csv</code> und Erstattungsdateien. Einzelne CSVs gehen auch.</span>
+  </div>
+  <input type="file" id="file" multiple accept=".zip,.csv,.txt" class="hidden">
+  <div id="status" class="muted"></div>
+  <ul id="files" class="files small"></ul>
+  <details id="mapbox" class="hidden">
+    <summary>Spaltenzuordnung (nur nötig, wenn etwas nicht automatisch erkannt wurde)</summary>
+    <div id="mapRoles"></div>
+  </details>
+</section>
+
+<div id="app" class="hidden">
+
+<section class="card">
+  <h2>Filter</h2>
+  <div class="filters">
+    <label class="f">Zeitraum
+      <select id="fYear"></select>
+    </label>
+    <label class="f">von
+      <input type="date" id="fFrom">
+    </label>
+    <label class="f">bis
+      <input type="date" id="fTo">
+    </label>
+    <label class="f">Shop
+      <select id="fSite"></select>
+    </label>
+    <label class="f">Währung
+      <select id="fCur"></select>
+    </label>
+    <label class="f">Status
+      <select id="fStatus"></select>
+    </label>
+    <label class="f" id="fKindBox">Art
+      <select id="fKind">
+        <option value="physical">Nur Waren</option>
+        <option value="all">Waren + digitale Käufe</option>
+        <option value="digital">Nur digitale Käufe</option>
+      </select>
+    </label>
+    <label class="f" style="flex:1;min-width:200px">Artikel / Bestellnr. / ASIN enthält
+      <input type="text" id="fText" placeholder="z. B. Kabel, 302-…, B0…">
+    </label>
+    <label class="f">Betrag ab
+      <input type="number" id="fMin" step="0.01" style="width:100px">
+    </label>
+    <label class="f">bis
+      <input type="number" id="fMax" step="0.01" style="width:100px">
+    </label>
+    <label class="chk"><input type="checkbox" id="fRefund" checked> Erstattungen abziehen</label>
+    <button id="fReset">Filter zurücksetzen</button>
+  </div>
+</section>
+
+<section class="card">
+  <div class="kpis" id="kpis"></div>
+  <div id="kpiNote" class="small muted" style="margin-top:8px"></div>
+</section>
+
+<section class="card">
+  <div class="row" style="justify-content:space-between">
+    <h2 id="chartTitle" style="margin:0">Ausgaben pro Monat</h2>
+    <span class="small muted">Balken anklicken = auf diesen Zeitraum filtern</span>
+  </div>
+  <div id="chart"><div id="tip"></div></div>
+  <details>
+    <summary>Als Tabelle</summary>
+    <div class="tablewrap" style="max-height:320px;margin-top:8px"><table id="periodTable"></table></div>
+  </details>
+</section>
+
+<section class="card">
+  <h2>Export des gefilterten Bereichs</h2>
+  <div class="row">
+    <label class="f">Format
+      <select id="xFmt">
+        <option value="de">Excel deutsch (Semikolon, Dezimalkomma)</option>
+        <option value="std">Standard-CSV (Komma, Dezimalpunkt)</option>
+      </select>
+    </label>
+    <label class="f">Spalten
+      <select id="xCols">
+        <option value="compact">Kompakt (Datum, Bestellnr., Artikel, Menge, Betrag …)</option>
+        <option value="all">Alle Originalspalten von Amazon</option>
+      </select>
+    </label>
+    <button class="primary" id="xOrders">Bestellungen exportieren</button>
+    <button id="xRefunds">Erstattungen exportieren</button>
+    <button id="xPeriods">Monats-/Jahresübersicht exportieren</button>
+  </div>
+  <div class="small muted" style="margin-top:6px">Exportiert wird genau das, was die Filter oben gerade zeigen. Die Kompakt-Variante hängt am Ende eine Summenzeile an.</div>
+</section>
+
+<div class="grid2">
+<section class="card">
+  <h2>Jahresübersicht</h2>
+  <div class="small muted" style="margin-bottom:6px">Berücksichtigt alle Filter außer dem Zeitraum. Zeile anklicken = Jahr auswählen.</div>
+  <div class="tablewrap" style="max-height:340px"><table id="yearTable"></table></div>
+</section>
+<section class="card">
+  <h2>Größte Posten im Zeitraum</h2>
+  <div class="tablewrap" style="max-height:340px"><table id="topTable"></table></div>
+</section>
+</div>
+
+<section class="card" id="refundCard">
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">Erstattungen im Zeitraum</h2>
+    <span id="refundInfo" class="small muted"></span>
+  </div>
+  <div class="small muted" style="margin-top:4px">Der Artikeltext stammt aus deinen Bestellungen (über die Bestellnummer) – die Erstattungsdatei von Amazon enthält selbst keinen Artikelnamen.</div>
+  <div class="tablewrap" style="margin-top:8px;max-height:360px"><table id="refundTable"></table></div>
+</section>
+
+<section class="card">
+  <div class="row" style="justify-content:space-between">
+    <h2 style="margin:0">Einzelne Artikel</h2>
+    <span id="listInfo" class="small muted"></span>
+  </div>
+  <div class="tablewrap" style="margin-top:8px"><table id="list"></table></div>
+  <div class="pager">
+    <button id="pPrev">‹ zurück</button>
+    <span id="pInfo"></span>
+    <button id="pNext">weiter ›</button>
+    <label class="chk" style="margin-left:auto">Zeilen pro Seite
+      <select id="pSize"><option>50</option><option selected>100</option><option>250</option><option>1000</option></select>
+    </label>
+  </div>
+</section>
+
+</div>
+</main>
+<footer>
+  Hinweis: Amazon führt jeden Artikel als eigene Zeile. „Betrag“ ist die Spalte <em>Total Amount</em> bzw. <em>Total Owed</em> (inkl. MwSt., Versand und Rabatten, für die ganze Menge). Erstattungen (<em>Refund Details.csv</em>) werden nach ihrem Erstattungsdatum gezählt; doppelte Buchungen (gleiche Bestellnr., Betrag und Datum) nur einmal. Digitale Käufe (<em>Digital Content Orders.csv</em>) bestehen bei Amazon aus mehreren Zeilen pro Artikel (Preis, Steuer); die Seite fasst sie je Artikel zusammen und nimmt den tatsächlich gezahlten Betrag (<em>Transaction Amount</em>). Bei vielen digitalen Käufen liefert Amazon keinen Artikelnamen – der Link ↗ führt dann zur Produktseite.<br>
+  Mehr Basteleien: <a href="https://itzwieseltal.wordpress.com" target="_blank" rel="noopener">itzwieseltal.wordpress.com</a> · <a href="https://zwieselbrau.wordpress.com" target="_blank" rel="noopener">zwieselbrau.wordpress.com</a>
+</footer>
+
+<script>
+"use strict";
+/* ============================================================
+   Bestellwerk – alles im Speicher, kein localStorage
+   ============================================================ */
+const $ = id => document.getElementById(id);
+const state = {
+  files: [],          // {name, role, headers, rows}
+  orders: [], refunds: [],
+  map: {orders:{}, refunds:{}, digital:{}, drefunds:{}},
+  sortKey: 'ts', sortDir: -1, page: 0,
+  filtered: [], filteredRefunds: [], periods: [], periodMode: 'month'
+};
+
+/* ---------- Feld-Definitionen & Auto-Erkennung ---------- */
+const FIELDS = {
+  orders: [
+    ['date','Bestelldatum',['Order Date','Bestelldatum','OrderDate','Order Placed Date']],
+    ['id','Bestellnummer',['Order ID','OrderID','Bestellnummer','Order Number']],
+    ['amount','Betrag',['Total Owed','Total Amount','Total Charged','Item Total','Gesamtbetrag','Betrag']],
+    ['qty','Menge',['Quantity','Menge','Original Quantity']],
+    ['prod','Artikel',['Product Name','Title','Produktname','Artikel']],
+    ['asin','ASIN',['ASIN','ASIN/ISBN']],
+    ['status','Status',['Order Status','Status']],
+    ['site','Shop',['Website','Marketplace','Shop']],
+    ['cur','Währung',['Currency','Währung','Purchase Price Per Unit Currency']],
+    ['ship','Versand',['Shipping Charge','Versandkosten']],
+    ['disc','Rabatte',['Total Discounts','Rabatt']],
+  ],
+  refunds: [
+    ['date','Erstattungsdatum',['Refund Completion Date','RefundCompletionDate','Refund Date','Creation Date','Return Date','Date']],
+    ['id','Bestellnummer',['Order ID','OrderID','Bestellnummer']],
+    ['amount','Erstattung',['Amount Refunded','AmountRefunded','Refund Amount','Total Refund Amount','Refunded Amount','Amount']],
+    ['cur','Währung',['Currency','Währung']],
+    ['status','Status',['Reversal Status','Refund Status','Status','Payment Status']],
+    ['reason','Grund',['Reversal Reason','Return Reason','Reason']],
+  ],
+  digital: [
+    ['date','Bestelldatum',['Order Date','OrderDate']],
+    ['id','Bestellnummer',['Order ID','OrderId']],
+    ['item','Artikel-ID (Digital)',['Digital Order Item ID','DigitalOrderItemId']],
+    ['amount','Betrag (Teilbetrag)',['Transaction Amount','TransactionAmount']],
+    ['comp','Komponente',['Component Type','ComponentType']],
+    ['prod','Artikel',['Product Name','Title','ProductName']],
+    ['asin','ASIN',['ASIN']],
+    ['status','Status',['Order Status','OrderStatus']],
+    ['site','Shop',['Marketplace','Shopping Marketplace ID']],
+    ['cur','Währung',['Base Currency Code','Price Currency Code','Base Currency','Currency']],
+  ],
+  drefunds: [
+    ['date','Erstattungsdatum',['Return Date','Refund Date']],
+    ['id','Bestellnummer',['Order ID','OrderId']],
+    ['item','Artikel-ID (Digital)',['Digital Order Item ID','DigitalOrderItemId']],
+    ['amount','Erstattung',['Amount Refunded','AmountRefunded']],
+    ['cur','Währung',['Base Currency','Base Currency Code','Currency']],
+    ['prod','Artikel',['Product Name']],
+    ['status','Status',['Return Status','Status']],
+    ['reason','Grund',['Reason Code','Reason']],
+  ]
+};
+const ROLES = [['orders','Bestellungen (Waren)'],['refunds','Erstattungen (Waren)'],['digital','Digitale Käufe'],['drefunds','Digitale Erstattungen'],['ignore','ignorieren']];
+const norm = s => String(s||'').toLowerCase().replace(/[\s_\-.]/g,'');
+function autoMap(role, headers){
+  const m = {};
+  const hn = headers.map(norm);
+  for (const [key,,cands] of FIELDS[role]){
+    let found = '';
+    for (const c of cands){ const i = hn.indexOf(norm(c)); if (i>=0){ found = headers[i]; break; } }
+    m[key] = found;
+  }
+  return m;
+}
+function guessRole(name, headers){
+  // nur den Dateinamen betrachten – Ordner wie „Your Returns & Refunds“ dürfen nicht zählen
+  const base = name.split(/[\/›]/).pop().trim().toLowerCase().replace(/[\s_.\-]/g, '');
+  const hn = headers.map(norm);
+  const orderCols = (hn.includes('totalowed') || hn.includes('totalamount')) && hn.includes('orderdate') && hn.includes('orderid');
+  if (hn.includes('digitalorderitemid') && hn.includes('amountrefunded')) return 'drefunds';
+  if (hn.includes('digitalorderitemid') && hn.includes('transactionamount')) return 'digital';
+  if (/orderhistory/.test(base) && orderCols) return 'orders';
+  if (/refunddetails|ordersreturnedpayments|erstattung/.test(base)) return 'refunds';
+  if (orderCols && !/digital|return|refund/.test(base)) return 'orders';
+  if (hn.includes('orderid') && hn.some(h => /^(refundamount|amountrefunded)$/.test(h)) && hn.some(h => /^(refunddate|refundcompletiondate)$/.test(h))) return 'refunds';
+  return 'ignore';
+}
+
+/* ---------- CSV-Parser (Anführungszeichen, Zeilenumbrüche, BOM) ---------- */
+function parseCSV(text){
+  if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+  const nl = text.indexOf('\n'); const first = text.slice(0, nl < 0 ? text.length : nl);
+  const cnt = ch => first.split(ch).length - 1;
+  const d = [[',',cnt(',')],[';',cnt(';')],['\t',cnt('\t')]].sort((a,b)=>b[1]-a[1])[0][0];
+  const rows = []; let row = []; let f = ''; let q = false; let i = 0; const L = text.length;
+  while (i < L){
+    const c = text[i];
+    if (q){
+      if (c === '"'){ if (text[i+1] === '"'){ f += '"'; i += 2; continue; } q = false; i++; continue; }
+      f += c; i++; continue;
+    }
+    if (c === '"'){ q = true; i++; continue; }
+    if (c === d){ row.push(f); f = ''; i++; continue; }
+    if (c === '\r'){ i++; continue; }
+    if (c === '\n'){ row.push(f); rows.push(row); row = []; f = ''; i++; continue; }
+    f += c; i++;
+  }
+  if (f !== '' || row.length){ row.push(f); rows.push(row); }
+  const headers = (rows.shift() || []).map(h => h.trim());
+  return {headers, rows: rows.filter(r => r.length > 1 || (r[0] && r[0].trim()))};
+}
+
+/* ---------- ZIP lesen (inkl. ZIP64, verschachtelte ZIPs) ---------- */
+async function readSlice(blob, start, end){ return new DataView(await blob.slice(start, end).arrayBuffer()); }
+async function zipEntries(blob){
+  const size = blob.size;
+  const tailLen = Math.min(size, 65557 + 22);
+  const tail = await readSlice(blob, size - tailLen, size);
+  let eo = -1;
+  for (let i = tail.byteLength - 22; i >= 0; i--){ if (tail.getUint32(i, true) === 0x06054b50){ eo = i; break; } }
+  if (eo < 0) throw new Error('Kein gültiges ZIP (Endsignatur fehlt)');
+  let count = tail.getUint16(eo + 10, true);
+  let cdSize = tail.getUint32(eo + 12, true);
+  let cdOff = tail.getUint32(eo + 16, true);
+  if (count === 0xFFFF || cdSize === 0xFFFFFFFF || cdOff === 0xFFFFFFFF){
+    const lo = eo - 20;
+    if (lo >= 0 && tail.getUint32(lo, true) === 0x07064b50){
+      const z64off = Number(tail.getBigUint64(lo + 8, true));
+      const z = await readSlice(blob, z64off, z64off + 56);
+      if (z.getUint32(0, true) === 0x06064b50){
+        count = Number(z.getBigUint64(32, true));
+        cdSize = Number(z.getBigUint64(40, true));
+        cdOff = Number(z.getBigUint64(48, true));
+      }
+    }
+  }
+  const cd = await readSlice(blob, cdOff, cdOff + cdSize);
+  const dec = new TextDecoder('utf-8');
+  const out = []; let p = 0;
+  for (let n = 0; n < count && p + 46 <= cd.byteLength; n++){
+    if (cd.getUint32(p, true) !== 0x02014b50) break;
+    const method = cd.getUint16(p + 10, true);
+    let comp = cd.getUint32(p + 20, true), unc = cd.getUint32(p + 24, true);
+    const nl = cd.getUint16(p + 28, true), xl = cd.getUint16(p + 30, true), cl = cd.getUint16(p + 32, true);
+    let off = cd.getUint32(p + 42, true);
+    const name = dec.decode(new Uint8Array(cd.buffer, cd.byteOffset + p + 46, nl));
+    let x = p + 46 + nl; const xe = x + xl;
+    while (x + 4 <= xe){
+      const id = cd.getUint16(x, true), sz = cd.getUint16(x + 2, true);
+      if (id === 0x0001){
+        let q = x + 4;
+        if (unc === 0xFFFFFFFF){ unc = Number(cd.getBigUint64(q, true)); q += 8; }
+        if (comp === 0xFFFFFFFF){ comp = Number(cd.getBigUint64(q, true)); q += 8; }
+        if (off === 0xFFFFFFFF){ off = Number(cd.getBigUint64(q, true)); q += 8; }
+      }
+      x += 4 + sz;
+    }
+    out.push({name, method, comp, unc, off});
+    p += 46 + nl + xl + cl;
+  }
+  return out;
+}
+async function zipExtract(blob, e){
+  const h = await readSlice(blob, e.off, e.off + 30);
+  if (h.getUint32(0, true) !== 0x04034b50) throw new Error('Lokaler Header fehlt: ' + e.name);
+  const start = e.off + 30 + h.getUint16(26, true) + h.getUint16(28, true);
+  const data = blob.slice(start, start + e.comp);
+  if (e.method === 0) return data;
+  if (e.method === 8){
+    if (typeof DecompressionStream === 'undefined') throw new Error('Browser kann kein Deflate (DecompressionStream fehlt) – bitte CSV direkt laden');
+    const s = data.stream().pipeThrough(new DecompressionStream('deflate-raw'));
+    return await new Response(s).blob();
+  }
+  throw new Error('Unbekannte Kompression (' + e.method + ') in ' + e.name);
+}
+const INTERESTING = /order|return|refund|bestell|erstatt/i;
+async function scanZip(blob, label, depth){
+  const entries = await zipEntries(blob);
+  let skipped = 0;
+  for (const e of entries){
+    if (e.name.endsWith('/')) continue;
+    const base = e.name.split('/').pop();
+    if (/\.zip$/i.test(base) && depth < 3){
+      if (INTERESTING.test(e.name) || entries.length < 40){
+        setStatus('Entpacke ' + base + ' …');
+        await scanZip(await zipExtract(blob, e), label + ' › ' + base, depth + 1);
+      } else skipped++;
+      continue;
+    }
+    if (/\.csv$/i.test(base) && INTERESTING.test(e.name)){
+      setStatus('Lese ' + base + ' …');
+      const text = await (await zipExtract(blob, e)).text();
+      addCSV(label + ' › ' + e.name, text);
+    } else skipped++;
+  }
+  return skipped;
+}
+
+/* ---------- Dateien laden ---------- */
+function setStatus(t, cls){ const s = $('status'); s.textContent = t; s.className = cls || 'muted'; }
+function addCSV(name, text){
+  const {headers, rows} = parseCSV(text);
+  if (!headers.length) return;
+  const role = guessRole(name, headers);
+  state.files.push({name, role, headers, rows});
+}
+async function handleFiles(list){
+  const files = [...list];
+  if (!files.length) return;
+  setStatus('Lade …');
+  await new Promise(r => setTimeout(r, 20));
+  try{
+    for (const f of files){
+      if (/\.zip$/i.test(f.name)) await scanZip(f, f.name, 0);
+      else { setStatus('Lese ' + f.name + ' …'); addCSV(f.name, await f.text()); }
+    }
+    if (!state.files.some(f => f.role === 'orders')){
+      setStatus('Keine Bestelldatei erkannt. Weise unten einer Datei die Rolle „Bestellungen“ zu.', 'warn');
+    } else setStatus('');
+    rebuildMapping(); renderFileList(); normalize(); initFilters(); update();
+  }catch(err){
+    console.error(err);
+    setStatus('Fehler: ' + err.message, 'warn');
+  }
+}
+function renderFileList(){
+  const ul = $('files'); ul.innerHTML = '';
+  state.files.forEach((f, i) => {
+    const li = document.createElement('li');
+    li.innerHTML = `<select data-i="${i}">${ROLES.map(([v, t]) => `<option value="${v}">${t}</option>`).join('')}</select> ${esc(f.name)} <span class="tag">${f.rows.length.toLocaleString('de-DE')} Zeilen</span>`;
+    const sel = li.querySelector('select'); sel.value = f.role;
+    sel.onchange = () => { f.role = sel.value; rebuildMapping(); normalize(); initFilters(); update(); };
+    ul.appendChild(li);
+  });
+  $('mapbox').classList.toggle('hidden', !state.files.length);
+}
+function rebuildMapping(){
+  const wrap = $('mapRoles'); wrap.innerHTML = '';
+  for (const [role, title] of ROLES){
+    if (role === 'ignore') continue;
+    const headers = [...new Set(state.files.filter(f => f.role === role).flatMap(f => f.headers))];
+    const auto = autoMap(role, headers);
+    if (!headers.length){ state.map[role] = auto; continue; }
+    const h = document.createElement('div'); h.className = 'small muted'; h.style.marginTop = '10px'; h.textContent = title; wrap.appendChild(h);
+    const box = document.createElement('div'); box.className = 'maprow'; wrap.appendChild(box);
+    for (const [key, label] of FIELDS[role]){
+      const cur = state.map[role][key];
+      state.map[role][key] = (cur && headers.includes(cur)) ? cur : auto[key];
+      const l = document.createElement('label'); l.className = 'f';
+      l.innerHTML = `${label}<select><option value="">– keine –</option>${headers.map(h => `<option>${esc(h)}</option>`).join('')}</select>`;
+      const s = l.querySelector('select'); s.value = state.map[role][key] || '';
+      s.onchange = () => { state.map[role][key] = s.value; normalize(); initFilters(); update(); };
+      box.appendChild(l);
+    }
+  }
+}
+
+/* ---------- Werte umwandeln ---------- */
+function num(s){
+  if (s == null) return NaN;
+  s = String(s).trim().replace(/[€$£'"\s\u00a0]|EUR|USD|GBP/g, '');
+  if (!s || !/\d/.test(s)) return NaN;
+  const hasC = s.includes(','), hasD = s.includes('.');
+  if (hasC && hasD){ s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g,'').replace(',', '.') : s.replace(/,/g,''); }
+  else if (hasC){ s = /^-?\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g,'') : s.replace(',', '.'); }
+  const v = parseFloat(s); return isFinite(v) ? v : NaN;
+}
+function parseDate(s){
+  if (!s) return null; s = String(s).trim();
+  let m;
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)){ const d = new Date(s.length === 10 ? s + 'T00:00:00' : s); return isNaN(d) ? null : d; }
+  if ((m = s.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/))) return new Date(+m[3], m[2]-1, +m[1], +(m[4]||0), +(m[5]||0));
+  if ((m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/))) return new Date(+m[3], m[1]-1, +m[2]);
+  const d = new Date(s); return isNaN(d) ? null : d;
+}
+const pad = n => String(n).padStart(2, '0');
+const isoDay = d => d ? `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}` : '';
+const isoDT = d => d ? `${isoDay(d)} ${pad(d.getHours())}:${pad(d.getMinutes())}` : '';
+const deDay = d => d ? `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}` : '–';
+const MONTHS = ['Jan','Feb','Mär','Apr','Mai','Jun','Jul','Aug','Sep','Okt','Nov','Dez'];
+const clean = v => { v = (v ?? '').trim(); return /^(not available|not applicable|n\/a)$/i.test(v) ? '' : v; };
+
+function normalize(){
+  const pull = (f, mp, key) => { const h = mp[key]; if (!h) return -1; return f.headers.indexOf(h); };
+  const orders = [], seen = new Set();
+  for (const f of state.files.filter(f => f.role === 'orders')){
+    const mp = state.map.orders; const ix = {};
+    for (const [k] of FIELDS.orders) ix[k] = pull(f, mp, k);
+    const g = (r, k) => ix[k] >= 0 ? clean(r[ix[k]]) : '';
+    for (const r of f.rows){
+      const key = r.join('\u0001'); if (seen.has(key)) continue; seen.add(key);
+      const d = parseDate(g(r,'date'));
+      const qty = num(g(r,'qty'));
+      orders.push({
+        kind: 'physical',
+        d, ts: d ? d.getTime() : 0, id: g(r,'id'), amt: num(g(r,'amount')),
+        qty: isFinite(qty) ? qty : 1, prod: g(r,'prod'), asin: g(r,'asin'),
+        status: g(r,'status') || '(ohne)', site: g(r,'site') || '(ohne)', cur: g(r,'cur') || 'EUR',
+        ship: num(g(r,'ship')), disc: num(g(r,'disc')), raw: r, hdr: f.headers
+      });
+    }
+  }
+  const refunds = [], seenR = new Set();
+  for (const f of state.files.filter(f => f.role === 'refunds')){
+    const mp = state.map.refunds; const ix = {};
+    for (const [k] of FIELDS.refunds) ix[k] = pull(f, mp, k);
+    const g = (r, k) => ix[k] >= 0 ? clean(r[ix[k]]) : '';
+    for (const r of f.rows){
+      const key = (g(r,'id') && g(r,'date')) ? [g(r,'id'), g(r,'amount'), g(r,'date')].join('\u0001') : r.join('\u0001');
+      if (seenR.has(key)) continue; seenR.add(key);
+      const d = parseDate(g(r,'date'));
+      refunds.push({ kind: 'physical', d, ts: d ? d.getTime() : 0, id: g(r,'id'), amt: Math.abs(num(g(r,'amount'))), cur: g(r,'cur') || 'EUR', status: g(r,'status'), reason: g(r,'reason'), raw: r, hdr: f.headers });
+    }
+  }
+  // Digitale Käufe: je Artikel mehrere Zeilen (Preis, Steuer …) -> zusammenfassen, doppelte Teilbeträge nur einmal
+  const siteName = v => { v = (v || '').replace(/^https?:\/\//, '').replace(/^www\./, ''); return v ? v.charAt(0).toUpperCase() + v.slice(1) : '(ohne)'; };
+  const dItems = new Map();
+  for (const f of state.files.filter(f => f.role === 'digital')){
+    const mp = state.map.digital; const ix = {};
+    for (const [k] of FIELDS.digital) ix[k] = pull(f, mp, k);
+    const g = (r, k) => ix[k] >= 0 ? clean(r[ix[k]]) : '';
+    f.rows.forEach((r, n) => {
+      const key = g(r,'item') || (f.name + '#' + n);
+      let it = dItems.get(key);
+      if (!it){
+        const d = parseDate(g(r,'date'));
+        it = { kind: 'digital', d, ts: d ? d.getTime() : 0, id: g(r,'id'), amt: 0, qty: 1, prod: g(r,'prod'), asin: g(r,'asin'),
+               status: g(r,'status') || '(ohne)', site: siteName(g(r,'site')), cur: g(r,'cur') || 'EUR', ship: NaN, disc: NaN,
+               raw: r, hdr: f.headers, parts: new Set(), any: false };
+        dItems.set(key, it);
+      }
+      const pk = g(r,'comp') + '|' + g(r,'amount');
+      if (it.parts.has(pk)) return; it.parts.add(pk);
+      const v = num(g(r,'amount')); if (isFinite(v)){ it.amt += v; it.any = true; }
+      if (!it.prod && g(r,'prod')) it.prod = g(r,'prod');
+    });
+  }
+  for (const it of dItems.values()){ if (!it.any) it.amt = NaN; it.amt = Math.round(it.amt * 100) / 100; delete it.parts; delete it.any; orders.push(it); }
+  const dRef = new Map();
+  for (const f of state.files.filter(f => f.role === 'drefunds')){
+    const mp = state.map.drefunds; const ix = {};
+    for (const [k] of FIELDS.drefunds) ix[k] = pull(f, mp, k);
+    const g = (r, k) => ix[k] >= 0 ? clean(r[ix[k]]) : '';
+    f.rows.forEach((r, n) => {
+      const key = (g(r,'item') || (f.name + '#' + n)) + '|' + g(r,'date');
+      if (dRef.has(key)) return;
+      const d = parseDate(g(r,'date'));
+      dRef.set(key, { kind: 'digital', d, ts: d ? d.getTime() : 0, id: g(r,'id'), amt: Math.abs(num(g(r,'amount'))), cur: g(r,'cur') || 'EUR',
+                      status: g(r,'status'), reason: g(r,'reason'), prod0: g(r,'prod'), raw: r, hdr: f.headers });
+    });
+  }
+  refunds.push(...dRef.values());
+  const names = new Map();
+  for (const o of orders){ if (!o.id || !o.prod) continue; const a = names.get(o.id) || []; if (!a.includes(o.prod)) a.push(o.prod); names.set(o.id, a); }
+  for (const r of refunds) r.prod = r.prod0 || (names.get(r.id) || []).join(' | ');
+  state.orders = orders; state.refunds = refunds;
+  $('app').classList.toggle('hidden', !orders.length);
+  state.hasDigital = orders.some(o => o.kind === 'digital');
+  state.hasPhysical = orders.some(o => o.kind === 'physical');
+}
+
+/* ---------- Filter ---------- */
+function fillSelect(sel, opts, keep){
+  const old = sel.value;
+  sel.innerHTML = opts.map(([v, t]) => `<option value="${esc(v)}">${esc(t)}</option>`).join('');
+  if (keep && opts.some(o => o[0] === old)) sel.value = old;
+}
+function years(){ return [...new Set(state.orders.filter(o => o.d).map(o => o.d.getFullYear()))].sort((a,b) => b-a); }
+function initFilters(){
+  if (!state.orders.length) return;
+  $('fKindBox').classList.toggle('hidden', !(state.hasDigital && state.hasPhysical));
+  if (!state.hasDigital) $('fKind').value = 'physical';
+  else if (!state.hasPhysical) $('fKind').value = 'digital';
+  const ys = years();
+  fillSelect($('fYear'), [...ys.map(y => [String(y), String(y)]), ['all','Alle Jahre'], ['custom','Benutzerdefiniert']], true);
+  if (!$('fYear').dataset.init){ $('fYear').value = String(ys[0] ?? 'all'); $('fYear').dataset.init = 1; }
+  applyYear();
+  const count = key => { const m = new Map(); state.orders.forEach(o => m.set(o[key], (m.get(o[key])||0) + 1)); return [...m].sort((a,b) => b[1]-a[1]); };
+  const sites = count('site');
+  fillSelect($('fSite'), [['__all','Alle Shops'], ...sites.map(([s,n]) => [s, `${s} (${n})`])], true);
+  const curs = count('cur');
+  fillSelect($('fCur'), curs.map(([c,n]) => [c, `${c} (${n})`]), true);
+  const sts = count('status');
+  fillSelect($('fStatus'), [['__nocancel','Alle außer storniert'], ['__all','Alle'], ...sts.map(([s,n]) => [s, `${s} (${n})`])], true);
+}
+function applyYear(){
+  const v = $('fYear').value;
+  if (/^\d{4}$/.test(v)){ $('fFrom').value = `${v}-01-01`; $('fTo').value = `${v}-12-31`; }
+  else if (v === 'all'){ $('fFrom').value = ''; $('fTo').value = ''; }
+}
+function syncYearFromDates(){
+  const f = $('fFrom').value, t = $('fTo').value;
+  const m = f.match(/^(\d{4})-01-01$/);
+  if (m && t === `${m[1]}-12-31` && [...$('fYear').options].some(o => o.value === m[1])) $('fYear').value = m[1];
+  else if (!f && !t) $('fYear').value = 'all';
+  else $('fYear').value = 'custom';
+}
+const isCancel = s => /cancel|storn/i.test(s);
+function getFilter(){
+  const from = $('fFrom').value ? new Date($('fFrom').value + 'T00:00:00').getTime() : -Infinity;
+  const to = $('fTo').value ? new Date($('fTo').value + 'T23:59:59.999').getTime() : Infinity;
+  return {
+    from, to, site: $('fSite').value, cur: $('fCur').value, status: $('fStatus').value,
+    text: $('fText').value.trim().toLowerCase(),
+    min: $('fMin').value === '' ? -Infinity : +$('fMin').value,
+    max: $('fMax').value === '' ? Infinity : +$('fMax').value,
+    refund: $('fRefund').checked,
+    kind: $('fKind').value
+  };
+}
+function matchNonDate(o, F){
+  if (F.kind !== 'all' && o.kind !== F.kind) return false;
+  if (F.site !== '__all' && o.site !== F.site) return false;
+  if (o.cur !== F.cur) return false;
+  if (F.status === '__nocancel'){ if (isCancel(o.status)) return false; }
+  else if (F.status !== '__all' && o.status !== F.status) return false;
+  if (F.text && !(o.prod.toLowerCase().includes(F.text) || o.id.toLowerCase().includes(F.text) || o.asin.toLowerCase().includes(F.text))) return false;
+  const a = isFinite(o.amt) ? o.amt : 0;
+  if (a < F.min || a > F.max) return false;
+  return true;
+}
+const inRange = (x, F) => x.d && x.ts >= F.from && x.ts <= F.to;
+// Erstattungen: Datum + Währung; bei Text-/Betrags-/Shop-/Status-Filter nur zu passenden Bestellungen
+function refundFilter(F, orderPool){
+  const narrow = F.text || isFinite(F.min) || isFinite(F.max) || F.site !== '__all' || (F.status !== '__nocancel' && F.status !== '__all');
+  const ids = narrow ? new Set(orderPool.map(o => o.id)) : null;
+  return r => r.cur === F.cur && (F.kind === 'all' || r.kind === F.kind) && (!ids || ids.has(r.id));
+}
+
+/* ---------- Aktualisieren ---------- */
+let fmtCache = {};
+function money(v, cur){
+  cur = cur || $('fCur').value || 'EUR';
+  if (!fmtCache[cur]){ try{ fmtCache[cur] = new Intl.NumberFormat('de-DE', {style:'currency', currency:cur}); } catch(e){ fmtCache[cur] = {format: x => x.toFixed(2).replace('.', ',') + ' ' + cur}; } }
+  return fmtCache[cur].format(v || 0);
+}
+const int = v => Math.round(v).toLocaleString('de-DE');
+const sum = (arr, f) => arr.reduce((s, x) => { const v = f(x); return s + (isFinite(v) ? v : 0); }, 0);
+
+function update(){
+  if (!state.orders.length) return;
+  const F = getFilter();
+  const pool = state.orders.filter(o => matchNonDate(o, F));
+  const filtered = pool.filter(o => inRange(o, F));
+  const rf = refundFilter(F, pool);
+  const refundPool = state.refunds.filter(rf);
+  const refunds = refundPool.filter(r => inRange(r, F));
+  state.filtered = filtered; state.filteredRefunds = refunds; state.page = 0;
+  renderKPIs(filtered, refunds, F);
+  renderChart(filtered, refunds, F);
+  renderYears(pool, refundPool, F);
+  renderTop(filtered);
+  renderRefunds(refunds);
+  renderList();
+}
+function renderKPIs(rows, refunds, F){
+  const total = sum(rows, o => o.amt);
+  const ids = new Set(rows.map(o => o.id).filter(Boolean));
+  const items = sum(rows, o => o.qty);
+  const ref = F.refund ? sum(refunds, r => r.amt) : 0;
+  const ship = sum(rows, o => o.ship), disc = sum(rows, o => o.disc);
+  const noAmt = rows.filter(o => !isFinite(o.amt)).length;
+  const span = $('fFrom').value || $('fTo').value ? `${$('fFrom').value ? deDay(new Date($('fFrom').value)) : 'Anfang'} – ${$('fTo').value ? deDay(new Date($('fTo').value)) : 'heute'}` : 'gesamter Zeitraum';
+  const k = (l, v, s, hero) => `<div class="kpi${hero?' hero':''}"><div class="l">${l}</div><div class="v">${v}</div>${s?`<div class="s">${s}</div>`:''}</div>`;
+  $('kpis').innerHTML =
+    k(F.refund && state.refunds.length ? 'Ausgaben nach Erstattungen' : 'Ausgaben', money(total - ref), span, true) +
+    k('Summe Bestellungen', money(total), F.kind === 'all'
+        ? `Waren ${money(sum(rows.filter(o => o.kind === 'physical'), o => o.amt))} · Digital ${money(sum(rows.filter(o => o.kind === 'digital'), o => o.amt))}`
+        : F.kind === 'digital' ? 'digitale Käufe (Kindle, Video, Musik, Apps, Prime …)' : `Versand ${money(ship)} · Rabatte ${money(disc)}`) +
+    (state.refunds.length ? k('Erstattungen', money(sum(refunds, r => r.amt)), `${int(refunds.length)} Buchungen${F.refund ? '' : ' (nicht abgezogen)'}`) : '') +
+    k('Bestellungen', int(ids.size), `${int(rows.length)} Artikelzeilen`) +
+    k('Artikel (Stück)', int(items)) +
+    k('Ø pro Bestellung', money(ids.size ? total / ids.size : 0));
+  const notes = [];
+  if (!state.map.orders.amount) notes.push('<b class="warn">Keine Betragsspalte erkannt – bitte unter „Spaltenzuordnung“ oben die Spalte „Betrag“ auswählen.</b>');
+  if (noAmt) notes.push(`<span class="warn">${int(noAmt)} Zeilen ohne Betrag (z. B. „Not Available“) – mit 0 gezählt.</span>`);
+  if (!state.refunds.length) notes.push('Keine Erstattungsdatei geladen – Rücksendungen sind nicht abgezogen.');
+  const curs = new Set(state.orders.map(o => o.cur));
+  if (curs.size > 1) notes.push(`Es gibt Bestellungen in ${curs.size} Währungen – Summen gelten nur für die gewählte Währung.`);
+  $('kpiNote').innerHTML = notes.join(' ');
+}
+
+/* ---------- Diagramm ---------- */
+function buildPeriods(rows, refunds, F){
+  const known = rows.filter(o => o.d);
+  let lo = isFinite(F.from) ? new Date(F.from) : null, hi = isFinite(F.to) ? new Date(F.to) : null;
+  const all = [...known, ...refunds];
+  if (!lo) lo = all.length ? new Date(Math.min(...all.map(x => x.ts))) : new Date();
+  if (!hi) hi = all.length ? new Date(Math.max(...all.map(x => x.ts))) : new Date();
+  const months = (hi.getFullYear() - lo.getFullYear()) * 12 + hi.getMonth() - lo.getMonth() + 1;
+  const mode = months > 36 ? 'year' : 'month';
+  const keyOf = d => mode === 'year' ? String(d.getFullYear()) : `${d.getFullYear()}-${pad(d.getMonth()+1)}`;
+  const map = new Map();
+  if (mode === 'year') for (let y = lo.getFullYear(); y <= hi.getFullYear(); y++) map.set(String(y), {key:String(y), amt:0, ref:0, n:0, ids:new Set()});
+  else { const c = new Date(lo.getFullYear(), lo.getMonth(), 1); while (c <= hi){ const k = keyOf(c); map.set(k, {key:k, amt:0, ref:0, n:0, ids:new Set()}); c.setMonth(c.getMonth() + 1); } }
+  for (const o of known){ const p = map.get(keyOf(o.d)); if (!p) continue; p.amt += isFinite(o.amt) ? o.amt : 0; p.n += o.qty; if (o.id) p.ids.add(o.id); }
+  for (const r of refunds){ const p = map.get(keyOf(r.d)); if (p && isFinite(r.amt)) p.ref += r.amt; }
+  const list = [...map.values()].map(p => ({...p, orders: p.ids.size, net: p.amt - (F.refund ? p.ref : 0)}));
+  return {mode, list};
+}
+function labelOf(key, mode){ if (mode === 'year') return key; const [y, m] = key.split('-'); return `${MONTHS[+m-1]} ${y}`; }
+function renderChart(rows, refunds, F){
+  const {mode, list} = buildPeriods(rows, refunds, F);
+  state.periods = list; state.periodMode = mode;
+  $('chartTitle').textContent = (mode === 'year' ? 'Ausgaben pro Jahr' : 'Ausgaben pro Monat') + (F.refund && state.refunds.length ? ' (nach Erstattungen)' : '');
+  const box = $('chart'); const tip = $('tip');
+  box.querySelector('svg')?.remove();
+  const W = box.clientWidth || 800, H = box.clientHeight || 280;
+  const m = {l: 64, r: 10, t: 12, b: 34};
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  const maxV = Math.max(0, ...list.map(p => p.net));
+  const minV = Math.min(0, ...list.map(p => p.net));
+  const step = niceStep((maxV - minV) / 4 || 1);
+  const top = Math.ceil(maxV / step) * step || step, bot = Math.floor(minV / step) * step;
+  const y = v => m.t + ih - (v - bot) / (top - bot) * ih;
+  const n = Math.max(list.length, 1), slot = iw / n, gap = Math.min(Math.max(2, slot * 0.25), 18), bw = Math.max(1, slot - gap);
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS, 'svg'); svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('role', 'img'); svg.setAttribute('aria-label', $('chartTitle').textContent);
+  let s = '';
+  for (let v = bot; v <= top + step / 2; v += step){
+    s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)" stroke-width="1"/>`;
+    s += `<text x="${m.l - 8}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="var(--text-2)">${shortMoney(v)}</text>`;
+  }
+  s += `<line x1="${m.l}" x2="${W - m.r}" y1="${y(0)}" y2="${y(0)}" stroke="var(--text-2)" stroke-width="1"/>`;
+  const every = Math.ceil(n / Math.max(1, Math.floor(iw / 58)));
+  list.forEach((p, i) => {
+    const x = m.l + i * slot + gap / 2, v = p.net, y0 = y(0), y1 = y(v);
+    const h = Math.abs(y1 - y0), r = Math.min(4, bw / 2, h);
+    if (h > 0.5){
+      const d = v >= 0
+        ? `M${x},${y0} V${y1 + r} Q${x},${y1} ${x + r},${y1} H${x + bw - r} Q${x + bw},${y1} ${x + bw},${y1 + r} V${y0} Z`
+        : `M${x},${y0} V${y1 - r} Q${x},${y1} ${x + r},${y1} H${x + bw - r} Q${x + bw},${y1} ${x + bw},${y1 - r} V${y0} Z`;
+      s += `<path d="${d}" fill="var(--bar)" data-i="${i}" class="bar"/>`;
+    }
+    s += `<rect x="${m.l + i * slot}" y="${m.t}" width="${slot}" height="${ih}" fill="transparent" data-i="${i}" class="hit" style="cursor:pointer"/>`;
+    if (i % every === 0){
+      const lab = mode === 'year' ? p.key : (n > 14 ? `${MONTHS[+p.key.slice(5) - 1]} ${p.key.slice(2,4)}` : MONTHS[+p.key.slice(5) - 1]);
+      s += `<text x="${m.l + i * slot + slot / 2}" y="${H - m.b + 16}" text-anchor="middle" font-size="11" fill="var(--text-2)">${lab}</text>`;
+    }
+  });
+  svg.innerHTML = s;
+  box.insertBefore(svg, tip);
+  const bars = svg.querySelectorAll('.bar');
+  const barOf = i => [...bars].find(b => +b.dataset.i === i);
+  svg.querySelectorAll('.hit').forEach(h => {
+    const i = +h.dataset.i, p = list[i];
+    h.addEventListener('mousemove', ev => {
+      bars.forEach(b => b.setAttribute('fill', 'var(--bar)'));
+      barOf(i)?.setAttribute('fill', 'var(--bar-hover)');
+      tip.innerHTML = `<b>${labelOf(p.key, mode)}</b><br>Bestellt: ${money(p.amt)}${state.refunds.length ? `<br>Erstattet: ${money(p.ref)}<br>Netto: ${money(p.amt - p.ref)}` : ''}<br>${int(p.orders)} Bestellungen · ${int(p.n)} Artikel`;
+      tip.style.display = 'block';
+      const rect = box.getBoundingClientRect();
+      let lx = ev.clientX - rect.left + 14; if (lx + tip.offsetWidth > rect.width) lx = ev.clientX - rect.left - tip.offsetWidth - 14;
+      tip.style.left = lx + 'px'; tip.style.top = Math.max(0, ev.clientY - rect.top - tip.offsetHeight - 8) + 'px';
+    });
+    h.addEventListener('mouseleave', () => { tip.style.display = 'none'; barOf(i)?.setAttribute('fill', 'var(--bar)'); });
+    h.addEventListener('click', () => {
+      if (mode === 'year'){ $('fYear').value = p.key; applyYear(); }
+      else { const [yy, mm] = p.key.split('-').map(Number); $('fFrom').value = `${yy}-${pad(mm)}-01`; $('fTo').value = isoDay(new Date(yy, mm, 0)); syncYearFromDates(); }
+      update();
+    });
+  });
+  const pt = $('periodTable');
+  pt.innerHTML = `<thead><tr><th>${mode === 'year' ? 'Jahr' : 'Monat'}</th><th class="num">Bestellungen</th><th class="num">Artikel</th><th class="num">Bestellt</th><th class="num">Erstattet</th><th class="num">Netto</th></tr></thead><tbody>` +
+    list.map(p => `<tr><td>${labelOf(p.key, mode)}</td><td class="num">${int(p.orders)}</td><td class="num">${int(p.n)}</td><td class="num">${money(p.amt)}</td><td class="num">${money(p.ref)}</td><td class="num">${money(p.amt - p.ref)}</td></tr>`).join('') + '</tbody>';
+}
+function niceStep(x){ const e = Math.pow(10, Math.floor(Math.log10(x))); const f = x / e; return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 2.5 ? 2.5 : f <= 5 ? 5 : 10) * e; }
+function shortMoney(v){ const a = Math.abs(v); return (a >= 1e6 ? (v / 1e6).toLocaleString('de-DE', {maximumFractionDigits:1}) + ' Mio' : a >= 1e4 ? (v / 1e3).toLocaleString('de-DE', {maximumFractionDigits:0}) + ' Tsd' : v.toLocaleString('de-DE', {maximumFractionDigits:0})) + ' ' + ($('fCur').value === 'EUR' ? '€' : $('fCur').value); }
+
+/* ---------- Tabellen ---------- */
+function renderYears(pool, refundPool, F){
+  const m = new Map();
+  for (const o of pool){ if (!o.d) continue; const y = o.d.getFullYear(); const e = m.get(y) || {y, amt:0, n:0, ids:new Set(), ref:0}; e.amt += isFinite(o.amt) ? o.amt : 0; e.n += o.qty; if (o.id) e.ids.add(o.id); m.set(y, e); }
+  for (const r of refundPool){ if (!r.d) continue; const y = r.d.getFullYear(); const e = m.get(y) || {y, amt:0, n:0, ids:new Set(), ref:0}; e.ref += isFinite(r.amt) ? r.amt : 0; m.set(y, e); }
+  const list = [...m.values()].sort((a, b) => b.y - a.y);
+  const tot = list.reduce((t, e) => (t.amt += e.amt, t.ref += e.ref, t.n += e.n, t.o += e.ids.size, t), {amt:0, ref:0, n:0, o:0});
+  const sel = $('fYear').value;
+  $('yearTable').innerHTML = `<thead><tr><th>Jahr</th><th class="num">Bestellungen</th><th class="num">Artikel</th><th class="num">Bestellt</th><th class="num">Erstattet</th><th class="num">Netto</th></tr></thead><tbody>` +
+    list.map(e => `<tr class="click" data-y="${e.y}"${String(e.y) === sel ? ' style="font-weight:650"' : ''}><td>${e.y}</td><td class="num">${int(e.ids.size)}</td><td class="num">${int(e.n)}</td><td class="num">${money(e.amt)}</td><td class="num">${money(e.ref)}</td><td class="num">${money(e.amt - e.ref)}</td></tr>`).join('') +
+    `<tr style="font-weight:650"><td>Summe</td><td class="num">${int(tot.o)}</td><td class="num">${int(tot.n)}</td><td class="num">${money(tot.amt)}</td><td class="num">${money(tot.ref)}</td><td class="num">${money(tot.amt - tot.ref)}</td></tr></tbody>`;
+  $('yearTable').querySelectorAll('tr.click').forEach(tr => tr.onclick = () => { $('fYear').value = tr.dataset.y; applyYear(); update(); });
+}
+function renderTop(rows){
+  const top = rows.filter(o => isFinite(o.amt)).sort((a, b) => b.amt - a.amt).slice(0, 15);
+  $('topTable').innerHTML = `<thead><tr><th>Datum</th><th>Artikel</th><th class="num">Betrag</th></tr></thead><tbody>` +
+    (top.map(o => `<tr><td>${deDay(o.d)}</td><td class="prod">${esc(o.prod || '(ohne Namen)')}${o.qty > 1 ? ` <span class="tag">${int(o.qty)}×</span>` : ''}</td><td class="num">${money(o.amt)}</td></tr>`).join('') || '<tr><td colspan="3" class="muted">Keine Einträge</td></tr>') + '</tbody>';
+}
+function renderRefunds(rows){
+  $('refundCard').classList.toggle('hidden', !state.refunds.length);
+  rows = [...rows].sort((a, b) => b.ts - a.ts);
+  $('refundInfo').textContent = `${int(rows.length)} Buchungen · Summe ${money(sum(rows, r => r.amt))}`;
+  $('refundTable').innerHTML = `<thead><tr><th>Datum</th><th>Bestellnr.</th><th>Artikel</th><th>Grund</th><th class="num">Betrag</th></tr></thead><tbody>` +
+    (rows.map(r => `<tr><td>${deDay(r.d)}</td><td>${esc(r.id)}</td><td class="prod">${esc(r.prod) || '<span class="muted">(Bestellung nicht in den geladenen Daten)</span>'}</td><td>${esc(r.reason)}</td><td class="num">${isFinite(r.amt) ? money(r.amt) : '–'}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">Keine Erstattungen im Zeitraum</td></tr>') + '</tbody>';
+}
+const COLS = [
+  ['ts','Datum', o => deDay(o.d), false],
+  ['id','Bestellnr.', o => esc(o.id), false],
+  ['prod','Artikel', o => `<span class="prod">${esc(o.prod) || '<span class="muted">(ohne Namen)</span>'}</span>${o.asin ? ` <a class="asin" href="https://www.amazon.de/dp/${encodeURIComponent(o.asin)}" target="_blank" rel="noopener" title="Produktseite bei Amazon öffnen">↗</a>` : ''}`, false],
+  ['qty','Menge', o => int(o.qty), true],
+  ['amt','Betrag', o => isFinite(o.amt) ? money(o.amt) : '<span class="warn">–</span>', true],
+  ['status','Status', o => esc(o.status), false],
+  ['kind','Art', o => o.kind === 'digital' ? 'Digital' : 'Ware', false],
+  ['site','Shop', o => esc(o.site), false],
+];
+function sortedFiltered(){
+  const k = state.sortKey, d = state.sortDir;
+  return [...state.filtered].sort((a, b) => {
+    let x = a[k], y = b[k];
+    if (k === 'amt'){ x = isFinite(x) ? x : -Infinity; y = isFinite(y) ? y : -Infinity; }
+    if (typeof x === 'string') return x.localeCompare(y, 'de') * d;
+    return (x - y) * d;
+  });
+}
+function renderList(){
+  const rows = sortedFiltered();
+  const size = +$('pSize').value, pages = Math.max(1, Math.ceil(rows.length / size));
+  state.page = Math.min(state.page, pages - 1);
+  const slice = rows.slice(state.page * size, (state.page + 1) * size);
+  $('list').innerHTML = `<thead><tr>${COLS.map(([k, t, , n]) => `<th class="sort${n ? ' num' : ''}" data-k="${k}">${t}${state.sortKey === k ? (state.sortDir > 0 ? ' ▲' : ' ▼') : ''}</th>`).join('')}</tr></thead><tbody>` +
+    (slice.map(o => `<tr>${COLS.map(([, , f, n]) => `<td${n ? ' class="num"' : ''}>${f(o)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${COLS.length}" class="muted">Keine Einträge für diese Filter</td></tr>`) + '</tbody>';
+  $('list').querySelectorAll('th.sort').forEach(th => th.onclick = () => {
+    const k = th.dataset.k; if (state.sortKey === k) state.sortDir *= -1; else { state.sortKey = k; state.sortDir = (k === 'amt' || k === 'ts' || k === 'qty') ? -1 : 1; }
+    renderList();
+  });
+  $('pInfo').textContent = `Seite ${state.page + 1} von ${pages}`;
+  $('pPrev').disabled = state.page === 0; $('pNext').disabled = state.page >= pages - 1;
+  $('listInfo').textContent = `${int(rows.length)} Zeilen · Summe ${money(sum(rows, o => o.amt))}`;
+}
+
+/* ---------- Export ---------- */
+function csvLine(vals, sep){ return vals.map(v => { v = v == null ? '' : String(v); return /["\n\r]/.test(v) || v.includes(sep) ? '"' + v.replace(/"/g, '""') + '"' : v; }).join(sep); }
+function fmtNum(v, de){ if (!isFinite(v)) return ''; const s = (Math.round(v * 100) / 100).toFixed(2); return de ? s.replace('.', ',') : s; }
+function fmtNumRaw(v, de){ if (!isFinite(v)) return ''; const s = String(Math.round(v * 1e6) / 1e6); return de ? s.replace('.', ',') : s; }
+function download(name, lines){
+  const blob = new Blob(['﻿' + lines.join('\r\n') + '\r\n'], {type: 'text/csv;charset=utf-8'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+}
+function rangeName(){
+  const f = $('fFrom').value, t = $('fTo').value, y = $('fYear').value;
+  if (/^\d{4}$/.test(y)) return y;
+  if (!f && !t) return 'alle';
+  return `${f || 'anfang'}_bis_${t || 'heute'}`;
+}
+function exportOrders(){
+  const de = $('xFmt').value === 'de', sep = de ? ';' : ',';
+  const rows = sortedFiltered();
+  if (!rows.length){ alertBox('Keine Bestellungen im gefilterten Bereich.'); return; }
+  const lines = [];
+  if ($('xCols').value === 'compact'){
+    lines.push(csvLine(['Datum','Bestellnummer','Art','Artikel','ASIN','Menge','Betrag','Versand','Rabatte','Währung','Status','Shop'], sep));
+    for (const o of rows) lines.push(csvLine([isoDT(o.d), o.id, o.kind === 'digital' ? 'Digital' : 'Ware', o.prod, o.asin, fmtNumRaw(o.qty, de), fmtNum(o.amt, de), fmtNum(o.ship, de), fmtNum(o.disc, de), o.cur, o.status, o.site], sep));
+    lines.push(csvLine(['Summe', '', '', `${rows.length} Zeilen / ${new Set(rows.map(o => o.id)).size} Bestellungen`, '', fmtNumRaw(sum(rows, o => o.qty), de), fmtNum(sum(rows, o => o.amt), de), fmtNum(sum(rows, o => o.ship), de), fmtNum(sum(rows, o => o.disc), de), $('fCur').value, '', ''], sep));
+  } else {
+    const hdr = [...new Set(rows.flatMap(o => o.hdr))];
+    lines.push(csvLine(hdr, sep));
+    for (const o of rows){
+      lines.push(csvLine(hdr.map(h => { const i = o.hdr.indexOf(h); let v = i >= 0 ? (o.raw[i] ?? '') : ''; if (de && /^-?\d+\.\d+$/.test(v.trim())) v = v.trim().replace('.', ','); return v; }), sep));
+    }
+  }
+  download(`amazon_bestellungen_${rangeName()}.csv`, lines);
+}
+function exportRefunds(){
+  const de = $('xFmt').value === 'de', sep = de ? ';' : ',';
+  const rows = [...state.filteredRefunds].sort((a, b) => a.ts - b.ts);
+  if (!rows.length){ alertBox(state.refunds.length ? 'Keine Erstattungen im gefilterten Bereich.' : 'Es ist keine Erstattungsdatei geladen.'); return; }
+  const lines = [];
+  if ($('xCols').value === 'compact'){
+    lines.push(csvLine(['Erstattungsdatum','Bestellnummer','Art','Artikel','Grund','Betrag','Währung','Status'], sep));
+    for (const r of rows) lines.push(csvLine([isoDT(r.d), r.id, r.kind === 'digital' ? 'Digital' : 'Ware', r.prod, r.reason, fmtNum(r.amt, de), r.cur, r.status], sep));
+    lines.push(csvLine(['Summe', `${rows.length} Buchungen`, '', '', '', fmtNum(sum(rows, r => r.amt), de), $('fCur').value, ''], sep));
+  } else {
+    const hdr = [...new Set(rows.flatMap(r => r.hdr))];
+    lines.push(csvLine(hdr, sep));
+    for (const r of rows) lines.push(csvLine(hdr.map(h => { const i = r.hdr.indexOf(h); let v = i >= 0 ? (r.raw[i] ?? '') : ''; if (de && /^-?\d+\.\d+$/.test(v.trim())) v = v.trim().replace('.', ','); return v; }), sep));
+  }
+  download(`amazon_erstattungen_${rangeName()}.csv`, lines);
+}
+function exportPeriods(){
+  const de = $('xFmt').value === 'de', sep = de ? ';' : ',';
+  const mode = state.periodMode, list = state.periods;
+  const lines = [csvLine([mode === 'year' ? 'Jahr' : 'Monat', 'Bestellungen', 'Artikel', 'Bestellt', 'Erstattet', 'Netto', 'Währung'], sep)];
+  for (const p of list) lines.push(csvLine([p.key, p.orders, fmtNumRaw(p.n, de), fmtNum(p.amt, de), fmtNum(p.ref, de), fmtNum(p.amt - p.ref, de), $('fCur').value], sep));
+  lines.push(csvLine(['Summe', sum(list, p => p.orders), fmtNumRaw(sum(list, p => p.n), de), fmtNum(sum(list, p => p.amt), de), fmtNum(sum(list, p => p.ref), de), fmtNum(sum(list, p => p.amt - p.ref), de), $('fCur').value], sep));
+  download(`amazon_${mode === 'year' ? 'jahre' : 'monate'}_${rangeName()}.csv`, lines);
+}
+function alertBox(t){ setStatus(t, 'warn'); $('status').scrollIntoView({behavior: 'smooth', block: 'center'}); setTimeout(() => setStatus(''), 5000); }
+
+/* ---------- Hilfen & Ereignisse ---------- */
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+const drop = $('drop'), fileIn = $('file');
+drop.onclick = () => fileIn.click();
+drop.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileIn.click(); } };
+fileIn.onchange = () => { handleFiles(fileIn.files); fileIn.value = ''; };
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => handleFiles(e.dataTransfer.files));
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => { if (!drop.contains(e.target)) { e.preventDefault(); handleFiles(e.dataTransfer.files); } });
+
+$('fYear').onchange = () => { applyYear(); update(); };
+$('fFrom').onchange = $('fTo').onchange = () => { syncYearFromDates(); update(); };
+['fSite','fCur','fStatus','fRefund','fKind'].forEach(id => $(id).onchange = update);
+let tmr; ['fText','fMin','fMax'].forEach(id => $(id).oninput = () => { clearTimeout(tmr); tmr = setTimeout(update, 200); });
+$('fReset').onclick = () => {
+  $('fText').value = ''; $('fMin').value = ''; $('fMax').value = '';
+  $('fSite').value = '__all'; $('fStatus').value = '__nocancel'; $('fRefund').checked = true;
+  $('fKind').value = state.hasPhysical ? 'physical' : 'digital';
+  $('fYear').value = String(years()[0] ?? 'all'); applyYear(); update();
+};
+$('pPrev').onclick = () => { state.page--; renderList(); };
+$('pNext').onclick = () => { state.page++; renderList(); };
+$('pSize').onchange = () => { state.page = 0; renderList(); };
+$('xOrders').onclick = exportOrders;
+$('xRefunds').onclick = exportRefunds;
+$('xPeriods').onclick = exportPeriods;
+let rt; window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (state.orders.length) renderChart(state.filtered, state.filteredRefunds, getFilter()); }, 150); });
+</script>
+</body>
+</html>
