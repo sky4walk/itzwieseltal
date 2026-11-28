@@ -94,6 +94,16 @@ footer { font-size: 11.5px; color: #6b7684; padding: 12px 2px 0; border-top: 1px
 .dlg { width: min(900px, 94vw); height: min(80vh, 900px); background: var(--panel); border: 1px solid var(--edge2); border-radius: 9px; display: flex; flex-direction: column; }
 .dlg-head { display: flex; gap: 8px; align-items: center; padding: 9px 12px; border-bottom: 1px solid var(--edge); }
 .dlg-head b { margin-right: auto; }
+#exp-dlg { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 10; align-items: center; justify-content: center; }
+#exp-dlg.open { display: flex; }
+#exp-dlg .dlg { height: auto; width: min(560px, 94vw); }
+.exp-body { padding: 12px 14px 4px; display: flex; flex-direction: column; gap: 9px; font-size: 13.5px; }
+.exp-body label.opt { display: flex; gap: 8px; align-items: flex-start; cursor: pointer; }
+.exp-body label.opt input { margin-top: 3px; accent-color: var(--accent); }
+.exp-body label.opt small { display: block; color: var(--dim); font-size: 12px; }
+.exp-body select { display: block; margin-top: 5px; min-width: 220px; max-width: 100%; font: inherit; font-size: 13px; color: var(--ink); background: var(--bg); border: 1px solid var(--edge); border-radius: 5px; padding: 5px 7px; }
+.exp-hint { font-size: 12px; color: var(--dim); border-top: 1px solid var(--edge); padding-top: 8px; }
+.exp-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 10px 14px 12px; }
 #code-text { flex: 1; resize: none; border: 0; background: var(--bg); color: var(--ink); font: 12px/1.45 var(--mono); padding: 12px; white-space: pre; }
 @media (max-width: 820px) {
   body { overflow: auto; }
@@ -183,6 +193,15 @@ footer { font-size: 11.5px; color: #6b7684; padding: 12px 2px 0; border-top: 1px
       <button class="btn" id="code-close">Schließen</button>
     </div>
     <textarea id="code-text" spellcheck="false" readonly></textarea>
+  </div>
+</div>
+<div id="exp-dlg">
+  <div class="dlg">
+    <div class="dlg-head"><b id="exp-title">OpenSCAD exportieren</b>
+      <button class="btn" id="exp-close">Schließen</button>
+    </div>
+    <div class="exp-body" id="exp-body"></div>
+    <div class="exp-foot"><button class="btn primary" id="exp-go">Exportieren</button></div>
   </div>
 </div>
 <script>
@@ -8961,6 +8980,10 @@ const SECTIONS = [
 // ------------------------------------------------------------
 //  Katalog: Sky4walks Teile und ein paar Vorlagen
 // ------------------------------------------------------------
+// Kugelhahn 1/2" auf Mini-Flansch (Ø 25): Rohr 12,7 × 1,65 -> Durchgang 9,4.
+// Kugel und Spindel von Hand gesetzt, damit der Spindeldom aufs kleine Gehäuse passt.
+const KH_12 = { teil: 'kugelhahn', kh_teil: 'alle', kh_tc: 'mini', kh_l: 80, kh_di: 9.4, kh_rohr_da: 12.7, kh_sw: 17, kh_kugel_d: 20,
+  kh_gewinde: 'auto', kh_spindel_d: 6, kh_hebel_l: 75, kh_hebel_b: 8, kh_hebel_d: 4 };
 const CATALOG = [
   { group: 'Adapter Tri-Clamp 1,5"', items: [
     { name: 'TC → Gardena', file: 'TriClampGardena', p: { b_typ: 'gardena', rohr_da: 19.6, rohr_wand: 5.4 } },
@@ -8978,6 +9001,8 @@ const CATALOG = [
   { group: 'Craft Hardware (Edelstahl-Vorbilder)', items: [
     { name: 'Kugelhahn zweiteilig 3/4"', file: 'TAK19114', p: { teil: 'kugelhahn', kh_teil: 'alle', kh_tc: 'mini', kh_l: 100, kh_di: 15.75, kh_rohr_da: 19.05, kh_sw: 21, kh_kugel_d: 0, kh_gewinde: 'auto' } },
     { name: 'Kugelhahn 3/4" Druckplatte', file: 'alle Teile flach', p: { teil: 'kugelhahn', kh_teil: 'druckplatte', kh_tc: 'mini', kh_l: 100, kh_di: 15.75, kh_rohr_da: 19.05, kh_sw: 21, kh_kugel_d: 0, kh_gewinde: 'auto' } },
+    { name: 'Kugelhahn 1/2"', file: 'Mini-Flansch, Ø 9,4', p: KH_12 },
+    { name: 'Kugelhahn 1/2" Druckplatte', file: 'alle Teile flach', p: Object.assign({}, KH_12, { kh_teil: 'druckplatte' }) },
     { name: 'Rohrbogen 90° 3/4"', file: 'TFK01738', p: { mitte: 'bogen', a_tc: 'mini', a_hals: 'norm', a_hals_l: 12.7, b_typ: 'triclamp', b_tc: 'mini', b_hals: 'norm', b_hals_l: 12.7, rohr_da: 19.05, rohr_wand: 1.65, bogen_winkel: 90, bogen_r: 25.4, schenkel_a: 0, schenkel_b: 0 } },
     { name: 'Schweißstutzen 3/4"', file: 'TFK22660', p: { a_tc: 'mini', a_hals: 'norm', a_hals_l: 21.5, b_typ: 'offen', rohr_da: 19.05, rohr_wand: 1.65, laenge: 0 } },
     { name: 'Reduzierkappe 1,5" → 3/4"', file: 'TFK01906', p: { a_tc: '1.5', a_hals: 'schraeg', b_typ: 'triclamp', b_tc: 'mini', b_hals: 'norm', b_hals_l: 12.7, rohr_da: 19.05, rohr_wand: 1.65, laenge: 12 } },
@@ -9244,6 +9269,7 @@ function updateNotes() {
     n.push('Drucken: beide Gehäusehälften auf der Teilungsfläche (Stützen nur unter dem Flansch), Klappe als zwei Hälften auf der Mittelfläche — Flächen gut ankleben, die D-Bohrung muss fluchten. Welle stehend, Hebel mit der Rastnase nach oben, Sitzring aus TPU.');
     n.push('Gedruckte Klappen sind für kaltes Wasser und Würze unter 60 °C bei geringem Druck gedacht — für heiße Seite und CO₂ das Edelstahlventil nehmen.');
   } else if (p.teil === 'kugelhahn') {
+    if (p.kh_tc === 'mini' && p.kh_di < 12) n.push('1/2"-Hahn auf Mini-Flansch: Durchgang wie Rohr 12,7 × 1,65, Kugel 20 mm und Spindel 6 mm sind von Hand gesetzt, damit der Spindeldom auf das kleine Gehäuse passt. Die Spindel mit 100 % Füllung drucken.');
     n.push('Kugelhahn nach Craft Hardware TAK19114 (3/4": Baulänge 100 mm, Durchgang 15,75 mm, Schlüsselweite 21). Gehäuse, Kugel, Spindel und Hebel sind eine eigene druckbare Konstruktion — keine Werksmaße des Originals.');
     n.push('Zusammenbau: Spindel von außen in den Dom stecken (O-Ring in die Nut), Stopfbuchsmutter aufschrauben; Sitzring A ins Gehäuse, Kugel mit dem Schlitz zur Spindel einsetzen, Sitzring B ins Einschraubteil und das Einschraubteil eindrehen. Hebel auf den Vierkant, mit M3-Schraube und Scheibe sichern.');
     n.push('Drucken: Gehäuse auf Flansch A, Einschraubteil auf Flansch B, Kugel mit senkrechter Bohrung, Spindel auf dem Mitnehmer (mit Brim), Mutter auf dem Sechskant, Hebel flach. Sitzringe aus TPU — die Vorspannung drückt sie gegen die Kugel. Kugel und Kammer bei Bedarf mit Silikonfett gängig machen.');
@@ -9328,9 +9354,9 @@ function sonstSource(forExport) {
   return src;
 }
 
-function currentSource(forExport) {
+function currentSource(forExport, over) {
   if (state.teil === 'sonstiges') return sonstSource(forExport);
-  const p = Object.assign({}, state);
+  const p = Object.assign({}, state, over || {});
   if (forExport) { p.schnitt = false; p.zusammenbau = false; }   // nur Ansicht; im Export aus (rechnet in OpenSCAD lange)
   if (!forExport && !fineView) {
     p.aufloesung = Math.min(p.aufloesung, 40);
@@ -9339,7 +9365,7 @@ function currentSource(forExport) {
   let src = setScadParams(SCAD_SRC, p);
   if (forExport) {
     const stamp = new Date().toLocaleDateString('de-DE');
-    src = src.replace(/^\/\/ ={10,}\n/, m => m + `//  Export aus triclampwerk.html am ${stamp}` + (presetName ? ` — Vorlage „${presetName}“` : '') + '\n');
+    src = src.replace(/^\/\/ ={10,}\n/, m => m + `//  Export aus triclampwerk.html am ${stamp}` + (presetName ? ` — Vorlage „${presetName}“` : '') + '\n' + partHeader(p));
   }
   return src;
 }
@@ -9430,8 +9456,8 @@ function fmtNum(x) { return (Math.round(x * 10) / 10).toLocaleString('de-DE'); }
 // ------------------------------------------------------------
 //  Export
 // ------------------------------------------------------------
-function exportName(ext) {
-  const p = state;
+function exportName(ext, p) {
+  p = p || state;
   let n;
   if (p.teil === 'fitting') {
     const d = (x) => {
@@ -9447,7 +9473,7 @@ function exportName(ext) {
   } else {
     if (p.teil === 'sonstiges') return (SONST_BY_ID[p.so_datei] || SONST[0]).file.replace(/^.*\//, '').replace(/\.scad$/, '') + '.' + ext;
     if (p.teil === 'scheibenventil') n = 'Scheibenventil' + p.sk_tc + (p.sk_teil !== 'alle' ? '-' + p.sk_teil : '');
-    else if (p.teil === 'kugelhahn') n = 'Kugelhahn' + p.kh_tc + (p.kh_teil !== 'alle' ? '-' + p.kh_teil : '');
+    else if (p.teil === 'kugelhahn') n = 'Kugelhahn' + p.kh_tc + '-DN' + Math.round(p.kh_di) + (p.kh_teil !== 'alle' ? '-' + p.kh_teil : '');
     else if (p.teil === 'halter') n = { schlauch: `Schlauchhalter-${p.sh_schlauch_dm}mm-${p.sh_anzahl}x`, gardena: `GardenaWandhalter-${p.gw_faecher + 1}Haken`, zapfgriff: 'Zapfhahngriff' }[p.hl_art];
     else if (p.teil === 'profil' && p.pf_teil === 'profil') n = 'Profil30x30-Nut8-' + p.pf_profil_l + 'mm' + (p.pf_gehrung !== 'keine' ? '-Gehrung' : '');
     else if (p.teil === 'profil') n = 'Nut8-' + p.pf_teil + (p.pf_teil === 'schelle' ? p.pf_rohr_d + (p.pf_anzahl > 1 ? 'x' + p.pf_anzahl : '') : '');
@@ -9471,8 +9497,142 @@ function download(data, name, type) {
   setTimeout(() => URL.revokeObjectURL(url), 5000);
 }
 
+// ------------------------------------------------------------
+//  Mehrteilige Baugruppen: Zusammenbau, Druckplatte oder Einzelteile
+// ------------------------------------------------------------
+const PART_KEY = { kugelhahn: 'kh_teil', scheibenventil: 'sk_teil', klemme: 'kl_teil' };
+const PART_TITLE = { kugelhahn: 'Kugelhahn', scheibenventil: 'Scheibenventil', klemme: 'Klemme' };
+const PART_ANZAHL = { kugelhahn: { sitz: 2 }, scheibenventil: { scheibe: 2 } };
+function partOpts(teil) {
+  const key = PART_KEY[teil];
+  for (const sec of SECTIONS) for (const f of sec.fields) if (f.k === key) return f.opts;
+  return [];
+}
+const einzelteile = (teil) => partOpts(teil).filter(o => o[0] !== 'alle' && o[0] !== 'druckplatte');
+const partLabel = (teil, v) => ((partOpts(teil).find(o => o[0] === v) || [v, v])[1]).replace(/\s*\(.*\)$/, '');
+function partHeader(p) {
+  const key = PART_KEY[p.teil];
+  if (!key) return '';
+  const opts = partOpts(p.teil), anz = PART_ANZAHL[p.teil] || {};
+  const w = Math.max(...opts.map(o => o[0].length)) + 2;
+  const lines = [`//`, `//  Ausgabe umschalten: ${key} = "…" (Customizer: Abschnitt ${PART_TITLE[p.teil]})`];
+  for (const [v, t] of opts) lines.push(`//    ${('"' + v + '"').padEnd(w)} ${t.replace(/\s*\(.*\)$/, '')}` +
+    (v === 'alle' ? ' – nur zum Ansehen' : v === 'druckplatte' ? ' – alle Teile zerlegt auf einer Platte' : anz[v] ? ` – ${anz[v]}× drucken` : '') +
+    (p[key] === v ? '   <- in dieser Datei' : ''));
+  return lines.join('\n') + '\n//\n';
+}
+
 function exportScad() {
-  download(currentSource(true), exportName('scad'), 'text/plain;charset=utf-8');
+  const key = PART_KEY[state.teil];
+  if (!key) return download(currentSource(true), exportName('scad'), 'text/plain;charset=utf-8');
+  openExportDialog();
+}
+
+function openExportDialog() {
+  const teil = state.teil, key = PART_KEY[teil], cur = state[key];
+  const teile = einzelteile(teil), anz = PART_ANZAHL[teil] || {};
+  const radio = (v, title, sub, extra) => el('label', { class: 'opt' },
+    el('input', { type: 'radio', name: 'exp_mode', value: v }),
+    el('span', null, title, sub ? el('small', null, sub) : null, extra || null));
+  const sel = el('select', { id: 'exp-teil' });
+  for (const [v, t] of teile) sel.append(el('option', { value: v }, t));
+  sel.value = teile.some(o => o[0] === cur) ? cur : (teil === 'kugelhahn' ? 'kugel' : teile[0][0]);
+  sel.addEventListener('change', () => { $('exp-body').querySelector('input[value="einzeln"]').checked = true; });
+  const liste = teile.map(([v]) => partLabel(teil, v) + (anz[v] ? ` (${anz[v]}×)` : '')).join(', ');
+  const body = $('exp-body');
+  body.innerHTML = '';
+  body.append(
+    radio('druckplatte', 'Druckplatte — alle Teile zerlegt', 'jedes Teil in Druckrichtung nebeneinander auf dem Bett'),
+    radio('einzeln', 'Ein Einzelteil', 'z. B. nur die Kugel nachdrucken', sel),
+    radio('zip', 'Alle Einzelteile als eigene Dateien (ZIP)', `${teile.length} Einzelteile plus Druckplatte, je eine eigenständige .scad: ${liste}`),
+    radio('alle', 'Zusammenbau', 'alle Teile ineinander, zum Ansehen in OpenSCAD — nicht druckbar'),
+    el('div', { class: 'exp-hint' }, `Jede Datei ist vollständig (ohne include/use). In OpenSCAD lässt sich die Ausgabe jederzeit über „${key}“ umschalten — Customizer, Abschnitt „${PART_TITLE[teil]}“; die Auswahl steht auch oben im Dateikopf.`)
+  );
+  const mode = cur === 'alle' || cur === 'druckplatte' ? 'druckplatte' : 'einzeln';   // Zusammenbau ist nicht druckbar
+  body.querySelector(`input[value="${mode}"]`).checked = true;
+  $('exp-title').textContent = PART_TITLE[teil] + ' als OpenSCAD exportieren';
+  $('exp-dlg').classList.add('open');
+}
+function closeExportDialog() { $('exp-dlg').classList.remove('open'); }
+
+async function runExportDialog() {
+  const teil = state.teil, key = PART_KEY[teil];
+  const mode = ($('exp-body').querySelector('input[name="exp_mode"]:checked') || {}).value || 'druckplatte';
+  const typ = 'text/plain;charset=utf-8';
+  const one = (v) => { const o = { [key]: v }; return [exportName('scad', Object.assign({}, state, o)), currentSource(true, o)]; };
+  if (mode !== 'zip') {
+    const [name, src] = one(mode === 'einzeln' ? $('exp-teil').value : mode);
+    download(src, name, typ);
+    closeExportDialog();
+    return;
+  }
+  const btn = $('exp-go');
+  btn.disabled = true; btn.textContent = 'packt …';
+  try {
+    const anz = PART_ANZAHL[teil] || {};
+    const files = [one('druckplatte')];
+    for (const [v] of einzelteile(teil)) {
+      const [name, src] = one(v);
+      files.push([anz[v] ? name.replace(/\.scad$/, `-${anz[v]}x.scad`) : name, src]);
+    }
+    const base = exportName('zip', Object.assign({}, state, { [key]: 'alle' })).replace(/\.zip$/, '');
+    const liesmich = [`${PART_TITLE[teil]} — Einzelteile aus TriClampWerk (${new Date().toLocaleDateString('de-DE')})`, '',
+      'Jede .scad-Datei ist eigenständig und lässt sich direkt in OpenSCAD öffnen.',
+      `Die Druckplatte enthält alle Teile; die übrigen Dateien je ein Teil zum einzelnen Nachdrucken.`, '',
+      ...einzelteile(teil).map(([v, t]) => `  ${anz[v] ? anz[v] + '×' : '1×'}  ${t.replace(/\s*\(.*\)$/, '')}`), '',
+      'https://zwieselbrau.wordpress.com · https://itzwieseltal.wordpress.com', ''].join('\r\n');
+    files.push(['LIESMICH.txt', liesmich]);
+    const zip = await makeZip(files.map(([n, t]) => [base + '/' + n, t]));
+    download(zip, base + '.zip', 'application/zip');
+    closeExportDialog();
+  } catch (err) {
+    setStatus('ZIP-Export fehlgeschlagen: ' + (err && err.message || err), 'err');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Exportieren';
+  }
+}
+
+// Kleiner ZIP-Schreiber (Deflate über CompressionStream, sonst unkomprimiert)
+const CRC_TAB = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_TAB[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+async function deflateRaw(b) {
+  if (typeof CompressionStream === 'undefined') return null;
+  try {
+    const cs = new CompressionStream('deflate-raw');
+    const out = new Response(new Blob([b]).stream().pipeThrough(cs)).arrayBuffer();
+    return new Uint8Array(await out);
+  } catch (e) { return null; }
+}
+async function makeZip(entries) {
+  const enc = new TextEncoder(), parts = [], central = [];
+  const d = new Date();
+  const dosT = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  const dosD = ((d.getFullYear() - 1980) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  let off = 0;
+  for (const [name, text] of entries) {
+    const nm = enc.encode(name), raw = enc.encode(text), crc = crc32(raw);
+    const def = await deflateRaw(raw);
+    const useDef = def && def.length < raw.length;
+    const data = useDef ? def : raw;
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 20, true); h.setUint16(6, 0x0800, true);
+    h.setUint16(8, useDef ? 8 : 0, true); h.setUint16(10, dosT, true); h.setUint16(12, dosD, true);
+    h.setUint32(14, crc, true); h.setUint32(18, data.length, true); h.setUint32(22, raw.length, true);
+    h.setUint16(26, nm.length, true); h.setUint16(28, 0, true);
+    const c = new DataView(new ArrayBuffer(46));
+    c.setUint32(0, 0x02014b50, true); c.setUint16(4, 20, true); c.setUint16(6, 20, true); c.setUint16(8, 0x0800, true);
+    c.setUint16(10, useDef ? 8 : 0, true); c.setUint16(12, dosT, true); c.setUint16(14, dosD, true);
+    c.setUint32(16, crc, true); c.setUint32(20, data.length, true); c.setUint32(24, raw.length, true);
+    c.setUint16(28, nm.length, true); c.setUint32(42, off, true);
+    parts.push(new Uint8Array(h.buffer), nm, data);
+    central.push(new Uint8Array(c.buffer), nm);
+    off += 30 + nm.length + data.length;
+  }
+  const cdSize = central.reduce((s, b) => s + b.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, entries.length, true); e.setUint16(10, entries.length, true);
+  e.setUint32(12, cdSize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...central, new Uint8Array(e.buffer)], { type: 'application/zip' });
 }
 
 let stlWorker = null;
@@ -9578,6 +9738,9 @@ function tcInit() {
       if (b.dataset.view === 'fit') { vp.fit(); vp.requestDraw(); } else vp.setView(b.dataset.view);
     });
   $('btn-scad').addEventListener('click', exportScad);
+  $('exp-close').addEventListener('click', closeExportDialog);
+  $('exp-go').addEventListener('click', runExportDialog);
+  $('exp-dlg').addEventListener('click', (e) => { if (e.target.id === 'exp-dlg') closeExportDialog(); });
   $('btn-stl').addEventListener('click', exportStl);
   $('btn-dxf').addEventListener('click', exportDxf);
   $('btn-code').addEventListener('click', showCode);
@@ -9602,7 +9765,7 @@ function tcInit() {
     $('code-copy').textContent = 'kopiert';
     setTimeout(() => { $('code-copy').textContent = 'Kopieren'; }, 1500);
   });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') $('code-dlg').classList.remove('open'); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { $('code-dlg').classList.remove('open'); closeExportDialog(); } });
   if (!readHash()) applyPreset(CATALOG[0].items[0]);
   setTimeout(() => vp.setView && vp.setView('iso'), 0);
 }
